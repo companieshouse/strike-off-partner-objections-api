@@ -1,4 +1,4 @@
-package uk.gov.companieshouse.strike_off_partner_objections_api;
+package uk.gov.companieshouse.strikeoffpartnerobjectionsapi;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -6,8 +6,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class StrikeOffPartnerObjectionsApiApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
 }
