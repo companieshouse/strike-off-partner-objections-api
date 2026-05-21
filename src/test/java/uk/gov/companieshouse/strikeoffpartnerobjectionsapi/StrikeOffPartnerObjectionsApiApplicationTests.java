@@ -15,31 +15,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 class StrikeOffPartnerObjectionsApiApplicationTests {
 
-	@Autowired
-	private WebApplicationContext context;
+    @Autowired
+    private WebApplicationContext context;
 
-	private MockMvc mockMvc;
+    private MockMvc mockMvc;
 
-	@BeforeEach
-	void setUp() {
-		this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
-	}
+    @BeforeEach
+    void setUp() {
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+    }
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
-	@Test
-	void healthcheckEndpointReturnsUp() throws Exception {
-		mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("UP"));
-	}
+    @Test
+    void healthcheckEndpointReturnsUp() throws Exception {
+        mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
 
-	@Test
-	void defaultActuatorHealthPathIsNotExposed() throws Exception {
-		mockMvc.perform(get("/actuator/health"))
-				.andExpect(status().isNotFound());
-	}
+    @Test
+    void defaultActuatorHealthPathIsNotExposed() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isNotFound());
+    }
 }
 
