@@ -3,9 +3,7 @@ provider "aws" {
 }
 
 terraform {
-  backend "s3" {
-  }
-  required_version = "~> 1.3"
+  required_version = ">= 1.3.0, < 2.0.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -16,6 +14,7 @@ terraform {
       version = ">= 5.0, < 6.0"
     }
   }
+  backend "s3" {}
 }
 
 module "secrets" {
