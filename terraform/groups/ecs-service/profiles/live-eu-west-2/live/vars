@@ -1,11 +1,12 @@
 environment = "live"
 aws_profile = "live-eu-west-2"
 
-log_level = "info"
-
 required_cpus = 768
 required_memory = 1536
 service_autoscale_target_value_cpu = 60
-desired_task_count = 3
-max_task_count = 6
-min_task_count = 3
+
+# service configs
+desired_task_count = 2
+max_task_count     = 3
+min_task_count     = 2
+

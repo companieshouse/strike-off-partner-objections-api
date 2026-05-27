@@ -1,9 +1,6 @@
 environment = "cidev"
 aws_profile = "development-eu-west-2"
 
-# service configs
-log_level = "debug"
-
 # Scheduled scaling of tasks
 service_autoscale_enabled  = true
 service_scaledown_schedule = "55 19 * * ? *"

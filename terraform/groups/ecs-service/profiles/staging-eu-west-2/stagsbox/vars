@@ -1,5 +1,7 @@
-environment = "staging"
+environment = "stagsbox"
 aws_profile = "staging-eu-west-2"
+
+# service configs
 
 # Scheduled scaling of tasks
 service_autoscale_enabled  = true
