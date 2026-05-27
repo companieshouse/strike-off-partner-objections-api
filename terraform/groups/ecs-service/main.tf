@@ -106,3 +106,4 @@ module "ecs-service" {
   depends_on = [module.secrets]
 
 }
+
