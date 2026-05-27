@@ -16,7 +16,6 @@ locals {
   stack_secrets              = jsondecode(data.vault_generic_secret.stack_secrets.data_json)
   application_subnet_pattern = local.stack_secrets["application_subnet_pattern"]
   use_set_environment_files  = var.use_set_environment_files
-  s3_config_bucket           = data.vault_generic_secret.shared_s3.data["config_bucket_name"]
   app_environment_filename   = "strike-off-partner-objections-api.env"
   vpc_name                   = local.stack_secrets["vpc_name"]
 
