@@ -22,7 +22,7 @@ locals {
 
   # Enable Eric
   use_eric_reverse_proxy = true
-  eric_port              = "8081" # container port plus 1
+  eric_port              = "10000" # container port plus 1
 
   service_secrets_arn_map = {
     for sec in module.secrets.secrets :
