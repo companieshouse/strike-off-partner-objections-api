@@ -38,27 +38,27 @@ module "ecs-service" {
   task_execution_role_arn = data.aws_iam_role.ecs_cluster_iam_role.arn
 
   # Load balancer configuration
-  lb_listener_arn                   = data.aws_lb_listener.service_lb_listener.arn
-  lb_listener_rule_priority         = local.lb_listener_rule_priority
-  lb_listener_paths                 = local.lb_listener_paths
-  multilb_setup                     = true
-  multilb_listeners                 = {
-    "priv-api-lb": {
-      listener_arn                  = data.aws_lb_listener.secondary_lb_listener.arn,
-      load_balancer_arn             = data.aws_lb.secondary_lb.arn
+  lb_listener_arn           = data.aws_lb_listener.service_lb_listener.arn
+  lb_listener_rule_priority = local.lb_listener_rule_priority
+  lb_listener_paths         = local.lb_listener_paths
+  multilb_setup             = true
+  multilb_listeners = {
+    "priv-api-lb" : {
+      listener_arn      = data.aws_lb_listener.secondary_lb_listener.arn,
+      load_balancer_arn = data.aws_lb.secondary_lb.arn
     }
-    "pub-api-lb": {
-      load_balancer_arn      = data.aws_lb.service_lb.arn
-      listener_arn           = data.aws_lb_listener.service_lb_listener.arn
+    "pub-api-lb" : {
+      load_balancer_arn = data.aws_lb.service_lb.arn
+      listener_arn      = data.aws_lb_listener.service_lb_listener.arn
     }
   }
 
   # Docker container details
-  docker_registry   = var.docker_registry
-  docker_repo       = local.docker_repo
-  container_version = var.strike_off_partner_objections_api_version
-  container_port    = local.container_port
-  read_only_root_filesystem          = false
+  docker_registry           = var.docker_registry
+  docker_repo               = local.docker_repo
+  container_version         = var.strike_off_partner_objections_api_version
+  container_port            = local.container_port
+  read_only_root_filesystem = false
 
   # Service configuration
   service_name              = local.service_name
@@ -75,15 +75,15 @@ module "ecs-service" {
   healthcheck_healthy_threshold     = "2"
 
   # Service performance and scaling configs
-  desired_task_count                  = var.desired_task_count
-  required_cpus                       = var.required_cpus
-  required_memory                     = var.required_memory
-  service_autoscale_target_value_cpu  = var.service_autoscale_target_value_cpu
-  service_scaledown_schedule          = var.service_scaledown_schedule
-  service_scaleup_schedule            = var.service_scaleup_schedule
-  use_capacity_provider               = var.use_capacity_provider
-  min_task_count                      = var.min_task_count
-  max_task_count                      = var.max_task_count
+  desired_task_count                 = var.desired_task_count
+  required_cpus                      = var.required_cpus
+  required_memory                    = var.required_memory
+  service_autoscale_target_value_cpu = var.service_autoscale_target_value_cpu
+  service_scaledown_schedule         = var.service_scaledown_schedule
+  service_scaleup_schedule           = var.service_scaleup_schedule
+  use_capacity_provider              = var.use_capacity_provider
+  min_task_count                     = var.min_task_count
+  max_task_count                     = var.max_task_count
 
   # Cloudwatch
   cloudwatch_alarms_enabled = var.cloudwatch_alarms_enabled

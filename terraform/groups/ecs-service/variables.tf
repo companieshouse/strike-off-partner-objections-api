@@ -119,12 +119,6 @@ variable "use_set_environment_files" {
   description = "Toggle default global and shared  environment files"
 }
 
-variable "log_level" {
-  default     = "info"
-  type        = string
-  description = "The log level for services to use: trace, debug, info or error"
-}
-
 variable "strike_off_partner_objections_api_version" {
   type        = string
   description = "The version of the strike_off_partner_objections_api container to run."
@@ -134,14 +128,14 @@ variable "strike_off_partner_objections_api_version" {
 # ERIC environment variable configs
 # ------------------------------------------------------------------------------
 variable "eric_cpus" {
-  type = number
+  type        = number
   description = "The required cpu resource for eric. 1024 here is 1 vCPU"
-  default = 256
+  default     = 256
 }
 variable "eric_memory" {
-  type = number
+  type        = number
   description = "The required memory for eric"
-  default = 512
+  default     = 512
 }
 variable "eric_version" {
   type        = string
