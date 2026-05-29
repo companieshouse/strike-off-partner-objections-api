@@ -1,0 +1,7 @@
+app_name: strike-off-partner-objections-api
+group: api
+weight: 900
+routes:
+  1: ^/company/.*/strike-off-partner-objections(/.*)?$
+  2: ^/company/.*/strike-off-partner-objections-withdrawals(/.*)?$
+  3: ^/internal/callback-update$
