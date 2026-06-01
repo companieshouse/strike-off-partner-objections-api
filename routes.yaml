@@ -1,6 +1,6 @@
 app_name: strike-off-partner-objections-api
 group: api
-weight: 900
+weight: 100
 routes:
   1: ^/company/.*/strike-off-partner-objections(/.*)?$
   2: ^/company/.*/strike-off-partner-objections-withdrawals(/.*)?$
