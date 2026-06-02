@@ -7,9 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-@SpringBootTest(properties = {
-        "spring.mongodb.uri=mongodb://localhost:27017/strike_off_partner_objections"
-})
+@SpringBootTest
 class MongoConfigurationTest {
 
     @Autowired

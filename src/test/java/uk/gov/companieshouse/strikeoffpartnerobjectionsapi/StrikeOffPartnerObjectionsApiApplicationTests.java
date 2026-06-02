@@ -42,4 +42,3 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
                 .andExpect(status().isNotFound());
     }
 }
-
