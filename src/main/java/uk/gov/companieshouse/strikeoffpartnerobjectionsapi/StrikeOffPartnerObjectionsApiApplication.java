@@ -12,7 +12,7 @@ public class StrikeOffPartnerObjectionsApiApplication {
             StrikeOffPartnerObjectionsApiApplication.class);
 
     public static void main(String[] args) {
-        LOGGER.info("Starting strike-off-partner-objections-api application");
+        LOGGER.info("Starting strike-off-partner-objections-api application!!!!!");
         SpringApplication.run(StrikeOffPartnerObjectionsApiApplication.class, args);
     }
 
