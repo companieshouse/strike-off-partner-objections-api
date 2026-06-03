@@ -1,16 +1,13 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalManagementPort;
+import org.springframework.test.web.servlet.MockMvc;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -19,34 +16,25 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "management.endpoints.web.path-mapping.health=healthcheck"
         }
 )
+@AutoConfigureMockMvc
 class StrikeOffPartnerObjectionsApiApplicationTests {
 
-    @LocalManagementPort
-    private int managementPort;
-
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    @Autowired
+    private MockMvc mockMvc;
 
     @Test
     void contextLoads() {
     }
 
     @Test
-    void healthcheckEndpointReturnsUp() throws IOException, InterruptedException {
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + managementPort + "/strike-off-partner-objections-api/healthcheck"))
-                .GET()
-                .build();
-        var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode()).isEqualTo(200);
+    void healthcheckEndpointReturnsUp() throws Exception {
+        mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
+                .andExpect(status().isOk());
     }
 
     @Test
-    void defaultActuatorHealthPathIsNotExposed() throws IOException, InterruptedException {
-        var request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + managementPort + "/actuator/health"))
-                .GET()
-                .build();
-        var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        assertThat(response.statusCode()).isEqualTo(404);
+    void defaultActuatorHealthPathIsNotExposed() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isNotFound());
     }
 }
