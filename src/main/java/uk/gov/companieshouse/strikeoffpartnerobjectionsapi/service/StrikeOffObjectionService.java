@@ -17,9 +17,8 @@ public class StrikeOffObjectionService {
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
-        LOGGER.info("Creating objection for company number {} and partner reference {}",
-                companyNumber,
-                createObjectionRequest.getPartnerCaseReference());
+        LOGGER.info("Creating objection for company number {}",
+                companyNumber);
 
         final String objectionId = UUID.randomUUID().toString();
         final String selfLink = String.format(
