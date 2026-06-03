@@ -25,10 +25,6 @@ public class CreateObjectionRequest {
     @JsonProperty("partner_objection_reason")
     private String partnerObjectionReason;
 
-    public String getSubmissionCompanyName() {
-        return submissionCompanyName;
-    }
-
     public void setSubmissionCompanyName(final String submissionCompanyName) {
         this.submissionCompanyName = submissionCompanyName;
     }

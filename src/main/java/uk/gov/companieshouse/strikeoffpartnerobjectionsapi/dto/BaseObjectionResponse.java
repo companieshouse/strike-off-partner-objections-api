@@ -21,9 +21,6 @@ public class BaseObjectionResponse {
     @JsonProperty("etag")
     private String etag;
 
-    public BaseObjectionResponse() {
-    }
-
     public BaseObjectionResponse(final String objectionId,
                                  final String processingStatus,
                                  final Map<String, String> links,
