@@ -15,13 +15,18 @@ public class StrikeOffObjectionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StrikeOffObjectionService.class);
     private static final String INITIAL_PROCESSING_STATUS = "PENDING";
-    private static final Pattern CONTROL_CHARS = Pattern.compile("[\\r\\n\\t\\f\\u0000-\\u007F]");
+    private static final Pattern CONTROL_CHARS = Pattern.compile("[\\x00-\\x1F\\x7F]");
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
-        LOGGER.info("Creating objection for company number {} and partner reference {}",
-                sanitizeForLog(companyNumber),
-                sanitizeForLog(createObjectionRequest.getPartnerCaseReference()));
+        if (LOGGER.isInfoEnabled()) {
+            final String safeCompanyNumber = sanitizeForLog(companyNumber);
+            final String safePartnerCaseReference =
+                    sanitizeForLog(createObjectionRequest.getPartnerCaseReference());
+            LOGGER.info("Creating objection for company number {} and partner reference {}",
+                    safeCompanyNumber,
+                    safePartnerCaseReference);
+        }
 
         final String objectionId = UUID.randomUUID().toString();
         final String selfLink = String.format(
