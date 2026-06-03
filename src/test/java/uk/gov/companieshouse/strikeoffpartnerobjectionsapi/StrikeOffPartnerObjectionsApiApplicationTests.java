@@ -12,7 +12,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+        "management.health.mongo.enabled=false",
+        "management.endpoints.web.path-mapping.health=healthcheck"
+})
 class StrikeOffPartnerObjectionsApiApplicationTests {
 
     @Autowired
