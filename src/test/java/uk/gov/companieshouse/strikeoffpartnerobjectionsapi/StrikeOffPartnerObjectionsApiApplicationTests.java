@@ -14,8 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         properties = {
                 "management.endpoints.web.path-mapping.health=healthcheck",
                 "management.endpoint.health.probes.enabled=false",
-                "management.health.defaults.enabled=false",
-                "management.health.mongo.enabled=false"
+                "management.health.defaults.enabled=false"
         }
 )
 @AutoConfigureMockMvc
