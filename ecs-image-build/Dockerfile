@@ -3,6 +3,9 @@ FROM 416670754337.dkr.ecr.eu-west-2.amazonaws.com/ci-corretto-runtime-21:${IMAGE
 
 WORKDIR /opt
 COPY /app .
-COPY docker_start.sh .
+COPY docker_start.sh /opt/docker_start.sh
 
-CMD ["./docker_start.sh"]
+RUN chmod +x /opt/docker_start.sh \
+ && sed -i 's/\r$//' /opt/docker_start.sh
+
+CMD ["/opt/docker_start.sh"]
