@@ -12,8 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "management.health.mongo.enabled=false",
-                "management.endpoints.web.path-mapping.health=healthcheck"
+                "management.endpoints.web.path-mapping.health=healthcheck",
+                "management.endpoint.health.probes.enabled=false",
+                "management.health.defaults.enabled=false",
+                "management.health.mongo.enabled=false"
         }
 )
 @AutoConfigureMockMvc
