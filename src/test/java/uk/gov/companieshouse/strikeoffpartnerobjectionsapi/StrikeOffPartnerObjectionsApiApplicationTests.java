@@ -13,7 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "management.endpoints.web.path-mapping.health=healthcheck",
-                "management.endpoint.health.probes.enabled=false"
+                "management.endpoint.health.probes.enabled=false",
+                "management.endpoint.health.show-details=always"
         }
 )
 @AutoConfigureMockMvc
@@ -29,6 +30,10 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
     @Test
     void healthcheckEndpointReturnsUp() throws Exception {
         mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
+                .andDo(result -> {
+                    String body = result.getResponse().getContentAsString();
+                    System.out.println("Health response: " + body);
+                })
                 .andExpect(status().isOk());
     }
 
