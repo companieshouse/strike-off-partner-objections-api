@@ -1,20 +1,22 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
-import java.util.Map;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 
 @Service
 public class StrikeOffObjectionService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StrikeOffObjectionService.class);
-    private static final String INITIAL_PROCESSING_STATUS = "PENDING";
+    private static final ObjectionProcessingStatus INITIAL_PROCESSING_STATUS =
+            ObjectionProcessingStatus.OBJECTION_SUBMITTED;
     private static final Pattern CONTROL_CHARS = Pattern.compile("[\\x00-\\x1F\\x7F]");
 
     public BaseObjectionResponse createObjection(final String companyNumber,
@@ -34,12 +36,20 @@ public class StrikeOffObjectionService {
                 companyNumber,
                 objectionId);
 
-        return new BaseObjectionResponse(
-                objectionId,
-                INITIAL_PROCESSING_STATUS,
-                Map.of("self", selfLink),
-                Instant.now(),
-                UUID.randomUUID().toString());
+        BaseObjectionResponse response = new BaseObjectionResponse();
+        response.setCompanyNumber(companyNumber);
+        response.setSubmissionCompanyName(createObjectionRequest.getSubmissionCompanyName());
+        response.setObjectionId(objectionId);
+        response.setPartnerCaseReference(createObjectionRequest.getPartnerCaseReference());
+        response.setPartnerObjectionWorkstream(createObjectionRequest.getPartnerObjectionWorkstream());
+        response.setPartnerObjectionReason(createObjectionRequest.getPartnerObjectionReason());
+        response.setPartnerContactEmail(createObjectionRequest.getPartnerContactEmail());
+        response.setProcessingStatus(INITIAL_PROCESSING_STATUS);
+        response.setLinks(new BaseObjectionResponseLinks().self(selfLink));
+        response.setKind("strike-off-partner-objection#objection");
+        response.setCreatedAt(OffsetDateTime.now());
+        response.setEtag(UUID.randomUUID().toString());
+        return response;
     }
 
     private String sanitizeForLog(final String value) {

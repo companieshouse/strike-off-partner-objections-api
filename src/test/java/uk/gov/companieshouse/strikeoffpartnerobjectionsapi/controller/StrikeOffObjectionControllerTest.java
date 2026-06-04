@@ -13,11 +13,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionService;
 
-import java.time.Instant;
-import java.util.Map;
+import java.time.OffsetDateTime;
 
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,15 +43,18 @@ class StrikeOffObjectionControllerTest {
 
     @Test
     void createObjectionReturnsCreatedAndResponseBody() throws Exception {
-        when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
-                .thenReturn(new BaseObjectionResponse(
-                        "objection-123",
-                        "PENDING",
-                        Map.of("self", "/company/12345678/strike-off-partner-objections/objection-123"),
-                        Instant.parse("2026-06-03T12:00:00Z"),
-                        "etag-1"));
+        BaseObjectionResponse response = new BaseObjectionResponse();
+        response.setObjectionId("objection-123");
+        response.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
+        response.setLinks(new BaseObjectionResponseLinks()
+                .self("/company/12345678/strike-off-partner-objections/objection-123"));
+        response.setCreatedAt(OffsetDateTime.parse("2026-06-03T12:00:00Z"));
+        response.setEtag("etag-1");
 
-        mockMvc.perform(post("/strike-off-partner-objections-api/company/12345678/strike-off-partner-objections")
+        when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -63,7 +67,7 @@ class StrikeOffObjectionControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.objection_id").value("objection-123"))
-                .andExpect(jsonPath("$.processing_status").value("PENDING"))
+                .andExpect(jsonPath("$.processing_status").value("objection-submitted"))
                 .andExpect(jsonPath("$.links.self").value(
                         "/company/12345678/strike-off-partner-objections/objection-123"))
                 .andExpect(jsonPath("$.created_at").value("2026-06-03T12:00:00Z"))
@@ -74,7 +78,7 @@ class StrikeOffObjectionControllerTest {
 
     @Test
     void createObjectionWithMissingFieldsReturns400BadRequest() throws Exception {
-        mockMvc.perform(post("/strike-off-partner-objections-api/company/12345678/strike-off-partner-objections")
+        mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -87,7 +91,7 @@ class StrikeOffObjectionControllerTest {
 
     @Test
     void createObjectionWithEmptyFieldsReturns400BadRequest() throws Exception {
-        mockMvc.perform(post("/strike-off-partner-objections-api/company/12345678/strike-off-partner-objections")
+        mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -107,7 +111,7 @@ class StrikeOffObjectionControllerTest {
         when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
                 .thenThrow(new RuntimeException("Internal service error"));
 
-        mockMvc.perform(post("/strike-off-partner-objections-api/company/12345678/strike-off-partner-objections")
+        mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -126,7 +130,7 @@ class StrikeOffObjectionControllerTest {
         when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
                 .thenThrow(new RuntimeException("Database connection failed"));
 
-        mockMvc.perform(post("/strike-off-partner-objections-api/company/12345678/strike-off-partner-objections")
+        mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {

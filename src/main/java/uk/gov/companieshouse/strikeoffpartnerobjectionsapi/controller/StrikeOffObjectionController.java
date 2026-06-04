@@ -1,20 +1,15 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
-import jakarta.validation.Valid;
+import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerObjectionsInterface;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RequestMapping("/strike-off-partner-objections-api")
 @RestController
-public class StrikeOffObjectionController {
+public class StrikeOffObjectionController implements StrikeOffPartnerObjectionsInterface {
 
     private final StrikeOffObjectionService strikeOffObjectionService;
 
@@ -22,12 +17,17 @@ public class StrikeOffObjectionController {
         this.strikeOffObjectionService = strikeOffObjectionService;
     }
 
-    @PostMapping("/company/{company_number}/strike-off-partner-objections")
+    @Override
     public ResponseEntity<BaseObjectionResponse> createObjection(
-            @PathVariable("company_number") final String companyNumber,
-            @Valid @RequestBody final CreateObjectionRequest createObjectionRequest) {
+            final String companyNumber,
+            final CreateObjectionRequest createObjectionRequest) {
         BaseObjectionResponse response = strikeOffObjectionService.createObjection(companyNumber, createObjectionRequest);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @Override
+    public ResponseEntity<BaseObjectionResponse> getObjection(final String companyNumber, final String objectionId) {
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
     }
 }
 

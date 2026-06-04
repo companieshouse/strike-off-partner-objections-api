@@ -5,10 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
 
 
 class StrikeOffObjectionServiceTest {
@@ -28,9 +29,9 @@ class StrikeOffObjectionServiceTest {
         BaseObjectionResponse response = strikeOffObjectionService.createObjection(COMPANY_NUMBER, request);
 
         assertNotNull(response.getObjectionId());
-        assertEquals("PENDING", response.getProcessingStatus());
+        assertEquals(ObjectionProcessingStatus.OBJECTION_SUBMITTED, response.getProcessingStatus());
         assertNotNull(response.getLinks());
-        assertTrue(response.getLinks().get("self").contains("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections/"));
+        assertTrue(response.getLinks().getSelf().contains("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections/"));
         assertNotNull(response.getCreatedAt());
         assertNotNull(response.getEtag());
     }

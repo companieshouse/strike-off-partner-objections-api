@@ -1,4 +1,4 @@
-package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto;
+package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
