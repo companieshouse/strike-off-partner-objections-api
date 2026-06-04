@@ -23,8 +23,8 @@
         <sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
         <sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
         <sonar.host.url>${CODE_ANALYSIS_HOST_URL}</sonar.host.url>
-        <sonar.tests>test</sonar.tests>
-        <sonar.test.inclusions>**/test/**/**.test.*</sonar.test.inclusions>
+        <sonar.tests>${project.basedir}/src/test</sonar.tests>
+        <sonar.test.inclusions>${project.basedir}/src/test/**/**.test.*</sonar.test.inclusions>
         <sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
         <sonar.projectKey>uk.gov.companieshouse:strike-off-partner-objections-api</sonar.projectKey>
         <sonar.java.binaries>${project.basedir}/target,${project.basedir}/target/*</sonar.java.binaries>
