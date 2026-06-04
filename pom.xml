@@ -34,6 +34,9 @@
         <sonar.jacoco.reports>${project.basedir}/target/site</sonar.jacoco.reports>
         <sonar.java.binaries>${project.basedir}/target</sonar.java.binaries>
 		<sonar.exclusions>**/models/**</sonar.exclusions>
+        <sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
+        <sonar.projectKey>uk.gov.companieshouse:strike-off-partner-objections-api</sonar.projectKey>
+        <sonar.sources>src</sonar.sources>
 	</properties>
 	<dependencies>
 		<dependency>
