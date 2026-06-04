@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Start script for acsp-service
+# Start script for service
 
 export APP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROXY_ARGS=""
