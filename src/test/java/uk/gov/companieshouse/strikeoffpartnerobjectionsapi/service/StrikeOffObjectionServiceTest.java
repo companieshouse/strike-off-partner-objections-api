@@ -10,6 +10,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.CreateObjectionRe
 
 class StrikeOffObjectionServiceTest {
 
+    private static final String COMPANY_NUMBER = "12345678";
     private final StrikeOffObjectionService strikeOffObjectionService = new StrikeOffObjectionService();
 
     @Test
@@ -21,14 +22,13 @@ class StrikeOffObjectionServiceTest {
         request.setPartnerContactEmail("owner@example.com");
         request.setPartnerObjectionReason("Supporting documents provided");
 
-        BaseObjectionResponse response = strikeOffObjectionService.createObjection("12345678", request);
+        BaseObjectionResponse response = strikeOffObjectionService.createObjection(COMPANY_NUMBER, request);
 
         assertNotNull(response.getObjectionId());
         assertEquals("PENDING", response.getProcessingStatus());
         assertNotNull(response.getLinks());
-        assertTrue(response.getLinks().get("self").contains("/company/12345678/strike-off-partner-objections/"));
+        assertTrue(response.getLinks().get("self").contains("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections/"));
         assertNotNull(response.getCreatedAt());
         assertNotNull(response.getEtag());
     }
 }
-
