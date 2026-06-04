@@ -12,15 +12,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "management.endpoints.web.path-mapping.health=healthcheck",
-                "management.endpoint.health.probes.enabled=false",
-                "management.endpoint.health.show-details=always"
+                "management.endpoint.health.probes.enabled=false"
         }
 )
 @AutoConfigureMockMvc
@@ -45,11 +44,8 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
     @Test
     void healthcheckEndpointReturnsUp() throws Exception {
         mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
-                .andDo(result -> {
-                    String body = result.getResponse().getContentAsString();
-                    System.out.println("Health response: " + body);
-                })
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test
