@@ -63,4 +63,4 @@ sonar:
 
 .PHONY: sonar-pr-analysis
 sonar-pr-analysis:
-	mvn verify sonar:sonar
+	mvn verify sonar:sonar -P sonar-pr-analysis
