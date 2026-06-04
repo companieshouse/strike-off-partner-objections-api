@@ -2,12 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>uk.gov.companieshouse</groupId>
-        <artifactId>companies-house-parent</artifactId>
-        <version>2.1.12</version>
-        <relativePath/>
-    </parent>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.0.6</version>
+		<relativePath/>
+	</parent>
+	<groupId>uk.gov.companieshouse</groupId>
 	<artifactId>strike-off-partner-objections-api</artifactId>
 	<version>unversioned</version>
 	<properties>
@@ -17,16 +18,11 @@
 		<!-- Override vulnerable Tomcat version -->
 		<tomcat.version>11.0.22</tomcat.version>
 		<private-api-sdk-java.version>6.0.19</private-api-sdk-java.version>
-        <!-- Spring Boot version -->
-        <spring.boot.version>4.0.6</spring.boot.version>
-        <!-- Plugin versions -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+
         <!-- Sonar Plugin and Configuration -->
         <sonar-maven-plugin.version>4.0.0.4121</sonar-maven-plugin.version>
         <sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
         <sonar.host.url>${CODE_ANALYSIS_HOST_URL}</sonar.host.url>
-        <sonar.login></sonar.login>
-        <sonar.password></sonar.password>
         <sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
         <sonar.projectKey>uk.gov.companieshouse:strike-off-partner-objections-api</sonar.projectKey>
         <sonar.java.binaries>${project.basedir}/target,${project.basedir}/target/*</sonar.java.binaries>
@@ -35,19 +31,8 @@
         </sonar.coverage.jacoco.xmlReportPaths>
         <sonar.jacoco.reports>${project.basedir}/target/site</sonar.jacoco.reports>
         <sonar.java.binaries>${project.basedir}/target</sonar.java.binaries>
-        <sonar.exclusions>**/models/**</sonar.exclusions>
+		<sonar.exclusions>**/models/**</sonar.exclusions>
 	</properties>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -89,24 +74,28 @@
 		</dependency>
 	</dependencies>
 
+    <profiles>
+        <profile>
+            <id>sonar-pr-analysis</id>
+            <properties>
+                <sonar.pullrequest.branch>${CODE_ANALYSIS_PULL_REQUEST_BRANCH}</sonar.pullrequest.branch>
+                <sonar.pullrequest.key>${CODE_ANALYSIS_PULL_REQUEST_KEY}</sonar.pullrequest.key>
+                <sonar.pullrequest.base>${CODE_ANALYSIS_PULL_REQUEST_BASE}</sonar.pullrequest.base>
+                <sonar.pullrequest.github.repository>${CODE_ANALYSIS_PULL_REQUEST_REPO}</sonar.pullrequest.github.repository>
+            </properties>
+        </profile>
+    </profiles>
+
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven-compiler-plugin.version}</version>
-				<configuration>
-					<release>21</release>
-				</configuration>
-			</plugin>
-			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.sonarsource.scanner.maven</groupId>
-                <artifactId>sonar-maven-plugin</artifactId>
-                <version>${sonar-maven-plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>${sonar-maven-plugin.version}</version>
 			</plugin>
 		</plugins>
 	</build>
