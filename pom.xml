@@ -35,8 +35,10 @@
         <sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
 		<sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
 		<sonar.projectKey>uk.gov.companieshouse:strike-off-partner-objections-api</sonar.projectKey>
-		<sonar.sources>src/main</sonar.sources>
-		<sonar.tests>src/test</sonar.tests>
+		<sonar.sources>src/main/java</sonar.sources>
+		<sonar.tests>src/test/java</sonar.tests>
+		<sonar.test.inclusions>src/test/java/**/*.java</sonar.test.inclusions>
+		<sonar.junit.reportPaths>${project.build.directory}/surefire-reports</sonar.junit.reportPaths>
 		<sonar.coverage.jacoco.xmlReportPaths>
 			${project.build.directory}/site/jacoco/jacoco.xml
 		</sonar.coverage.jacoco.xmlReportPaths>
