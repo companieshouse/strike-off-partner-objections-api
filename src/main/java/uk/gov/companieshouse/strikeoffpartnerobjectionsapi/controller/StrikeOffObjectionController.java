@@ -1,8 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import jakarta.validation.Valid;
+import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

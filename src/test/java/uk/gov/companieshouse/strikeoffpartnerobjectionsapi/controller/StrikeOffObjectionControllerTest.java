@@ -19,6 +19,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObje
 import java.time.Instant;
 import java.util.Map;
 
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,9 +56,9 @@ class StrikeOffObjectionControllerTest {
                                 {
                                   \"submission_company_name\": \"ACME LTD\",
                                   \"partner_case_reference\": \"CASE-123\",
-                                  \"partner_objection_workstream\": \"DS01\",
+                                  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",
                                   \"partner_contact_email\": \"case.owner@example.com\",
-                                  \"partner_objection_reason\": \"Evidence supplied by partner\"
+                                  \"partner_objection_reason\": \"compliance-issue-outstanding\"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -112,9 +113,9 @@ class StrikeOffObjectionControllerTest {
                                 {
                                   \"submission_company_name\": \"ACME LTD\",
                                   \"partner_case_reference\": \"CASE-123\",
-                                  \"partner_objection_workstream\": \"DS01\",
+                                  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",
                                   \"partner_contact_email\": \"case.owner@example.com\",
-                                  \"partner_objection_reason\": \"Evidence supplied by partner\"
+                                  \"partner_objection_reason\": \"compliance-issue-outstanding\"
                                 }
                                 """))
                 .andExpect(status().isInternalServerError());
@@ -131,9 +132,9 @@ class StrikeOffObjectionControllerTest {
                                 {
                                   \"submission_company_name\": \"ACME LTD\",
                                   \"partner_case_reference\": \"CASE-123\",
-                                  \"partner_objection_workstream\": \"DS01\",
+                                  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",
                                   \"partner_contact_email\": \"case.owner@example.com\",
-                                  \"partner_objection_reason\": \"Evidence supplied by partner\"
+                                  \"partner_objection_reason\": \"compliance-issue-outstanding\"
                                 }
                                 """))
                 .andExpect(status().isInternalServerError());

@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.CreateObjectionRequest;
+
 
 class StrikeOffObjectionServiceTest {
 
@@ -18,9 +21,9 @@ class StrikeOffObjectionServiceTest {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
-        request.setPartnerObjectionWorkstream("DS01");
+        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.values()[0]);
         request.setPartnerContactEmail("owner@example.com");
-        request.setPartnerObjectionReason("Supporting documents provided");
+        request.setPartnerObjectionReason(PartnerObjectionReason.values()[0]);
 
         BaseObjectionResponse response = strikeOffObjectionService.createObjection(COMPANY_NUMBER, request);
 

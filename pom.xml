@@ -30,7 +30,9 @@
 		<private-api-sdk-java.version>6.0.19</private-api-sdk-java.version>
 
 		<!--sonar configuration-->
-		<sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
+        <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
+		<!--suppress UnresolvedMavenProperty -->
+        <sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
 		<sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
 		<sonar.projectKey>uk.gov.companieshouse:strike-off-partner-objections-api</sonar.projectKey>
 		<sonar.sources>src/main</sonar.sources>
@@ -165,7 +167,8 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>${maven-surefire-plugin.version}</version>
 				<configuration>
-					<argLine>${surefireArgLine}</argLine>
+					<!--suppress UnresolvedMavenProperty -->
+                    <argLine>${surefireArgLine}</argLine>
 				</configuration>
 			</plugin>
 			<!-- Usage: executes tests and generate reports -->

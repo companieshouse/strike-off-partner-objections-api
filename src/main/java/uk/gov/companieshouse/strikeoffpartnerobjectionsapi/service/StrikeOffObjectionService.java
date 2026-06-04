@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.BaseObjectionResponse;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.dto.CreateObjectionRequest;
 
 @Service
 public class StrikeOffObjectionService {
