@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         }
 )
 @AutoConfigureMockMvc
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class StrikeOffPartnerObjectionsApiApplicationTests {
 
     @Container
@@ -58,3 +58,4 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
                 .andExpect(status().isNotFound());
     }
 }
+
