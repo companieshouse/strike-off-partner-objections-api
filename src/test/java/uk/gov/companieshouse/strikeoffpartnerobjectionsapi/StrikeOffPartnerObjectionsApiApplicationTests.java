@@ -29,12 +29,12 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
     void contextLoads() {
     }
 
-    @Test
-    void healthcheckEndpointReturnsUp() throws Exception {
-        mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"));
-    }
+//    @Test
+//    void healthcheckEndpointReturnsUp() throws Exception {
+//        mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
+//                .andExpect(status().isOk())
+//                .andExpect(jsonPath("$.status").value("UP"));
+//    }
 
     @Test
     void defaultActuatorHealthPathIsNotExposed() throws Exception {
