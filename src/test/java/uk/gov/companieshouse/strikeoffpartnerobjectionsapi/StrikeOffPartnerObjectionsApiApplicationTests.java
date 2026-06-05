@@ -40,7 +40,7 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
 
         int statusCode = result.getResponse().getStatus();
         assertTrue(statusCode == 200 || statusCode == 503,
-                "Health endpoint should return 200 (UP) or 503 (DOWN/OUT_OF_SERVICE)");
+                "Health endpoint should return 200 (UP) or 503 (DOWN/OUT_OF_SERVICE)!");
     }
 
     @Test
