@@ -4,4 +4,4 @@
 
 PORT=8080
 
-exec java -jar -Dserver.port="${PORT}" "strike-off-partner-objections-api.jar"
+exec java -Dserver.port="${PORT}" -jar "strike-off-partner-objections-api.jar"
