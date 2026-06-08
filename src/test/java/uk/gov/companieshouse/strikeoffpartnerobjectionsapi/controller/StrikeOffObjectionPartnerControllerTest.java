@@ -16,7 +16,7 @@ import org.springframework.web.context.WebApplicationContext;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionService;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
 
 import java.time.OffsetDateTime;
 
@@ -26,13 +26,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-class StrikeOffObjectionControllerTest {
+class StrikeOffObjectionPartnerControllerTest {
 
     @Autowired
     private WebApplicationContext context;
 
     @MockitoBean
-    private StrikeOffObjectionService strikeOffObjectionService;
+    private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
 
     private MockMvc mockMvc;
 
@@ -51,7 +51,7 @@ class StrikeOffObjectionControllerTest {
         response.setCreatedAt(OffsetDateTime.parse("2026-06-03T12:00:00Z"));
         response.setEtag("etag-1");
 
-        when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
+        when(strikeOffObjectionPartnerService.createObjection(eq("12345678"), any()))
                 .thenReturn(response);
 
         mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
@@ -73,7 +73,7 @@ class StrikeOffObjectionControllerTest {
                 .andExpect(jsonPath("$.created_at").value("2026-06-03T12:00:00Z"))
                 .andExpect(jsonPath("$.etag").value("etag-1"));
 
-        verify(strikeOffObjectionService).createObjection(eq("12345678"), any());
+        verify(strikeOffObjectionPartnerService).createObjection(eq("12345678"), any());
     }
 
     @Test
@@ -86,7 +86,8 @@ class StrikeOffObjectionControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid request: missing or invalid required fields"));
+                .andExpect(jsonPath("$.error_code").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("Invalid request: missing or invalid required fields"));
     }
 
     @Test
@@ -103,12 +104,13 @@ class StrikeOffObjectionControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid request: missing or invalid required fields"));
+                .andExpect(jsonPath("$.error_code").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("Invalid request: missing or invalid required fields"));
     }
 
     @Test
     void createObjectionWhenServiceThrowsExceptionReturns500() throws Exception {
-        when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
+        when(strikeOffObjectionPartnerService.createObjection(eq("12345678"), any()))
                 .thenThrow(new RuntimeException("Internal service error"));
 
         mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
@@ -122,12 +124,14 @@ class StrikeOffObjectionControllerTest {
                                   \"partner_objection_reason\": \"compliance-issue-outstanding\"
                                 }
                                 """))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error_code").value("internal_server_error"))
+                .andExpect(jsonPath("$.message").value("Internal Server Error"));
     }
 
     @Test
     void createObjectionWhenDatabaseUnavailableReturns500() throws Exception {
-        when(strikeOffObjectionService.createObjection(eq("12345678"), any()))
+        when(strikeOffObjectionPartnerService.createObjection(eq("12345678"), any()))
                 .thenThrow(new RuntimeException("Database connection failed"));
 
         mockMvc.perform(post("/company/12345678/strike-off-partner-objections")
@@ -141,7 +145,8 @@ class StrikeOffObjectionControllerTest {
                                   \"partner_objection_reason\": \"compliance-issue-outstanding\"
                                 }
                                 """))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error_code").value("internal_server_error"))
+                .andExpect(jsonPath("$.message").value("Internal Server Error"));
     }
 }
-

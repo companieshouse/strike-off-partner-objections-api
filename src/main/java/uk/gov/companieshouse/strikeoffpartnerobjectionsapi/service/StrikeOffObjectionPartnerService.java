@@ -12,9 +12,9 @@ import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 
 @Service
-public class StrikeOffObjectionService {
+public class StrikeOffObjectionPartnerService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StrikeOffObjectionService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StrikeOffObjectionPartnerService.class);
     private static final ObjectionProcessingStatus INITIAL_PROCESSING_STATUS =
             ObjectionProcessingStatus.OBJECTION_SUBMITTED;
     private static final Pattern CONTROL_CHARS = Pattern.compile("[\\x00-\\x1F\\x7F]");
@@ -59,4 +59,3 @@ public class StrikeOffObjectionService {
         return CONTROL_CHARS.matcher(value).replaceAll("_");
     }
 }
-

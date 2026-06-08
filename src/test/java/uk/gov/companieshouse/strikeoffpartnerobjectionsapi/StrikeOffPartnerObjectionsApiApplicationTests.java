@@ -1,7 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,7 +32,6 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
         // Intentionally empty: verifies the Spring application context starts successfully.
     }
 
-    @Disabled("Currently failing with 503, to resolve")
     @Test
     void healthcheckEndpointReturnsUp() throws Exception {
         MvcResult result = mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))

@@ -12,10 +12,11 @@ import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 
 
-class StrikeOffObjectionServiceTest {
+class StrikeOffObjectionPartnerServiceTest {
 
     private static final String COMPANY_NUMBER = "12345678";
-    private final StrikeOffObjectionService strikeOffObjectionService = new StrikeOffObjectionService();
+    private final StrikeOffObjectionPartnerService strikeOffObjectionPartnerService =
+            new StrikeOffObjectionPartnerService();
 
     @Test
     void createObjectionReturnsPopulatedBaseObjectionResponse() {
@@ -26,7 +27,8 @@ class StrikeOffObjectionServiceTest {
         request.setPartnerContactEmail("owner@example.com");
         request.setPartnerObjectionReason(PartnerObjectionReason.values()[0]);
 
-        BaseObjectionResponse response = strikeOffObjectionService.createObjection(COMPANY_NUMBER, request);
+        BaseObjectionResponse response =
+                strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
 
         assertNotNull(response.getObjectionId());
         assertEquals(ObjectionProcessingStatus.OBJECTION_SUBMITTED, response.getProcessingStatus());
