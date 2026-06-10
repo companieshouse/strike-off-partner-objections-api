@@ -2,8 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -42,11 +41,11 @@ class StrikeOffObjectionPartnerIntegrationTest {
         request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
 
-        OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC);
+        Instant before = Instant.now();
 
         strikeOffObjectionPartnerService.createObjection(companyNumber, request);
 
-        OffsetDateTime after = OffsetDateTime.now(ZoneOffset.UTC);
+        Instant after = Instant.now();
 
         List<ObjectionDocument> savedDocs = objectionRepository.findAll();
         assertThat(savedDocs).hasSize(1);
@@ -70,7 +69,6 @@ class StrikeOffObjectionPartnerIntegrationTest {
         assertThat(saved.getLinks().getSelf()).startsWith("/company/01234567/strike-off-partner-objections/");
 
         assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getCreatedAt().getOffset()).isEqualTo(ZoneOffset.UTC);
         assertThat(saved.getCreatedAt()).isAfterOrEqualTo(before);
         assertThat(saved.getCreatedAt()).isBeforeOrEqualTo(after);
     }

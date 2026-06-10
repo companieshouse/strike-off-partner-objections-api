@@ -9,9 +9,6 @@ import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_SUBMITTED;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.OBJECTION_KIND;
 
@@ -25,13 +22,11 @@ public interface ObjectionRequestMapper {
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, objectionId))")
     @Mapping(target = "companyNumber", source = "companyNumber")
     @Mapping(target = "partnerOrganisation", source = "partnerOrganisation")
-
     @Mapping(target = "submissionCompanyName", source = "request.submissionCompanyName")
     @Mapping(target = "partnerCaseReference", source = "request.partnerCaseReference")
     @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream", qualifiedByName = "workstreamToString")
     @Mapping(target = "partnerObjectionReason", source = "request.partnerObjectionReason", qualifiedByName = "reasonToString")
     @Mapping(target = "partnerContactEmail", source = "request.partnerContactEmail")
-    @Mapping(target = "createdAt", expression = "java(createTime())")
     ObjectionDocument toObjectionDocument(
             CreateObjectionRequest request,
             String companyNumber,
@@ -54,9 +49,6 @@ public interface ObjectionRequestMapper {
         return value == null ? null : value.getValue();
     }
 
-    default OffsetDateTime createTime() {
-        return OffsetDateTime.now(ZoneOffset.UTC);
-    }
 
     default ObjectionLinks buildLinks(String companyNumber, String objectionId) {
         ObjectionLinks links = new ObjectionLinks();

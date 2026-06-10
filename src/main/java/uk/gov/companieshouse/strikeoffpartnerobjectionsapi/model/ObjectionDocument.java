@@ -1,7 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -41,8 +42,9 @@ public class ObjectionDocument {
 	@Field("processing_status")
 	private String processingStatus;
 
+	@CreatedDate
 	@Field("created_at")
-	private OffsetDateTime createdAt;
+	private Instant createdAt;
 
 	private String etag;
 
@@ -118,12 +120,8 @@ public class ObjectionDocument {
 		this.processingStatus = processingStatus;
 	}
 
-	public OffsetDateTime getCreatedAt() {
+	public Instant getCreatedAt() {
 		return createdAt;
-	}
-
-	public void setCreatedAt(OffsetDateTime createdAt) {
-		this.createdAt = createdAt;
 	}
 
 	public String getEtag() {

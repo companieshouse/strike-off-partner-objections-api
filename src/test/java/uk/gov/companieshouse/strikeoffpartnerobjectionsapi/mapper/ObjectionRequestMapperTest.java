@@ -39,7 +39,6 @@ class ObjectionRequestMapperTest {
         assertThat(doc.getPartnerOrganisation()).isEqualTo(PARTNER_ORG);
         assertThat(doc.getObjectionId()).isEqualTo(OBJECTION_ID);
         assertThat(doc.getEtag()).isEqualTo(ETAG);
-        assertThat(doc.getCreatedAt()).isNotNull();
     }
 
     @Test
