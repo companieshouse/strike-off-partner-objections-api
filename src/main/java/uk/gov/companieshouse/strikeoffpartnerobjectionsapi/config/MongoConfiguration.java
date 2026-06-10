@@ -10,9 +10,9 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 /**
  * MongoDB configuration for the Strike Off Partner Objections API.
- * Enables MongoDB auditing with a custom {@link DateTimeProvider} that supplies * the current UTC timestamp as an {@link Instant} for audited fields such as{@code @CreatedDate} and {@code @LastModifiedDate}.
- * Using {@link Instant} ensures timestamps are stored as BSON Date (UTC epoch milliseconds) * in MongoDB, avoiding timezone ambiguity.
- *
+ * Enables MongoDB auditing with a custom {@link DateTimeProvider} that supplies
+ * the current UTC timestamp as an {@link Instant} for audited fields such as{@code @CreatedDate} and {@code @LastModifiedDate}.
+ * Using {@link Instant} ensures timestamps are stored as BSON Date (UTC epoch milliseconds) in MongoDB, avoiding timezone ambiguity.
  */
 @Configuration
 @EnableMongoAuditing(dateTimeProviderRef = "mongodbDatetimeProvider")
