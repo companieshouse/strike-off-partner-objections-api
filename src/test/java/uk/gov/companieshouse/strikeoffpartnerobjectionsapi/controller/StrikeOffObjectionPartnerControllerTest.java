@@ -19,6 +19,8 @@ import java.time.OffsetDateTime;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -26,7 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -43,7 +45,15 @@ import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
 
-@SpringBootTest
+import java.time.OffsetDateTime;
+
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@Tag("unit-test")
+@WebMvcTest(controllers = StrikeOffObjectionPartnerController.class)
 class StrikeOffObjectionPartnerControllerTest {
 
     private static final String COMPANY_NUMBER = "12345678";
@@ -60,7 +70,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
-    private WebApplicationContext context;
+    private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
