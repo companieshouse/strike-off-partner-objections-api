@@ -47,7 +47,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObje
 class StrikeOffObjectionPartnerControllerTest {
 
     private static final String COMPANY_NUMBER = "12345678";
-    private static final String CREATE_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
+    private static final String CREATE_OBJECTION_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
     private static final String VALID_REASON = "compliance-issue-outstanding";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
@@ -57,6 +57,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MULTIPLE_ERRORS = "MULTIPLE_ERRORS";
+    private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
     private WebApplicationContext context;
@@ -88,7 +89,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void missingBodyReturnsMissingRequiredParameter() throws Exception {
-        assertBadRequestWithoutServiceCall(null, MISSING_REQUIRED_PARAMETER);
+        postCreateObjectionWithoutBody()
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+        verifyNoInteractions(strikeOffObjectionPartnerService);
     }
 
     @ParameterizedTest
@@ -120,7 +124,8 @@ class StrikeOffObjectionPartnerControllerTest {
     @Test
     void emailMaxBoundaryValidReturnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
-        request.put("partner_contact_email", "a".repeat(249) + "@t.com");
+        request.put("partner_contact_email", "a".repeat(64) + "@"
+                + "b".repeat(186) + ".com");
 
         postCreateObjection(request)
                 .andExpect(status().isCreated());
@@ -173,6 +178,23 @@ class StrikeOffObjectionPartnerControllerTest {
         requestMutator.accept(request);
 
         assertBadRequestWithoutServiceCall(request, INVALID_REASON);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "compliance-issue-outstanding",
+            "financial-issue-outstanding",
+            "compliance-and-financial-issue-outstanding",
+            "other"
+    })
+    void validReasonValuesReturnCreated(String reason) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_objection_reason", reason);
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
     }
 
     @Test
@@ -268,7 +290,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void malformedJsonReturnsMissingRequiredParameter() throws Exception {
-        mockMvc.perform(post(CREATE_URL)
+        mockMvc.perform(post(CREATE_OBJECTION_URL)
                         .contentType(APPLICATION_JSON)
                         .content("{\"partner_contact_email\":\"valid@email.com\","))
                 .andExpect(status().isBadRequest())
@@ -349,12 +371,13 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     private ResultActions postCreateObjection(JsonNode payload) throws Exception {
-        if (payload == null) {
-            return mockMvc.perform(post(CREATE_URL).contentType(APPLICATION_JSON));
-        }
-        return mockMvc.perform(post(CREATE_URL)
+        return mockMvc.perform(post(CREATE_OBJECTION_URL)
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)));
+    }
+
+    private ResultActions postCreateObjectionWithoutBody() throws Exception {
+        return mockMvc.perform(post(CREATE_OBJECTION_URL).contentType(APPLICATION_JSON));
     }
 
     private static Stream<Arguments> invalidEmailCases() {
@@ -373,23 +396,6 @@ class StrikeOffObjectionPartnerControllerTest {
         );
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "compliance-issue-outstanding",
-            "financial-issue-outstanding",
-            "compliance-and-financial-issue-outstanding",
-            "other"
-    })
-    void validReasonValuesReturnCreated(String reason) throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_objection_reason", reason);
-
-        postCreateObjection(request)
-                .andExpect(status().isCreated());
-
-        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
-    }
-
     private static Stream<Arguments> invalidReasonCases() {
         return Stream.of(
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", "invalid-value")),
@@ -403,14 +409,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     private static Stream<Arguments> wrongTypeCases() {
         return Stream.of(
-                Arguments.of("partner_contact_email", objectMapper().createArrayNode().add("not-a-string")),
-                Arguments.of("partner_case_reference", objectMapper().createObjectNode().put("bad", "value")),
-                Arguments.of("submission_company_name", objectMapper().createArrayNode().add("not-a-string"))
+                Arguments.of("partner_contact_email", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string")),
+                Arguments.of("partner_case_reference", STATIC_OBJECT_MAPPER.createObjectNode().put("bad", "value")),
+                Arguments.of("submission_company_name", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string"))
         );
-    }
-
-    private static ObjectMapper objectMapper() {
-        return new ObjectMapper();
     }
 
     private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
