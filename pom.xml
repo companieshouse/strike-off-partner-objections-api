@@ -28,6 +28,7 @@
         <tomcat.version>11.0.22</tomcat.version>
         <private-api-sdk-java.version>6.0.19</private-api-sdk-java.version>
         <testcontainers.version>1.20.4</testcontainers.version>
+        <api-security-java.version>2.0.27</api-security-java.version>
 
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
 		<!--sonar configuration-->
@@ -188,6 +189,11 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
             <version>${org.mapstruct.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>uk.gov.companieshouse</groupId>
+            <artifactId>api-security-java</artifactId>
+            <version>${api-security-java.version}</version>
         </dependency>
     </dependencies>
 
