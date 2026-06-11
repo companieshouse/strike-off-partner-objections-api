@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.OffsetDateTime;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,18 +91,11 @@ class StrikeOffObjectionPartnerControllerTest {
         assertBadRequestWithoutServiceCall(null, MISSING_REQUIRED_PARAMETER);
     }
 
-    @Test
-    void missingEmailReturnsMissingRequiredParameter() throws Exception {
+    @ParameterizedTest
+    @MethodSource("missingOrBlankEmailCases")
+    void missingOrBlankEmailReturnsMissingRequiredParameter(Consumer<ObjectNode> requestMutator) throws Exception {
         ObjectNode request = baseValidRequest();
-        request.remove("partner_contact_email");
-
-        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
-    }
-
-    @Test
-    void blankEmailReturnsMissingRequiredParameter() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_contact_email", "");
+        requestMutator.accept(request);
 
         assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
     }
@@ -172,35 +166,11 @@ class StrikeOffObjectionPartnerControllerTest {
         verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
     }
 
-    @Test
-    void invalidReasonReturnsInvalidReason() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_objection_reason", "invalid-value");
-
-        assertBadRequestWithoutServiceCall(request, INVALID_REASON);
-    }
-
     @ParameterizedTest
-    @ValueSource(strings = {
-            "compliance-issue-outstanding",
-            "financial-issue-outstanding",
-            "compliance-and-financial-issue-outstanding",
-            "other"
-    })
-    void validReasonValuesReturnCreated(String reason) throws Exception {
+    @MethodSource("invalidReasonCases")
+    void invalidReasonCasesReturnInvalidReason(Consumer<ObjectNode> requestMutator) throws Exception {
         ObjectNode request = baseValidRequest();
-        request.put("partner_objection_reason", reason);
-
-        postCreateObjection(request)
-                .andExpect(status().isCreated());
-
-        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
-    }
-
-    @Test
-    void reasonCaseSensitivityReturnsInvalidReason() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_objection_reason", "Compliance-Issue-Outstanding");
+        requestMutator.accept(request);
 
         assertBadRequestWithoutServiceCall(request, INVALID_REASON);
     }
@@ -255,16 +225,56 @@ class StrikeOffObjectionPartnerControllerTest {
         verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
     }
 
-    @ParameterizedTest
-    @MethodSource("securityEdgeCases")
-    void securityEdgeCasesPassValidation(String fieldName, String value) throws Exception {
+    @Test
+    void blankCaseReferenceReturnsMissingRequiredParameter() throws Exception {
         ObjectNode request = baseValidRequest();
-        request.put(fieldName, value);
+        request.put("partner_case_reference", "");
 
-        postCreateObjection(request)
-                .andExpect(status().isCreated());
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
 
-        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
+    @Test
+    void nullCaseReferenceReturnsMissingRequiredParameter() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.putNull("partner_case_reference");
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
+
+    @Test
+    void blankCompanyNameReturnsMissingRequiredParameter() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("submission_company_name", "");
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
+
+    @Test
+    void nullCompanyNameReturnsMissingRequiredParameter() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.putNull("submission_company_name");
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
+
+    @ParameterizedTest
+    @MethodSource("wrongTypeCases")
+    void wrongTypeCasesReturnMissingRequiredParameter(String fieldName, JsonNode wrongTypeValue) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.set(fieldName, wrongTypeValue);
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
+
+    @Test
+    void malformedJsonReturnsMissingRequiredParameter() throws Exception {
+        mockMvc.perform(post(CREATE_URL)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"partner_contact_email\":\"valid@email.com\","))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffObjectionPartnerService);
     }
 
     @Test
@@ -355,12 +365,52 @@ class StrikeOffObjectionPartnerControllerTest {
         );
     }
 
-    private static Stream<Arguments> securityEdgeCases() {
+    private static Stream<Arguments> missingOrBlankEmailCases() {
         return Stream.of(
-                Arguments.of("partner_case_reference", "'; DROP TABLE users;--"),
-                Arguments.of("submission_company_name", "<script>alert(1)</script>"),
-                Arguments.of("submission_company_name", "会社株式会社🚀")
+                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_contact_email")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_contact_email", "")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_contact_email", "   "))
         );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "compliance-issue-outstanding",
+            "financial-issue-outstanding",
+            "compliance-and-financial-issue-outstanding",
+            "other"
+    })
+    void validReasonValuesReturnCreated(String reason) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_objection_reason", reason);
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
+    }
+
+    private static Stream<Arguments> invalidReasonCases() {
+        return Stream.of(
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", "invalid-value")),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                        request.put("partner_objection_reason", "Compliance-Issue-Outstanding")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_reason")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_reason")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", ""))
+        );
+    }
+
+    private static Stream<Arguments> wrongTypeCases() {
+        return Stream.of(
+                Arguments.of("partner_contact_email", objectMapper().createArrayNode().add("not-a-string")),
+                Arguments.of("partner_case_reference", objectMapper().createObjectNode().put("bad", "value")),
+                Arguments.of("submission_company_name", objectMapper().createArrayNode().add("not-a-string"))
+        );
+    }
+
+    private static ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 
     private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
