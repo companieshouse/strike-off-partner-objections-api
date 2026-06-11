@@ -19,11 +19,10 @@ import uk.gov.companieshouse.api.objections.model.ApiError;
 public class GlobalExceptionHandler {
 
     private static final String DEFAULT_RESPONSE_STATUS_MESSAGE = "Request failed";
-    private static final String VALIDATION_MESSAGE = "Invalid request";
+    private static final String VALIDATION_MESSAGE = "Invalid Message";
     private static final String ERROR_CODE = "error";
     private static final String INTERNAL_SERVER_ERROR_CODE = "internal_server_error";
     private static final String INTERNAL_SERVER_ERROR_MESSAGE = "Internal Server Error";
-    private static final String MULTIPLE_ERRORS = "MULTIPLE_ERRORS";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
@@ -45,7 +44,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
         List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
         if (fieldErrors.size() > 1) {
-            return badRequest(MULTIPLE_ERRORS, VALIDATION_MESSAGE);
+            // Collect all error codes from all field errors
+            String allErrorCodes = fieldErrors.stream()
+                    .map(this::mapFieldError)
+                    .distinct()
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse(MISSING_REQUIRED_PARAMETER);
+            return badRequest(allErrorCodes, VALIDATION_MESSAGE);
         }
 
         if (fieldErrors.isEmpty()) {
