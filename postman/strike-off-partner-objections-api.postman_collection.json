@@ -74,6 +74,51 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "Create Withdrawals",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Host",
+            "value": "{{hostHeader}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "test-request-001",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "strike-off-partner-objections-api",
+            "company",
+            "{{companyNumber}}",
+            "strike-off-partner-objections-withdrawals"
+          ]
+        }
+      },
+      "response": []
     }
   ],
   "variable": [
