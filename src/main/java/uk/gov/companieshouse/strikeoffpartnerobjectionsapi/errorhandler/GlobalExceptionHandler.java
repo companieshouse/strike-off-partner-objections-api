@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String INVALID_LENGTH = "INVALID_LENGTH";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
+    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String SIZE = "Size";
     private static final String EMAIL = "Email";
@@ -121,6 +122,9 @@ public class GlobalExceptionHandler {
         }
 
         if (PARTNER_OBJECTION_WORKSTREAM.equals(field)) {
+            if (rejectedLength == 0) {
+                return MISSING_WORKSTREAM;
+            }
             return INVALID_WORKSTREAM;
         }
 
