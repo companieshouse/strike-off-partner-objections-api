@@ -56,7 +56,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String INVALID_LENGTH = "INVALID_LENGTH";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
-    private static final String MULTIPLE_ERRORS = "MULTIPLE_ERRORS";
+    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
 
     @Autowired
@@ -102,14 +102,6 @@ class StrikeOffObjectionPartnerControllerTest {
         requestMutator.accept(request);
 
         assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
-    }
-
-    @Test
-    void missingWorkstreamReturnsInvalidWorkstream() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.remove("partner_objection_workstream");
-
-        assertBadRequestWithoutServiceCall(request, INVALID_WORKSTREAM);
     }
 
     @ParameterizedTest
@@ -197,28 +189,14 @@ class StrikeOffObjectionPartnerControllerTest {
         verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
     }
 
-    @Test
-    void nullWorkstreamReturnsInvalidWorkstream() throws Exception {
+    @ParameterizedTest
+    @MethodSource("workstreamCases")
+    void workstreamCasesReturnExpectedErrorCode(Consumer<ObjectNode> requestMutator,
+                                                String expectedErrorCode) throws Exception {
         ObjectNode request = baseValidRequest();
-        request.putNull("partner_objection_workstream");
+        requestMutator.accept(request);
 
-        assertBadRequestWithoutServiceCall(request, INVALID_WORKSTREAM);
-    }
-
-    @Test
-    void blankWorkstreamReturnsInvalidWorkstream() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_objection_workstream", "");
-
-        assertBadRequestWithoutServiceCall(request, INVALID_WORKSTREAM);
-    }
-
-    @Test
-    void workstreamTooLongReturnsInvalidWorkstream() throws Exception {
-        ObjectNode request = baseValidRequest();
-        request.put("partner_objection_workstream", "a".repeat(101));
-
-        assertBadRequestWithoutServiceCall(request, INVALID_WORKSTREAM);
+        assertBadRequestWithoutServiceCall(request, expectedErrorCode);
     }
 
     @Test
@@ -228,7 +206,10 @@ class StrikeOffObjectionPartnerControllerTest {
         request.put("partner_case_reference", "");
         request.putNull("partner_objection_workstream");
 
-        assertBadRequestWithoutServiceCall(request, MULTIPLE_ERRORS);
+        postCreateObjection(request)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("MISSING_REQUIRED_PARAMETER, MISSING_WORKSTREAM"));
+        verifyNoInteractions(strikeOffObjectionPartnerService);
     }
 
     @Test
@@ -412,6 +393,19 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of("partner_contact_email", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string")),
                 Arguments.of("partner_case_reference", STATIC_OBJECT_MAPPER.createObjectNode().put("bad", "value")),
                 Arguments.of("submission_company_name", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string"))
+        );
+    }
+
+    private static Stream<Arguments> workstreamCases() {
+        return Stream.of(
+                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
+                        INVALID_WORKSTREAM)
         );
     }
 
