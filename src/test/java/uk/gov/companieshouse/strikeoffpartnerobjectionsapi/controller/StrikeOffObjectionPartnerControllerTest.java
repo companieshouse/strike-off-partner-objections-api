@@ -35,22 +35,13 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.ErrorResponseException;
-import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
-
-import java.time.OffsetDateTime;
-
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Tag("unit-test")
 @WebMvcTest(controllers = StrikeOffObjectionPartnerController.class)
@@ -77,11 +68,8 @@ class StrikeOffObjectionPartnerControllerTest {
     @MockitoBean
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
 
-    private MockMvc mockMvc;
-
     @BeforeEach
     void setUp() {
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenReturn(defaultCreatedResponse());
         clearInvocations(strikeOffObjectionPartnerService);
