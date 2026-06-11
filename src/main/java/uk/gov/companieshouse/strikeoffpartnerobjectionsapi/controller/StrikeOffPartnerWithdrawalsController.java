@@ -2,12 +2,14 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
 import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerWithdrawalsInterface;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerWithdrawalsService;
 
+@RestController
 public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWithdrawalsInterface {
 
     private final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;

@@ -1,10 +1,12 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import uk.gov.companieshouse.api.objections.model.*;
+import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Service
 public class StrikeOffPartnerWithdrawalsService {
 
     private static final WithdrawalRequestedStatus INITIAL_WITHDRAWAL_STATUS =
