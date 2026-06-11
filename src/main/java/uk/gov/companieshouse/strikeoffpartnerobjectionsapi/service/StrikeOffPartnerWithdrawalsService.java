@@ -6,6 +6,9 @@ import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static java.lang.String.format;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
+
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
@@ -17,6 +20,8 @@ public class StrikeOffPartnerWithdrawalsService {
         final String selfLink = String.format(
                 "/company/%s/strike-off-partner-objections-withdrawals",
                 companyNumber);
+        LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
+                companyNumber, withdrawalId));
 
         WithdrawAllObjections201Response response = new WithdrawAllObjections201Response();
         response.setCompanyNumber(companyNumber);
@@ -30,6 +35,9 @@ public class StrikeOffPartnerWithdrawalsService {
         response.setKind("strike-off-partner-objection#withdrawal");
         response.setEtag(UUID.randomUUID().toString());
         response.setProcessingStatus(INITIAL_WITHDRAWAL_STATUS);
+
+        LOGGER.info(format("Withdrawal created successfully: withdrawalId=%s, companyNumber=%s", withdrawalId, companyNumber));
+
         return response;
     }
 }
