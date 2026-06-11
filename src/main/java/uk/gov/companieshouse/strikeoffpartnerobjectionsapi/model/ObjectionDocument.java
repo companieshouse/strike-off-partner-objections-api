@@ -46,6 +46,15 @@ public class ObjectionDocument {
 	@Field("created_at")
 	private Instant createdAt;
 
+	@Field("processing_status_changed_at")
+	private Instant processingStatusChangedAt;
+
+	@Field("initial_expiration_on")
+	private Instant initialExpirationOn;
+
+	@Field("failure_reason")
+	private String failureReason;
+
 	private String etag;
 
 	private ObjectionLinks links;
@@ -154,6 +163,30 @@ public class ObjectionDocument {
 
     public void setPartnerOrganisation(String partnerOrganisation) {
         this.partnerOrganisation = partnerOrganisation;
+    }
+
+    public Instant getInitialExpirationOn() {
+        return initialExpirationOn;
+    }
+
+    public void setInitialExpirationOn(Instant initialExpirationOn) {
+        this.initialExpirationOn = initialExpirationOn;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
+    }
+
+    public void setFailureReason(String failureReason) {
+        this.failureReason = failureReason;
+    }
+
+    public Instant getProcessingStatusChangedAt() {
+        return processingStatusChangedAt;
+    }
+
+    public void setProcessingStatusChangedAt(Instant processingStatusChangedAt) {
+        this.processingStatusChangedAt = processingStatusChangedAt;
     }
 }
 

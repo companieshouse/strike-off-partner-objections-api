@@ -18,7 +18,6 @@ class ObjectionRequestMapperTest {
     private static final String COMPANY_NUMBER = "01234567";
     private static final String PARTNER_ORG = "hmrc";
     private static final String OBJECTION_ID = "obj-abc-123";
-    private static final String ETAG = "etag-xyz";
 
     @Test
     void toObjectionDocumentMapsRequestFieldsCorrectly() {
@@ -30,7 +29,7 @@ class ObjectionRequestMapperTest {
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
 
         ObjectionDocument doc = mapper.toObjectionDocument(
-                request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+                request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
         assertThat(doc.getSubmissionCompanyName()).isEqualTo("Acme Ltd");
         assertThat(doc.getPartnerCaseReference()).isEqualTo("CASE-001");
@@ -38,13 +37,13 @@ class ObjectionRequestMapperTest {
         assertThat(doc.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(doc.getPartnerOrganisation()).isEqualTo(PARTNER_ORG);
         assertThat(doc.getObjectionId()).isEqualTo(OBJECTION_ID);
-        assertThat(doc.getEtag()).isEqualTo(ETAG);
+        assertThat(doc.getEtag()).isNotNull();
     }
 
     @Test
     void toObjectionDocumentSetsProcessingStatusToObjectionSubmitted() {
         ObjectionDocument doc = mapper.toObjectionDocument(
-                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
         assertThat(doc.getProcessingStatus())
                 .isEqualTo(ObjectionProcessingStatus.OBJECTION_SUBMITTED.getValue());
@@ -53,7 +52,7 @@ class ObjectionRequestMapperTest {
     @Test
     void toObjectionDocumentSetsKind() {
         ObjectionDocument doc = mapper.toObjectionDocument(
-                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
         assertThat(doc.getKind()).isEqualTo("strike-off-partner-objection#objection");
     }
@@ -61,7 +60,7 @@ class ObjectionRequestMapperTest {
     @Test
     void toObjectionDocumentBuildsLinksCorrectly() {
         ObjectionDocument doc = mapper.toObjectionDocument(
-                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+                new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
         assertThat(doc.getLinks()).isNotNull();
         assertThat(doc.getLinks().getSelf())
@@ -77,7 +76,7 @@ class ObjectionRequestMapperTest {
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
 
         ObjectionDocument doc = mapper.toObjectionDocument(
-                request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+                request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
         assertThat(doc.getPartnerObjectionWorkstream()).isNotBlank();
         assertThat(doc.getPartnerObjectionReason()).isNotBlank();
@@ -86,7 +85,7 @@ class ObjectionRequestMapperTest {
     @Test
     void toObjectionDocumentWhenNullRequestReturnsNull() {
         ObjectionDocument doc = mapper.toObjectionDocument(
-                null, null, null, null, null);
+                null, null, null, null);
 
         assertThat(doc).isNull();
     }

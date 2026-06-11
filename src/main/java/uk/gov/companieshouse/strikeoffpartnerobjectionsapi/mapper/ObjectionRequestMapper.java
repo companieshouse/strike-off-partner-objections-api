@@ -10,6 +10,7 @@ import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
 
+import static uk.gov.companieshouse.GenerateEtagUtil.generateEtag;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_SUBMITTED;
 
 @Mapper(componentModel = "spring")
@@ -17,7 +18,7 @@ public interface ObjectionRequestMapper {
 
     @Mapping(target = "objectionId", source = "objectionId")
     @Mapping(target = "processingStatus", expression = "java(getStatus())")
-    @Mapping(target = "etag", source = "etag")
+    @Mapping(target = "etag", expression = "java(getEtag())")
     @Mapping(target = "kind", expression = "java(getObjectionKind())")
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, objectionId))")
     @Mapping(target = "companyNumber", source = "companyNumber")
@@ -31,8 +32,7 @@ public interface ObjectionRequestMapper {
             CreateObjectionRequest request,
             String companyNumber,
             String partnerOrganisation,
-            String objectionId,
-            String etag
+            String objectionId
     );
 
     default String getStatus() {
@@ -63,5 +63,14 @@ public interface ObjectionRequestMapper {
         links.setCompanyProfile(String.format("/company/%s", companyNumber));
         return links;
     }
+
+    /**
+     *
+     * Generates etag for Objection record
+     */
+    default String getEtag() {
+        return generateEtag();
+    }
+
 }
 

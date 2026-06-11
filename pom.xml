@@ -31,6 +31,7 @@
         <api-security-java.version>2.0.27</api-security-java.version>
 
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
+        <api-helper-java.version>3.0.4</api-helper-java.version>
 		<!--sonar configuration-->
         <sonar.token>${CODE_ANALYSIS_TOKEN}</sonar.token>
         <sonar.projectName>strike-off-partner-objections-api</sonar.projectName>
@@ -194,6 +195,11 @@
             <groupId>uk.gov.companieshouse</groupId>
             <artifactId>api-security-java</artifactId>
             <version>${api-security-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>uk.gov.companieshouse</groupId>
+            <artifactId>api-helper-java</artifactId>
+            <version>${api-helper-java.version}</version>
         </dependency>
     </dependencies>
 
