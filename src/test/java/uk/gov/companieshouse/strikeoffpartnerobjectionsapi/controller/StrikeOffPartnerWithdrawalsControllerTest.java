@@ -53,7 +53,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void getAllWithdrawalsReturnsNotImplemented() {
+    void getAllWithdrawals_returnsNotImplemented_whenInvoked() {
         ResponseEntity<WithdrawAllObjectionsResponse> response =
                 strikeOffPartnerWithdrawalsController.getAllWithdrawals("12345678", "withdrawal-123");
 
@@ -62,7 +62,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjectionsReturnsCreatedAndDelegatesToService() {
+    void withdrawAllObjections_returnsCreatedAndDelegatesToService_whenRequestIsValid() {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
@@ -84,7 +84,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjectionsWithMissingFieldsReturnsBadRequestErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsBadRequestErrorResponse_whenRequiredFieldsAreMissing() throws Exception {
         mockMvc().perform(post(WITHDRAWALS_PATH)
                         .contentType(APPLICATION_JSON)
                         .content("""
@@ -98,7 +98,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsRuntimeExceptionReturnsInternalServerErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsInternalServerErrorResponse_whenServiceThrowsRuntimeException() throws Exception {
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq("12345678"),
                 org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new RuntimeException("Downstream unavailable"));
@@ -112,7 +112,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsResponseStatusExceptionReturnsMappedErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsConflictErrorResponse_whenServiceThrowsConflictResponseStatusException() throws Exception {
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq("12345678"),
                 org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate withdrawal request"));
@@ -126,34 +126,34 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsUnauthorizedReturnsUnauthorizedErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsUnauthorizedErrorResponse_whenServiceThrowsUnauthorizedResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.UNAUTHORIZED, "Unauthorized access", "unauthorized");
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsForbiddenReturnsForbiddenErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsForbiddenErrorResponse_whenServiceThrowsForbiddenResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.FORBIDDEN, "Forbidden action", "forbidden");
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsBadGatewayReturnsBadGatewayErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsBadGatewayErrorResponse_whenServiceThrowsBadGatewayResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.BAD_GATEWAY, "Upstream bad gateway", "bad_gateway");
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsServiceUnavailableReturnsServiceUnavailableErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsServiceUnavailableErrorResponse_whenServiceThrowsServiceUnavailableResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.SERVICE_UNAVAILABLE,
                 "Dependency unavailable",
                 "service_unavailable");
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsGatewayTimeoutReturnsGatewayTimeoutErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsGatewayTimeoutErrorResponse_whenServiceThrowsGatewayTimeoutResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.GATEWAY_TIMEOUT, "Upstream timeout", "gateway_timeout");
     }
 
     @Test
-    void withdrawAllObjectionsWhenServiceThrowsInternalServerErrorStatusReturnsInternalServerErrorResponse() throws Exception {
+    void withdrawAllObjections_returnsInternalServerErrorResponse_whenServiceThrowsInternalServerErrorResponseStatusException() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Unexpected downstream failure",
                 "internal_server_error");
@@ -175,4 +175,3 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(jsonPath("$.message").value(reason));
     }
 }
-
