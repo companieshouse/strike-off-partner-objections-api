@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -59,8 +60,7 @@ class StrikeOffObjectionPartnerControllerTest {
     @Autowired
     private WebApplicationContext context;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockitoBean
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
@@ -72,6 +72,7 @@ class StrikeOffObjectionPartnerControllerTest {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenReturn(defaultCreatedResponse());
+        clearInvocations(strikeOffObjectionPartnerService);
     }
 
     @Test
