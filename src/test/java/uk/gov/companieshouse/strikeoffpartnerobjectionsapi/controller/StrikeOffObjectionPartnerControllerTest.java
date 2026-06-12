@@ -54,7 +54,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
-    private static final String INVALID_LENGTH = "INVALID_LENGTH";
+    private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
@@ -115,7 +115,7 @@ class StrikeOffObjectionPartnerControllerTest {
     void emailMaxBoundaryValidReturnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "a".repeat(64) + "@"
-                + "b".repeat(186) + ".com");
+                + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(62));
 
         postCreateObjection(request)
                 .andExpect(status().isCreated());
@@ -128,7 +128,7 @@ class StrikeOffObjectionPartnerControllerTest {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(65));
 
-        assertBadRequestWithoutServiceCall(request, INVALID_LENGTH);
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
     }
 
     @Test
@@ -147,7 +147,7 @@ class StrikeOffObjectionPartnerControllerTest {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(161));
 
-        assertBadRequestWithoutServiceCall(request, INVALID_LENGTH);
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
     }
 
     @Test
@@ -292,6 +292,32 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
+    void whitespaceCaseReferenceIsTrimmedAndAccepted() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_case_reference", " CASE123 ");
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
+        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture());
+        assertEquals("CASE123", requestCaptor.getValue().getPartnerCaseReference());
+    }
+
+    @Test
+    void whitespaceCompanyNameIsTrimmedAndAccepted() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("submission_company_name", " Valid Company Ltd ");
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
+        verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture());
+        assertEquals("Valid Company Ltd", requestCaptor.getValue().getSubmissionCompanyName());
+    }
+
+    @Test
     void createObjectionWhenServiceThrowsExceptionReturns500() throws Exception {
         when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new RuntimeException("Internal service error"));
@@ -363,7 +389,7 @@ class StrikeOffObjectionPartnerControllerTest {
         return Stream.of(
                 Arguments.of("invalid-email", EMAIL_INCORRECT_FORMAT),
                 Arguments.of("test@", EMAIL_INCORRECT_FORMAT),
-                Arguments.of("a".repeat(247) + "@test.com", EMAIL_MAX_LENGTH)
+                Arguments.of("a".repeat(247) + "@test.com", EMAIL_INCORRECT_FORMAT + ", " + EMAIL_MAX_LENGTH)
         );
     }
 
@@ -401,7 +427,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
-                        MISSING_WORKSTREAM),
+                        INVALID_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
                         INVALID_WORKSTREAM)
         );
