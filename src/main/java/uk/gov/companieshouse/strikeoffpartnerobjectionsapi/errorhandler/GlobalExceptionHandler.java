@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
-    private static final String INVALID_LENGTH = "INVALID_LENGTH";
+    private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final String INVALID_REASON = "INVALID_REASON";
@@ -40,25 +41,29 @@ public class GlobalExceptionHandler {
     private static final String PARTNER_OBJECTION_WORKSTREAM_SNAKE = "partner_objection_workstream";
     private static final String PARTNER_OBJECTION_REASON_SNAKE = "partner_objection_reason";
     private static final String REQUIRED_BODY_MISSING = "Required request body is missing";
+    private static final List<String> ERROR_PRIORITY_ORDER = List.of(
+            MISSING_REQUIRED_PARAMETER,
+            EMAIL_INCORRECT_FORMAT,
+            EMAIL_MAX_LENGTH,
+            MAX_LENGTH_EXCEEDED,
+            INVALID_REASON,
+            INVALID_WORKSTREAM,
+            MISSING_WORKSTREAM);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
         List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
-        if (fieldErrors.size() > 1) {
-            // Collect all error codes from all field errors
-            String allErrorCodes = fieldErrors.stream()
-                    .map(this::mapFieldError)
-                    .distinct()
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse(MISSING_REQUIRED_PARAMETER);
-            return badRequest(allErrorCodes, VALIDATION_MESSAGE);
-        }
-
         if (fieldErrors.isEmpty()) {
             return badRequest(MISSING_REQUIRED_PARAMETER, VALIDATION_MESSAGE);
         }
 
-        return badRequest(mapFieldError(fieldErrors.getFirst()), VALIDATION_MESSAGE);
+        String allErrorCodes = fieldErrors.stream()
+                .map(this::mapFieldError)
+                .distinct()
+                .sorted(Comparator.comparingInt(this::errorPriorityIndex))
+                .reduce((a, b) -> a + ", " + b)
+                .orElse(MISSING_REQUIRED_PARAMETER);
+        return badRequest(allErrorCodes, VALIDATION_MESSAGE);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -100,61 +105,122 @@ public class GlobalExceptionHandler {
     }
 
     private String mapFieldError(FieldError fieldError) {
-        String field = fieldError.getField();
-        String code = fieldError.getCode();
-        int rejectedLength = toStringLength(fieldError.getRejectedValue());
-
-        if (PARTNER_CONTACT_EMAIL.equals(field)) {
-            if (SIZE.equals(code) && rejectedLength > 255) {
-                return EMAIL_MAX_LENGTH;
-            }
-            if (EMAIL.equals(code)) {
-                return EMAIL_INCORRECT_FORMAT;
-            }
-            return MISSING_REQUIRED_PARAMETER;
-        }
-
-        if (PARTNER_CASE_REFERENCE.equals(field) || SUBMISSION_COMPANY_NAME.equals(field)) {
-            if (SIZE.equals(code) && rejectedLength > 0) {
-                return INVALID_LENGTH;
-            }
-            return MISSING_REQUIRED_PARAMETER;
-        }
-
-        if (PARTNER_OBJECTION_WORKSTREAM.equals(field)) {
-            if (rejectedLength == 0) {
-                return MISSING_WORKSTREAM;
-            }
-            return INVALID_WORKSTREAM;
-        }
-
-        if (PARTNER_OBJECTION_REASON.equals(field)) {
-            return INVALID_REASON;
-        }
-
-        return MISSING_REQUIRED_PARAMETER;
+        return switch (fieldError.getField()) {
+            case PARTNER_CONTACT_EMAIL -> mapEmailFieldError(fieldError);
+            case PARTNER_CASE_REFERENCE, SUBMISSION_COMPANY_NAME -> mapLengthFieldError(fieldError);
+            case PARTNER_OBJECTION_WORKSTREAM -> mapWorkstreamFieldError(fieldError);
+            case PARTNER_OBJECTION_REASON -> INVALID_REASON;
+            default -> MISSING_REQUIRED_PARAMETER;
+        };
     }
 
     private String mapUnreadableMessage(HttpMessageNotReadableException ex) {
         String message = ex.getMessage();
-        if (message != null && message.contains(REQUIRED_BODY_MISSING)) {
+        if (isRequiredBodyMissing(message)) {
             return MISSING_REQUIRED_PARAMETER;
         }
 
-        Throwable cause = ex.getMostSpecificCause();
-        if (cause instanceof InvalidFormatException invalidFormatException) {
-            String field = invalidFormatException.getPath().isEmpty()
-                    ? null
-                    : invalidFormatException.getPath().getLast().getFieldName();
-            if (PARTNER_OBJECTION_REASON_SNAKE.equals(field) || PARTNER_OBJECTION_REASON.equals(field)) {
-                return INVALID_REASON;
-            }
-            if (PARTNER_OBJECTION_WORKSTREAM_SNAKE.equals(field) || PARTNER_OBJECTION_WORKSTREAM.equals(field)) {
-                return INVALID_WORKSTREAM;
-            }
+        String fromInvalidFormat = mapInvalidFormatCause(ex.getMostSpecificCause());
+        if (fromInvalidFormat != null) {
+            return fromInvalidFormat;
         }
 
+        return mapUnreadableMessageText(message);
+    }
+
+    private String mapEmailFieldError(FieldError fieldError) {
+        if (isBlank(fieldError.getRejectedValue())) {
+            return MISSING_REQUIRED_PARAMETER;
+        }
+
+        String code = fieldError.getCode();
+        int rejectedLength = toStringLength(fieldError.getRejectedValue());
+        if (SIZE.equals(code) && rejectedLength > 255) {
+            return EMAIL_MAX_LENGTH;
+        }
+        if (EMAIL.equals(code)) {
+            return EMAIL_INCORRECT_FORMAT;
+        }
         return MISSING_REQUIRED_PARAMETER;
+    }
+
+    private String mapLengthFieldError(FieldError fieldError) {
+        if (SIZE.equals(fieldError.getCode()) && toStringLength(fieldError.getRejectedValue()) > 0) {
+            return MAX_LENGTH_EXCEEDED;
+        }
+        return MISSING_REQUIRED_PARAMETER;
+    }
+
+    private String mapWorkstreamFieldError(FieldError fieldError) {
+        if (toStringLength(fieldError.getRejectedValue()) == 0) {
+            return MISSING_WORKSTREAM;
+        }
+        return INVALID_WORKSTREAM;
+    }
+
+    private boolean isRequiredBodyMissing(String message) {
+        return message != null && message.contains(REQUIRED_BODY_MISSING);
+    }
+
+    private String mapInvalidFormatCause(Throwable cause) {
+        if (!(cause instanceof InvalidFormatException invalidFormatException)) {
+            return null;
+        }
+
+        String field = invalidFormatException.getPath().isEmpty()
+                ? null
+                : invalidFormatException.getPath().getLast().getFieldName();
+        if (isReasonField(field)) {
+            return INVALID_REASON;
+        }
+        if (isWorkstreamField(field)) {
+            return isBlank(invalidFormatException.getValue()) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
+        }
+        return null;
+    }
+
+    private String mapUnreadableMessageText(String message) {
+        String normalized = message == null ? "" : message.toLowerCase(Locale.ROOT);
+        if (isReasonFieldInText(normalized)) {
+            return INVALID_REASON;
+        }
+        if (isWorkstreamFieldInText(normalized)) {
+            return isBlankWorkstreamText(normalized) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
+        }
+        return MISSING_REQUIRED_PARAMETER;
+    }
+
+    private boolean isReasonField(String field) {
+        return PARTNER_OBJECTION_REASON_SNAKE.equals(field) || PARTNER_OBJECTION_REASON.equals(field);
+    }
+
+    private boolean isWorkstreamField(String field) {
+        return PARTNER_OBJECTION_WORKSTREAM_SNAKE.equals(field) || PARTNER_OBJECTION_WORKSTREAM.equals(field);
+    }
+
+    private boolean isReasonFieldInText(String normalizedMessage) {
+        return normalizedMessage.contains(PARTNER_OBJECTION_REASON_SNAKE)
+                || normalizedMessage.contains(PARTNER_OBJECTION_REASON.toLowerCase(Locale.ROOT));
+    }
+
+    private boolean isWorkstreamFieldInText(String normalizedMessage) {
+        return normalizedMessage.contains(PARTNER_OBJECTION_WORKSTREAM_SNAKE)
+                || normalizedMessage.contains(PARTNER_OBJECTION_WORKSTREAM.toLowerCase(Locale.ROOT));
+    }
+
+    private boolean isBlankWorkstreamText(String normalizedMessage) {
+        return normalizedMessage.contains("from string \"\"")
+                || normalizedMessage.contains("empty string")
+                || normalizedMessage.contains("(\"\")");
+    }
+
+    private int errorPriorityIndex(String errorCode) {
+        int index = ERROR_PRIORITY_ORDER.indexOf(errorCode);
+        return index < 0 ? Integer.MAX_VALUE : index;
+    }
+
+    private boolean isBlank(Object value) {
+        return value == null || String.valueOf(value).trim().isEmpty();
     }
 
     private int toStringLength(Object value) {
