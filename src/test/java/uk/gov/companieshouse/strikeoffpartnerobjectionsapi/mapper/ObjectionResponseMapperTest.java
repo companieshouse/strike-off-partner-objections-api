@@ -99,10 +99,8 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void createdAtIsConvertedToUtcOffsetDateTime() {
+    void processingStatusChangedAtIsConvertedToUtcOffsetDateTime() {
         ObjectionDocument document = new ObjectionDocument();
-        // Use reflection or setter if available — createdAt is set by @CreatedDate
-        // Here we verify via a document with processingStatusChangedAt which has a setter
         document.setProcessingStatusChangedAt(CREATED_AT);
 
         BaseObjectionResponse response = mapper.toObjectionApiResponse(document);
