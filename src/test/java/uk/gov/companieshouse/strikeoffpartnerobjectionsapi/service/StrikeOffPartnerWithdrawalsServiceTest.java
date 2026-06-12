@@ -46,7 +46,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void withdrawAllObjections_persistsDocumentAndReturnsMappedResponse_whenRequestIsValid() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawalDocument savedDocument = buildSavedDocument(COMPANY_NUMBER);
+        WithdrawalDocument savedDocument = buildSavedDocument();
 
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(savedDocument);
 
@@ -190,10 +190,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         return request;
     }
 
-    private WithdrawalDocument buildSavedDocument(String companyNumber) {
+    private WithdrawalDocument buildSavedDocument() {
         String withdrawalId = UUID.randomUUID().toString();
         WithdrawalDocument doc = new WithdrawalDocument();
-        doc.setCompanyNumber(companyNumber);
+        doc.setCompanyNumber(COMPANY_NUMBER);
         doc.setSubmissionCompanyName("ACME LTD");
         doc.setWithdrawalId(withdrawalId);
         doc.setPartnerCaseReference("CASE-001");
@@ -205,8 +205,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         doc.setKind("strike-off-partner-objection#withdrawal");
 
         WithdrawalLinks links = new WithdrawalLinks();
-        links.setSelf("/company/" + companyNumber + "/strike-off-partner-objections-withdrawals/" + withdrawalId);
-        links.setCompanyProfile("/company/" + companyNumber);
+        links.setSelf("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/" + withdrawalId);
+        links.setCompanyProfile("/company/" + COMPANY_NUMBER);
         doc.setLinks(links);
 
         // Simulate @CreatedDate by using reflection to set createdAt
@@ -223,6 +223,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     private void assertDoesNotThrowUUID(String value) {
         assertThat(value).isNotBlank();
-        UUID.fromString(value); // throws if not a valid UUID
+        UUID parsed = UUID.fromString(value);
+        assertThat(parsed).isNotNull();
     }
 }
