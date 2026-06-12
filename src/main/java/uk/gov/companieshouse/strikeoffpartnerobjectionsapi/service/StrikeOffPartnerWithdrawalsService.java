@@ -67,10 +67,10 @@ public class StrikeOffPartnerWithdrawalsService {
         document.setSubmissionCompanyName(request.getSubmissionCompanyName());
         document.setPartnerContactEmail(request.getPartnerContactEmail());
         document.setPartnerCaseReference(request.getPartnerCaseReference());
-        document.setPartnerObjectionWorkstream(
-                request.getPartnerObjectionWorkstream() != null
-                        ? request.getPartnerObjectionWorkstream().getValue()
-                        : null);
+
+        PartnerObjectionWorkstream workstream = request.getPartnerObjectionWorkstream();
+        document.setPartnerObjectionWorkstream(workstream.getValue());
+
         document.setPartnerOrganisation(PARTNER_ORGANISATION);
         document.setProcessingStatus(INITIAL_WITHDRAWAL_STATUS);
         document.setEtag(etag);
