@@ -42,10 +42,10 @@ class StrikeOffPartnerWithdrawalsIntegrationTest {
     void withdrawAllObjections_persistsDocumentInMongo_whenRequestIsValid() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        Instant before = Instant.now();
+        Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         WithdrawAllObjections201Response response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-        Instant after = Instant.now();
+        Instant after = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
 
         List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
         assertThat(savedDocs).hasSize(1);
