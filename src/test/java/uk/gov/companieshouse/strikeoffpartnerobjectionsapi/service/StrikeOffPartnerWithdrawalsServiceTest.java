@@ -209,14 +209,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         links.setCompanyProfile("/company/" + COMPANY_NUMBER);
         doc.setLinks(links);
 
-        // Simulate @CreatedDate by using reflection to set createdAt
-        try {
-            java.lang.reflect.Field createdAtField = WithdrawalDocument.class.getDeclaredField("createdAt");
-            createdAtField.setAccessible(true);
-            createdAtField.set(doc, Instant.now());
-        } catch (Exception ignored) {
-            // not critical for this test
-        }
+        doc.setCreatedAt(Instant.now());
 
         return doc;
     }
