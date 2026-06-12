@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -31,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.ProblemDetail;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -83,6 +85,17 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.processing_status").value("objection-submitted"));
 
         verify(strikeOffObjectionPartnerService).createObjection(eq(COMPANY_NUMBER), any());
+    }
+
+    @Test
+    void getObjectionReturnsNotImplemented() {
+        StrikeOffObjectionPartnerController controller =
+                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+
+        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
+
+        assertEquals(HttpStatus.NOT_IMPLEMENTED, response.getStatusCode());
+        assertNull(response.getBody());
     }
 
     @Test
