@@ -7,7 +7,7 @@
   },
   "item": [
     {
-      "name": "Heaalthcheck",
+      "name": "Healthcheck",
       "request": {
         "method": "GET",
         "header": [

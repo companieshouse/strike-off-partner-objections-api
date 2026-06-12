@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -24,16 +25,13 @@ public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
                                 java.lang.reflect.Type targetType,
                                 Class<? extends HttpMessageConverter<?>> converterType) {
         if (body instanceof CreateObjectionRequest request) {
-            request.setPartnerContactEmail(trimToNullSafe(request.getPartnerContactEmail()));
-            request.setPartnerCaseReference(trimToNullSafe(request.getPartnerCaseReference()));
-            request.setSubmissionCompanyName(trimToNullSafe(request.getSubmissionCompanyName()));
+            request.setPartnerContactEmail(StringUtils.trim(request.getPartnerContactEmail()));
+            request.setPartnerCaseReference(StringUtils.trim(request.getPartnerCaseReference()));
+            request.setSubmissionCompanyName(StringUtils.trim(request.getSubmissionCompanyName()));
         }
         return body;
     }
 
-    private String trimToNullSafe(String value) {
-        return value == null ? null : value.trim();
-    }
 }
 
 

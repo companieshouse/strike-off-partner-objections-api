@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -138,7 +139,9 @@ public class GlobalExceptionHandler {
     }
 
     private String mapEmailFieldError(FieldError fieldError) {
-        if (isBlank(fieldError.getRejectedValue())) {
+        if (StringUtils.isBlank(fieldError.getRejectedValue() == null
+                ? null
+                : String.valueOf(fieldError.getRejectedValue()))) {
             return MISSING_REQUIRED_PARAMETER;
         }
 
@@ -210,7 +213,10 @@ public class GlobalExceptionHandler {
     private boolean isBlankWorkstreamValue(HttpMessageNotReadableException ex, String message) {
         InvalidFormatException invalidFormatException = findInvalidFormatCause(ex.getMostSpecificCause());
         if (invalidFormatException != null) {
-            return isBlank(invalidFormatException.getValue()) || isBlankWorkstreamText(normalize(message));
+            return StringUtils.isBlank(invalidFormatException.getValue() == null
+                    ? null
+                    : String.valueOf(invalidFormatException.getValue()))
+                    || isBlankWorkstreamText(normalize(message));
         }
         return isBlankWorkstreamText(normalize(message));
     }
@@ -249,10 +255,6 @@ public class GlobalExceptionHandler {
     private int errorPriorityIndex(String errorCode) {
         int index = ERROR_PRIORITY_ORDER.indexOf(errorCode);
         return index < 0 ? Integer.MAX_VALUE : index;
-    }
-
-    private boolean isBlank(Object value) {
-        return value == null || String.valueOf(value).trim().isEmpty();
     }
 
     private int toStringLength(Object value) {
