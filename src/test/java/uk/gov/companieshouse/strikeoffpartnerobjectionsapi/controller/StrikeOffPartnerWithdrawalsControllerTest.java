@@ -93,8 +93,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value("bad_request"))
-                .andExpect(jsonPath("$.message").value("Invalid request: missing or invalid required fields"));
+                .andExpect(jsonPath("$.error_code").value("MISSING_REQUIRED_PARAMETER, MISSING_WORKSTREAM"))
+                .andExpect(jsonPath("$.message").value("Invalid Message"));
     }
 
     @Test

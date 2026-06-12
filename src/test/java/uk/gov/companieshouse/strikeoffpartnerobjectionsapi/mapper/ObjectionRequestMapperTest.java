@@ -90,4 +90,21 @@ class ObjectionRequestMapperTest {
 
         assertThat(doc).isNull();
     }
+
+    @Test
+    void toObjectionDocumentWhenRequestIsNullButMetadataProvidedStillBuildsDocument() {
+        ObjectionDocument doc = mapper.toObjectionDocument(
+                null, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID, ETAG);
+
+        assertThat(doc).isNotNull();
+        assertThat(doc.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+        assertThat(doc.getPartnerOrganisation()).isEqualTo(PARTNER_ORG);
+        assertThat(doc.getObjectionId()).isEqualTo(OBJECTION_ID);
+        assertThat(doc.getEtag()).isEqualTo(ETAG);
+        assertThat(doc.getSubmissionCompanyName()).isNull();
+        assertThat(doc.getPartnerCaseReference()).isNull();
+        assertThat(doc.getPartnerObjectionWorkstream()).isNull();
+        assertThat(doc.getPartnerObjectionReason()).isNull();
+        assertThat(doc.getPartnerContactEmail()).isNull();
+    }
 }

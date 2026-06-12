@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Strike Off Partner Objections API",
-    "description": "Basic collection for local testing of healthcheck and create objection endpoints.",
+    "description": "Collection for local testing of healthcheck, create objection, withdrawals, and validation scenarios.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "8f8a8a1b-2c9a-4c69-9e8d-7a7f6b0d1b1a"
   },
@@ -53,7 +53,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"DS01\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"Evidence supplied by partner\"\n}",
+          "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -73,6 +73,19 @@
           ]
         }
       },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"returns 201 for valid create objection\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ],
       "response": []
     },
     {
@@ -119,6 +132,322 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "Objection Validation Test Cases",
+      "item": [
+        {
+          "name": "400 - Missing Required Parameter (blank email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-400-001",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "strike-off-partner-objections-api",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is MISSING_REQUIRED_PARAMETER\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"MISSING_REQUIRED_PARAMETER\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 - Max Length Exceeded (partner_case_reference)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-400-002",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "strike-off-partner-objections-api",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is MAX_LENGTH_EXCEEDED\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"MAX_LENGTH_EXCEEDED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 - Invalid Reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-400-003",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"invalid-reason\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "strike-off-partner-objections-api",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_REASON\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_REASON\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 - Missing Workstream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-400-004",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "strike-off-partner-objections-api",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code includes MISSING_WORKSTREAM\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.include(\"MISSING_WORKSTREAM\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "400 - Multiple Errors (blank email + missing workstream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-400-005",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "strike-off-partner-objections-api",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code contains both expected errors\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.include(\"MISSING_REQUIRED_PARAMETER\");",
+                  "  pm.expect(body.error_code).to.include(\"MISSING_WORKSTREAM\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [

@@ -1,0 +1,37 @@
+package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAdapter;
+import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+
+@ControllerAdvice
+public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
+
+    @Override
+    public boolean supports(MethodParameter methodParameter,
+                            java.lang.reflect.Type targetType,
+                            Class<? extends HttpMessageConverter<?>> converterType) {
+        return CreateObjectionRequest.class.isAssignableFrom(methodParameter.getParameterType());
+    }
+
+    @Override
+    public Object afterBodyRead(Object body,
+                                HttpInputMessage inputMessage,
+                                MethodParameter parameter,
+                                java.lang.reflect.Type targetType,
+                                Class<? extends HttpMessageConverter<?>> converterType) {
+        if (body instanceof CreateObjectionRequest request) {
+            request.setPartnerContactEmail(StringUtils.trim(request.getPartnerContactEmail()));
+            request.setPartnerCaseReference(StringUtils.trim(request.getPartnerCaseReference()));
+            request.setSubmissionCompanyName(StringUtils.trim(request.getSubmissionCompanyName()));
+        }
+        return body;
+    }
+
+}
+
+
