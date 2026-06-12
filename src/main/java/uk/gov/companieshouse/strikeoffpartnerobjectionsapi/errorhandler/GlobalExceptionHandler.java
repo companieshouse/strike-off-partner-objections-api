@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.List;
@@ -120,12 +121,20 @@ public class GlobalExceptionHandler {
             return MISSING_REQUIRED_PARAMETER;
         }
 
-        String fromInvalidFormat = mapInvalidFormatCause(ex.getMostSpecificCause());
-        if (fromInvalidFormat != null) {
-            return fromInvalidFormat;
+        String field = resolveUnreadableField(ex);
+        if (isReasonField(field)) {
+            return INVALID_REASON;
+        }
+        if (isWorkstreamField(field)) {
+            return isBlankWorkstreamValue(ex, message) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
         }
 
-        return mapUnreadableMessageText(message);
+        String fromMessage = mapUnreadableMessageText(message);
+        if (fromMessage != null) {
+            return fromMessage;
+        }
+
+        return MISSING_REQUIRED_PARAMETER;
     }
 
     private String mapEmailFieldError(FieldError fieldError) {
@@ -162,32 +171,61 @@ public class GlobalExceptionHandler {
         return message != null && message.contains(REQUIRED_BODY_MISSING);
     }
 
-    private String mapInvalidFormatCause(Throwable cause) {
-        if (!(cause instanceof InvalidFormatException invalidFormatException)) {
-            return null;
-        }
-
-        String field = invalidFormatException.getPath().isEmpty()
-                ? null
-                : invalidFormatException.getPath().getLast().getFieldName();
-        if (isReasonField(field)) {
-            return INVALID_REASON;
-        }
-        if (isWorkstreamField(field)) {
-            return isBlank(invalidFormatException.getValue()) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
+    private InvalidFormatException findInvalidFormatCause(Throwable cause) {
+        Throwable current = cause;
+        while (current != null) {
+            if (current instanceof InvalidFormatException invalidFormatException) {
+                return invalidFormatException;
+            }
+            current = current.getCause();
         }
         return null;
     }
 
+    private JsonMappingException findJsonMappingCause(Throwable cause) {
+        Throwable current = cause;
+        while (current != null) {
+            if (current instanceof JsonMappingException jsonMappingException) {
+                return jsonMappingException;
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private String resolveUnreadableField(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getMostSpecificCause();
+        InvalidFormatException invalidFormatException = findInvalidFormatCause(cause);
+        if (invalidFormatException != null && !invalidFormatException.getPath().isEmpty()) {
+            return invalidFormatException.getPath().getLast().getFieldName();
+        }
+
+        JsonMappingException jsonMappingException = findJsonMappingCause(cause);
+        if (jsonMappingException == null || jsonMappingException.getPath().isEmpty()) {
+            return null;
+        }
+        return jsonMappingException.getPath().getLast().getFieldName();
+    }
+
+    private boolean isBlankWorkstreamValue(HttpMessageNotReadableException ex, String message) {
+        InvalidFormatException invalidFormatException = findInvalidFormatCause(ex.getMostSpecificCause());
+        if (invalidFormatException != null) {
+            return isBlank(invalidFormatException.getValue()) || isBlankWorkstreamText(normalize(message));
+        }
+        return isBlankWorkstreamText(normalize(message));
+    }
+
     private String mapUnreadableMessageText(String message) {
-        String normalized = message == null ? "" : message.toLowerCase(Locale.ROOT);
-        if (isReasonFieldInText(normalized)) {
+        String normalized = normalize(message);
+        if (normalized.contains(PARTNER_OBJECTION_REASON_SNAKE)
+                || normalized.contains(PARTNER_OBJECTION_REASON.toLowerCase(Locale.ROOT))) {
             return INVALID_REASON;
         }
-        if (isWorkstreamFieldInText(normalized)) {
+        if (normalized.contains(PARTNER_OBJECTION_WORKSTREAM_SNAKE)
+                || normalized.contains(PARTNER_OBJECTION_WORKSTREAM.toLowerCase(Locale.ROOT))) {
             return isBlankWorkstreamText(normalized) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
         }
-        return MISSING_REQUIRED_PARAMETER;
+        return null;
     }
 
     private boolean isReasonField(String field) {
@@ -198,20 +236,14 @@ public class GlobalExceptionHandler {
         return PARTNER_OBJECTION_WORKSTREAM_SNAKE.equals(field) || PARTNER_OBJECTION_WORKSTREAM.equals(field);
     }
 
-    private boolean isReasonFieldInText(String normalizedMessage) {
-        return normalizedMessage.contains(PARTNER_OBJECTION_REASON_SNAKE)
-                || normalizedMessage.contains(PARTNER_OBJECTION_REASON.toLowerCase(Locale.ROOT));
-    }
-
-    private boolean isWorkstreamFieldInText(String normalizedMessage) {
-        return normalizedMessage.contains(PARTNER_OBJECTION_WORKSTREAM_SNAKE)
-                || normalizedMessage.contains(PARTNER_OBJECTION_WORKSTREAM.toLowerCase(Locale.ROOT));
-    }
-
     private boolean isBlankWorkstreamText(String normalizedMessage) {
         return normalizedMessage.contains("from string \"\"")
                 || normalizedMessage.contains("empty string")
                 || normalizedMessage.contains("(\"\")");
+    }
+
+    private String normalize(String message) {
+        return message == null ? "" : message.toLowerCase(Locale.ROOT);
     }
 
     private int errorPriorityIndex(String errorCode) {
