@@ -13,12 +13,11 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionR
 
 import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
 public class StrikeOffObjectionPartnerService {
 
-    //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
-    private static final String PARTNER_ORGANISATION = "hmrc";
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
