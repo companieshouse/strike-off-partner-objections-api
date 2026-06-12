@@ -7,7 +7,7 @@ locals {
   container_port             = "8080" # default Java port to match start script
   docker_repo                = "strike-off-partner-objections-api"
   lb_listener_rule_priority  = 51                                               # priority for the lb listener rule to route to this service, must be unique across services using the same load balancer listener
-  lb_listener_paths          = ["/company/*/strike-off-partner-objections*"]      # paths to route to the service, must be unique across services using the same load balancer listener
+  lb_listener_paths          = ["/company/*/strike-off-partner-objections*", "/strike-off-partner-objections-api/healthcheck"]      # paths to route to the service, must be unique across services using the same load balancer listener
   healthcheck_path           = "/strike-off-partner-objections-api/healthcheck" #healthcheck path for strike-off-partner-objections-api service
   healthcheck_matcher        = "200"
   application_subnet_ids     = data.aws_subnets.application.ids
