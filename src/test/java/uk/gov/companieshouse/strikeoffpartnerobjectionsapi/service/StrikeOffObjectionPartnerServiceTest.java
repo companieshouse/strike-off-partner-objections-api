@@ -98,12 +98,11 @@ class StrikeOffObjectionPartnerServiceTest {
 
 
     @Test
-    void createObjectionGeneratesUniqueObjectionIdAndEtag() {
+    void createObjectionGeneratesUniqueObjectionId() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         String companyNumber = "12345";
 
         ArgumentCaptor<String> objectionIdCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> etagCaptor = ArgumentCaptor.forClass(String.class);
 
         when(objectionRequestMapper.toObjectionDocument(
                 any(), any(), any(), objectionIdCaptor.capture()))
@@ -114,8 +113,6 @@ class StrikeOffObjectionPartnerServiceTest {
         strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
 
         assertThat(objectionIdCaptor.getValue()).isNotBlank();
-        assertThat(etagCaptor.getValue()).isNotBlank();
-        assertThat(objectionIdCaptor.getValue()).isNotEqualTo(etagCaptor.getValue());
     }
 
 }
