@@ -18,8 +18,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class StrikeOffObjectionPartnerService {
 
     //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
-    public static final String PARTNER_ORGANISATION = "hmrc";
-
+    private static final String PARTNER_ORGANISATION = "hmrc";
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
