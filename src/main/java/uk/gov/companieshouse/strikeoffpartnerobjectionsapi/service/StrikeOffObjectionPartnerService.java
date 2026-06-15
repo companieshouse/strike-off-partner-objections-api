@@ -5,6 +5,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -49,5 +50,17 @@ public class StrikeOffObjectionPartnerService {
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
         }
+    }
+
+    public BaseObjectionResponse getObjection(final String companyNumber,
+                                                 final String objectionId) throws ObjectionNotFoundException {
+
+        LOGGER.info(format("Attempting to fetch objection with ID: =%s and company number: =%s",
+                objectionId, companyNumber));
+
+        ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        if (document == null) throw new ObjectionNotFoundException(format("Objection not found for company number: =%s, objectionId: =%s", companyNumber, objectionId));
+        LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s", document.getObjectionId(), document.getCompanyNumber()));
+        return objectionResponseMapper.toObjectionApiResponse(document);
     }
 }

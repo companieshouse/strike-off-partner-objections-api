@@ -28,7 +28,11 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
     }
 
     @Override
-    public ResponseEntity<BaseObjectionResponse> getObjection(final String companyNumber, final String objectionId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    public ResponseEntity<BaseObjectionResponse> getObjection(
+            final String companyNumber,
+            final String objectionId) {
+        BaseObjectionResponse response =
+                strikeOffObjectionPartnerService.getObjection(companyNumber, objectionId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -1,13 +1,9 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.ProblemDetail;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -88,14 +83,11 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionReturnsNotImplemented() {
+    void getObjectionCallsServiceWithCompanyNumberAndObjectionId() {
         StrikeOffObjectionPartnerController controller =
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
-
-        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
-
-        assertEquals(HttpStatus.NOT_IMPLEMENTED, response.getStatusCode());
-        assertNull(response.getBody());
+        controller.getObjection(COMPANY_NUMBER, "objection-123");
+        verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, "objection-123");
     }
 
     @Test
