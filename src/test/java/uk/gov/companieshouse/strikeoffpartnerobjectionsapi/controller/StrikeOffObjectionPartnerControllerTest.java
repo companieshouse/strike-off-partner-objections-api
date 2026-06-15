@@ -388,6 +388,50 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.message").value("Request failed"));
     }
 
+    @Test
+    void createObjectionWhenServiceThrowsBadGatewayReturns502() throws Exception {
+        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Upstream service unavailable"));
+
+        postCreateObjection(baseValidRequest())
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error_code").value("bad_gateway"))
+                .andExpect(jsonPath("$.message").value("Upstream service unavailable"));
+    }
+
+    @Test
+    void createObjectionWhenServiceThrowsServiceUnavailableReturns503() throws Exception {
+        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service temporarily unavailable"));
+
+        postCreateObjection(baseValidRequest())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error_code").value("service_unavailable"))
+                .andExpect(jsonPath("$.message").value("Service temporarily unavailable"));
+    }
+
+    @Test
+    void createObjectionWhenServiceThrowsGatewayTimeoutReturns504() throws Exception {
+        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Upstream timed out"));
+
+        postCreateObjection(baseValidRequest())
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.error_code").value("gateway_timeout"))
+                .andExpect(jsonPath("$.message").value("Upstream timed out"));
+    }
+
+    @Test
+    void createObjectionWhenServiceThrowsInternalServerErrorResponse() throws Exception {
+        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred"));
+
+        postCreateObjection(baseValidRequest())
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error_code").value("internal_server_error"))
+                .andExpect(jsonPath("$.message").value("Unexpected error occurred"));
+    }
+
     private ResultActions postCreateObjection(JsonNode payload) throws Exception {
         return mockMvc.perform(post(CREATE_OBJECTION_URL)
                 .contentType(APPLICATION_JSON)
