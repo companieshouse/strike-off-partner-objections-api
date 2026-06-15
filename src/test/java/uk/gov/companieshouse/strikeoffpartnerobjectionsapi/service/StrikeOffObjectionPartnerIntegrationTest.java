@@ -1,25 +1,27 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.Instant;
-import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import uk.gov.companieshouse.api.objections.model.*;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbTestContainerConfiguration;
+import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
+import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
+import java.time.Instant;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 @SpringBootTest
-@Import({MongoDbTestContainerConfiguration.class})
 @Tag("integration-test")
-class StrikeOffObjectionPartnerIntegrationTest {
+class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
 
     @Autowired
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
