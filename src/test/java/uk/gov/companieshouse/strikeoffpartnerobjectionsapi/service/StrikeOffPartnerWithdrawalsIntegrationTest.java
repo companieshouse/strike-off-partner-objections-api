@@ -11,19 +11,17 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbTestContainerConfiguration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 @SpringBootTest
-@Import({MongoDbTestContainerConfiguration.class})
 @Tag("integration-test")
-class StrikeOffPartnerWithdrawalsIntegrationTest {
+class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
 
