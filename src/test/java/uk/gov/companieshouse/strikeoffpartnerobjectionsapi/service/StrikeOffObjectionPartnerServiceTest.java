@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -17,6 +20,7 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
@@ -30,13 +34,18 @@ class StrikeOffObjectionPartnerServiceTest {
     @Mock
     private ObjectionRequestMapper objectionRequestMapper;
 
+    @Mock
+    private ObjectionResponseMapper objectionResponseMapper;
+
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
 
     @BeforeEach
     void setUp() {
         strikeOffObjectionPartnerService = new StrikeOffObjectionPartnerService(
                 objectionRepository,
-                objectionRequestMapper
+                objectionRequestMapper,
+                objectionResponseMapper
+
         );
     }
     @Test
@@ -47,16 +56,20 @@ class StrikeOffObjectionPartnerServiceTest {
         String companyNumber = "12345";
 
         when(objectionRequestMapper.toObjectionDocument(
-                eq(requestDto), eq(companyNumber), anyString(), anyString(), anyString()))
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+        when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
+
 
         BaseObjectionResponse result = strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
 
-        assertThat(result).isNotNull();
+        assertThat(result).isSameAs(expectedResponse);
         verify(objectionRequestMapper).toObjectionDocument(
-                eq(requestDto), eq(companyNumber), anyString(), anyString(), anyString());
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);
+        verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
     }
 
     @Test
@@ -69,7 +82,7 @@ class StrikeOffObjectionPartnerServiceTest {
 
 
         when(objectionRequestMapper.toObjectionDocument(
-                eq(requestDto), eq(companyNumber), anyString(), anyString(), anyString()))
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenThrow(cause);
 
@@ -79,7 +92,32 @@ class StrikeOffObjectionPartnerServiceTest {
                 .hasCause(cause);
 
         verify(objectionRequestMapper).toObjectionDocument(
-                eq(requestDto), eq(companyNumber), anyString(), anyString(), anyString());
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);
+        verifyNoInteractions(objectionResponseMapper);
     }
+
+
+    @Test
+    void createObjectionGeneratesUniqueObjectionId() {
+        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        String companyNumber = "12345";
+
+        ArgumentCaptor<String> objectionIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), objectionIdCaptor.capture()))
+                .thenReturn(new ObjectionDocument());
+        when(objectionRepository.insert(any(ObjectionDocument.class))).thenReturn(new ObjectionDocument());
+        when(objectionResponseMapper.toObjectionApiResponse(any())).thenReturn(new BaseObjectionResponse());
+
+        strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
+        strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
+
+        assertThat(objectionIdCaptor.getAllValues()).hasSize(2);
+        assertThat(objectionIdCaptor.getAllValues().get(0)).isNotBlank();
+        assertThat(objectionIdCaptor.getAllValues().get(1)).isNotBlank();
+        assertThat(objectionIdCaptor.getAllValues().get(0)).isNotEqualTo(objectionIdCaptor.getAllValues().get(1));
+    }
+
 }
