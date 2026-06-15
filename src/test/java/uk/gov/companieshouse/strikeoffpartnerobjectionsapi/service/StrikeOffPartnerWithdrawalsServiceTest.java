@@ -74,7 +74,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
-        when(withdrawalRepository.insert((WithdrawalDocument) mappedDocument)).thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(mappedDocument);
         when(withdrawalMapper.toWithdrawAllObjections201Response(mappedDocument))
                 .thenReturn(new WithdrawAllObjections201Response());
 
@@ -91,7 +91,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(savedDocument);
-        when(withdrawalRepository.insert((WithdrawalDocument) savedDocument)).thenReturn(savedDocument);
+        when(withdrawalRepository.insert(savedDocument)).thenReturn(savedDocument);
         when(withdrawalMapper.toWithdrawAllObjections201Response(savedDocument))
                 .thenReturn(expectedResponse);
 
