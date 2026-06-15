@@ -1,7 +1,10 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -97,7 +101,6 @@ class StrikeOffObjectionPartnerServiceTest {
         verifyNoInteractions(objectionResponseMapper);
     }
 
-
     @Test
     void createObjectionGeneratesUniqueObjectionId() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
@@ -120,4 +123,25 @@ class StrikeOffObjectionPartnerServiceTest {
         assertThat(objectionIdCaptor.getAllValues().get(0)).isNotEqualTo(objectionIdCaptor.getAllValues().get(1));
     }
 
+    @Test
+    void getObjection_WhenExists_ReturnsObjection() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        ObjectionDocument document = new ObjectionDocument();
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
+        when(objectionResponseMapper.toObjectionApiResponse(document)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffObjectionPartnerService.getObjection(companyNumber, objectionId);
+
+        assertEquals(expectedResponse, result);
+        verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        verify(objectionResponseMapper).toObjectionApiResponse(document);
+    }
+
+    @Test
+    void getObjection_WhenDoesntExist_ReturnsCorrectErrorMessage() {
+        assertThrows(ObjectionNotFoundException.class, () -> strikeOffObjectionPartnerService.getObjection("1", "2"), format("Objection not found for company number: =%s, objectionId: =%s", "1", "2"));
+    }
 }
