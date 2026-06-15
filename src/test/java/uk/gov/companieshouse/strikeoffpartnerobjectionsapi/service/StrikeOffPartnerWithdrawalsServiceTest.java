@@ -121,8 +121,11 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         verify(withdrawalMapper, org.mockito.Mockito.times(2))
                 .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
 
-        assertThat(withdrawalIdCaptor.getAllValues().get(0))
-                .isNotEqualTo(withdrawalIdCaptor.getAllValues().get(1));
+        String id1 = withdrawalIdCaptor.getAllValues().get(0);
+        String id2 = withdrawalIdCaptor.getAllValues().get(1);
+        assertThat(id1).isNotEqualTo(id2);
+        assertThat(UUID.fromString(id1)).isNotNull();
+        assertThat(UUID.fromString(id2)).isNotNull();
     }
 
     @Test
@@ -144,8 +147,11 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         verify(withdrawalMapper, org.mockito.Mockito.times(2))
                 .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
 
-        assertThat(etagCaptor.getAllValues().get(0))
-                .isNotEqualTo(etagCaptor.getAllValues().get(1));
+        String etag1 = etagCaptor.getAllValues().get(0);
+        String etag2 = etagCaptor.getAllValues().get(1);
+        assertThat(etag1).isNotEqualTo(etag2);
+        assertThat(UUID.fromString(etag1)).isNotNull();
+        assertThat(UUID.fromString(etag2)).isNotNull();
     }
 
     @Test
