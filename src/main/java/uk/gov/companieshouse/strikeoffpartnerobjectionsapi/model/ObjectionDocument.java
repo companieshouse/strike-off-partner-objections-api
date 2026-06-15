@@ -18,7 +18,6 @@ public class ObjectionDocument {
 	@Id
 	private String id;
 
-	@Setter
     @Field("company_number")
 	private String companyNumber;
 
