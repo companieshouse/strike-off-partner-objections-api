@@ -61,12 +61,11 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "strike-off-partner-objections-api",
             "company",
             "{{companyNumber}}",
             "strike-off-partner-objections"
@@ -119,12 +118,11 @@
           }
         },
         "url": {
-          "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
-            "strike-off-partner-objections-api",
             "company",
             "{{companyNumber}}",
             "strike-off-partner-objections-withdrawals"
@@ -167,12 +165,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "strike-off-partner-objections-api",
                 "company",
                 "{{companyNumber}}",
                 "strike-off-partner-objections"
@@ -229,12 +226,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "strike-off-partner-objections-api",
                 "company",
                 "{{companyNumber}}",
                 "strike-off-partner-objections"
@@ -291,12 +287,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "strike-off-partner-objections-api",
                 "company",
                 "{{companyNumber}}",
                 "strike-off-partner-objections"
@@ -353,12 +348,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "strike-off-partner-objections-api",
                 "company",
                 "{{companyNumber}}",
                 "strike-off-partner-objections"
@@ -415,12 +409,11 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/strike-off-partner-objections-api/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "strike-off-partner-objections-api",
                 "company",
                 "{{companyNumber}}",
                 "strike-off-partner-objections"
