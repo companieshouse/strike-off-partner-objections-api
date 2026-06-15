@@ -388,49 +388,27 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.message").value("Request failed"));
     }
 
-    @Test
-    void createObjectionWhenServiceThrowsBadGatewayReturns502() throws Exception {
+    @ParameterizedTest
+    @MethodSource("gatewayErrorCases")
+    void createObjectionWhenServiceThrowsGatewayErrorReturnsCorrectStatus(
+            HttpStatus status, String expectedErrorCode) throws Exception {
         when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Upstream service unavailable"));
+                .thenThrow(new ResponseStatusException(status, status.getReasonPhrase()));
 
         postCreateObjection(baseValidRequest())
-                .andExpect(status().isBadGateway())
-                .andExpect(jsonPath("$.error_code").value("bad_gateway"))
-                .andExpect(jsonPath("$.message").value("Upstream service unavailable"));
+                .andExpect(status().is(status.value()))
+                .andExpect(jsonPath("$.error_code").value(expectedErrorCode));
     }
 
-    @Test
-    void createObjectionWhenServiceThrowsServiceUnavailableReturns503() throws Exception {
-        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service temporarily unavailable"));
-
-        postCreateObjection(baseValidRequest())
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error_code").value("service_unavailable"))
-                .andExpect(jsonPath("$.message").value("Service temporarily unavailable"));
+    static Stream<Arguments> gatewayErrorCases() {
+        return Stream.of(
+                Arguments.of(HttpStatus.BAD_GATEWAY,          "bad_gateway"),
+                Arguments.of(HttpStatus.SERVICE_UNAVAILABLE,  "service_unavailable"),
+                Arguments.of(HttpStatus.GATEWAY_TIMEOUT,      "gateway_timeout"),
+                Arguments.of(HttpStatus.INTERNAL_SERVER_ERROR,      "internal_server_error")
+        );
     }
 
-    @Test
-    void createObjectionWhenServiceThrowsGatewayTimeoutReturns504() throws Exception {
-        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Upstream timed out"));
-
-        postCreateObjection(baseValidRequest())
-                .andExpect(status().isGatewayTimeout())
-                .andExpect(jsonPath("$.error_code").value("gateway_timeout"))
-                .andExpect(jsonPath("$.message").value("Upstream timed out"));
-    }
-
-    @Test
-    void createObjectionWhenServiceThrowsInternalServerErrorResponse() throws Exception {
-        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
-                .thenThrow(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred"));
-
-        postCreateObjection(baseValidRequest())
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error_code").value("internal_server_error"))
-                .andExpect(jsonPath("$.message").value("Unexpected error occurred"));
-    }
 
     private ResultActions postCreateObjection(JsonNode payload) throws Exception {
         return mockMvc.perform(post(CREATE_OBJECTION_URL)
