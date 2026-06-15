@@ -388,6 +388,28 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.message").value("Request failed"));
     }
 
+    @ParameterizedTest
+    @MethodSource("gatewayErrorCases")
+    void createObjectionWhenServiceThrowsGatewayErrorReturnsCorrectStatus(
+            HttpStatus status, String expectedErrorCode) throws Exception {
+        when(strikeOffObjectionPartnerService.createObjection(eq(COMPANY_NUMBER), any()))
+                .thenThrow(new ResponseStatusException(status, status.getReasonPhrase()));
+
+        postCreateObjection(baseValidRequest())
+                .andExpect(status().is(status.value()))
+                .andExpect(jsonPath("$.error_code").value(expectedErrorCode));
+    }
+
+    static Stream<Arguments> gatewayErrorCases() {
+        return Stream.of(
+                Arguments.of(HttpStatus.BAD_GATEWAY,          "bad_gateway"),
+                Arguments.of(HttpStatus.SERVICE_UNAVAILABLE,  "service_unavailable"),
+                Arguments.of(HttpStatus.GATEWAY_TIMEOUT,      "gateway_timeout"),
+                Arguments.of(HttpStatus.INTERNAL_SERVER_ERROR,      "internal_server_error")
+        );
+    }
+
+
     private ResultActions postCreateObjection(JsonNode payload) throws Exception {
         return mockMvc.perform(post(CREATE_OBJECTION_URL)
                 .contentType(APPLICATION_JSON)
