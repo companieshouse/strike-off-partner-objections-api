@@ -53,4 +53,5 @@ public class WithdrawalDocument {
     private WithdrawalLinks links;
 
     private String kind;
+
 }

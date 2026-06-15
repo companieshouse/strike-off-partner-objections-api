@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Respon
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
@@ -35,133 +37,121 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private WithdrawalRepository withdrawalRepository;
 
+    @Mock
+    private WithdrawalMapper withdrawalMapper;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
     void setUp() {
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper);
     }
 
     @Test
-    void withdrawAllObjections_persistsDocumentAndReturnsMappedResponse_whenRequestIsValid() {
+    void withdrawAllObjections_delegatesToMapperToCreateDocument_whenRequestIsValid() {
         WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
 
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(savedDocument);
+        when(withdrawalMapper.toWithdrawalDocument(
+                eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        when(withdrawalMapper.toWithdrawAllObjections201Response(savedDocument))
+                .thenReturn(new WithdrawAllObjections201Response());
 
-        WithdrawAllObjections201Response response =
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        verify(withdrawalMapper).toWithdrawalDocument(
+                eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any());
+    }
+
+    @Test
+    void withdrawAllObjections_persistsDocumentReturnedByMapper_whenRequestIsValid() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
+
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(mappedDocument);
+        when(withdrawalMapper.toWithdrawAllObjections201Response(mappedDocument))
+                .thenReturn(new WithdrawAllObjections201Response());
+
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        verify(withdrawalRepository).insert(mappedDocument);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsResponseFromMapper_whenDocumentIsPersisted() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument savedDocument = buildSavedDocument();
+        WithdrawAllObjections201Response expectedResponse = buildResponse(savedDocument);
+
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(savedDocument);
+        when(withdrawalRepository.insert(savedDocument)).thenReturn(savedDocument);
+        when(withdrawalMapper.toWithdrawAllObjections201Response(savedDocument))
+                .thenReturn(expectedResponse);
+
+        WithdrawAllObjections201Response result =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
-        verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
-
-        assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
-        assertThat(response.getSubmissionCompanyName()).isEqualTo("ACME LTD");
-        assertThat(response.getWithdrawalId()).isEqualTo(savedDocument.getWithdrawalId());
-        assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-001");
-        assertThat(response.getPartnerContactEmail()).isEqualTo("owner@example.com");
-        assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
-        assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
-        assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
-        assertThat(response.getEtag()).isNotBlank();
-        assertThat(response.getCreatedAt()).isNotNull();
-        assertThat(response.getLinks()).isNotNull();
-        assertThat(response.getLinks().getSelf()).contains(
-                "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/");
-        assertThat(response.getLinks().getCompanyProfile()).isEqualTo("/company/" + COMPANY_NUMBER);
-    }
-
-    @Test
-    void withdrawAllObjections_mapsRequestFieldsOntoPersistedDocument_whenRequestIsValid() {
-        WithdrawAllObjectionsRequest request = buildRequest();
-        ArgumentCaptor<WithdrawalDocument> documentCaptor =
-                ArgumentCaptor.forClass(WithdrawalDocument.class);
-
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-
-        verify(withdrawalRepository).insert(documentCaptor.capture());
-        WithdrawalDocument captured = documentCaptor.getValue();
-
-        assertThat(captured.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
-        assertThat(captured.getSubmissionCompanyName()).isEqualTo("ACME LTD");
-        assertThat(captured.getPartnerCaseReference()).isEqualTo("CASE-001");
-        assertThat(captured.getPartnerContactEmail()).isEqualTo("owner@example.com");
-        assertThat(captured.getPartnerObjectionWorkstream())
-                .isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
-        assertThat(captured.getPartnerOrganisation()).isEqualTo("hmrc");
-        assertThat(captured.getProcessingStatus()).isEqualTo("withdrawal-requested");
-        assertThat(captured.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
-        assertThat(captured.getEtag()).isNotBlank();
-        assertThat(captured.getWithdrawalId()).isNotBlank();
-        assertDoesNotThrowUUID(captured.getWithdrawalId());
-    }
-
-    @Test
-    void withdrawAllObjections_setsWithdrawalRequestedStatus_whenCreatingDocument() {
-        WithdrawAllObjectionsRequest request = buildRequest();
-        ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-
-        verify(withdrawalRepository).insert(captor.capture());
-        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("withdrawal-requested");
+        verify(withdrawalMapper).toWithdrawAllObjections201Response(savedDocument);
+        assertThat(result).isSameAs(expectedResponse);
     }
 
     @Test
     void withdrawAllObjections_generatesUniqueWithdrawalId_onEachCall() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+        WithdrawalDocument doc = buildSavedDocument();
 
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(doc);
+        when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
+        when(withdrawalMapper.toWithdrawAllObjections201Response(any()))
+                .thenReturn(new WithdrawAllObjections201Response());
+
+        ArgumentCaptor<String> withdrawalIdCaptor = ArgumentCaptor.forClass(String.class);
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
-        verify(withdrawalRepository, org.mockito.Mockito.times(2)).insert(captor.capture());
-        var ids = captor.getAllValues().stream()
-                .map(WithdrawalDocument::getWithdrawalId)
-                .toList();
-        assertThat(ids.get(0)).isNotEqualTo(ids.get(1));
+        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+                .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
+
+        String id1 = withdrawalIdCaptor.getAllValues().get(0);
+        String id2 = withdrawalIdCaptor.getAllValues().get(1);
+        assertThat(id1).isNotEqualTo(id2);
+        assertThat(UUID.fromString(id1)).isNotNull();
+        assertThat(UUID.fromString(id2)).isNotNull();
     }
 
     @Test
-    void withdrawAllObjections_generatesEtag_whenCreatingDocument() {
+    void withdrawAllObjections_generatesUniqueEtag_onEachCall() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+        WithdrawalDocument doc = buildSavedDocument();
 
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(doc);
+        when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
+        when(withdrawalMapper.toWithdrawAllObjections201Response(any()))
+                .thenReturn(new WithdrawAllObjections201Response());
+
+        ArgumentCaptor<String> etagCaptor = ArgumentCaptor.forClass(String.class);
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-
-        verify(withdrawalRepository).insert(captor.capture());
-        assertThat(captor.getValue().getEtag()).isNotBlank();
-        assertDoesNotThrowUUID(captor.getValue().getEtag());
-    }
-
-    @Test
-    void withdrawAllObjections_buildsCorrectSelfAndCompanyProfileLinks_whenCreatingDocument() {
-        WithdrawAllObjectionsRequest request = buildRequest();
-        ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-
-        when(withdrawalRepository.insert(any(WithdrawalDocument.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
-        verify(withdrawalRepository).insert(captor.capture());
-        WithdrawalDocument doc = captor.getValue();
-        assertThat(doc.getLinks()).isNotNull();
-        assertThat(doc.getLinks().getSelf()).isEqualTo(
-                "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/" + doc.getWithdrawalId());
-        assertThat(doc.getLinks().getCompanyProfile()).isEqualTo("/company/" + COMPANY_NUMBER);
+        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+                .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
+
+        String etag1 = etagCaptor.getAllValues().get(0);
+        String etag2 = etagCaptor.getAllValues().get(1);
+        assertThat(etag1).isNotEqualTo(etag2);
+        assertThat(UUID.fromString(etag1)).isNotNull();
+        assertThat(UUID.fromString(etag2)).isNotNull();
     }
 
     @Test
@@ -170,6 +160,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         DataAccessResourceFailureException cause =
                 new DataAccessResourceFailureException("mongo insert failed");
 
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(buildSavedDocument());
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenThrow(cause);
 
         assertThatThrownBy(() ->
@@ -214,9 +206,11 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         return doc;
     }
 
-    private void assertDoesNotThrowUUID(String value) {
-        assertThat(value).isNotBlank();
-        UUID parsed = UUID.fromString(value);
-        assertThat(parsed).isNotNull();
+    private WithdrawAllObjections201Response buildResponse(WithdrawalDocument doc) {
+        WithdrawAllObjections201Response response = new WithdrawAllObjections201Response();
+        response.setCompanyNumber(doc.getCompanyNumber());
+        response.setWithdrawalId(doc.getWithdrawalId());
+        response.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
+        return response;
     }
 }
