@@ -55,11 +55,11 @@ public class StrikeOffObjectionPartnerService {
     public BaseObjectionResponse getObjection(final String companyNumber,
                                                  final String objectionId) throws ObjectionNotFoundException {
 
-        LOGGER.info(format("Attempting to fetch objection with ID: =%s and company number: =%s",
+        LOGGER.info(format("Attempting to fetch objection with ID=%s and company number=%s",
                 objectionId, companyNumber));
 
         ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
-        if (document == null) throw new ObjectionNotFoundException(format("Objection not found for company number: =%s, objectionId: =%s", companyNumber, objectionId));
+        if (document == null) throw new ObjectionNotFoundException(format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
         LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s", document.getObjectionId(), document.getCompanyNumber()));
         return objectionResponseMapper.toObjectionApiResponse(document);
     }

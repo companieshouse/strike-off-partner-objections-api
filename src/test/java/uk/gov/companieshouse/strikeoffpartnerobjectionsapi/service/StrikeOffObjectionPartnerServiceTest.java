@@ -142,6 +142,6 @@ class StrikeOffObjectionPartnerServiceTest {
 
     @Test
     void getObjection_WhenDoesntExist_ReturnsCorrectErrorMessage() {
-        assertThrows(ObjectionNotFoundException.class, () -> strikeOffObjectionPartnerService.getObjection("1", "2"), format("Objection not found for company number: =%s, objectionId: =%s", "1", "2"));
+        assertThrows(ObjectionNotFoundException.class, () -> strikeOffObjectionPartnerService.getObjection("1", "2"), format("Objection not found for company number=%s, objectionId=%s", "1", "2"));
     }
 }
