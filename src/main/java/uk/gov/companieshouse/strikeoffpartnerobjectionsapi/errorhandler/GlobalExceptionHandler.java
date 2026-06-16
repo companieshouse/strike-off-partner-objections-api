@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
         List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
         if (fieldErrors.isEmpty()) {
-            return badRequest(MISSING_REQUIRED_PARAMETER, VALIDATION_MESSAGE);
+            return badRequest(MISSING_REQUIRED_PARAMETER);
         }
 
         String allErrorCodes = fieldErrors.stream()
@@ -71,12 +71,12 @@ public class GlobalExceptionHandler {
                 .sorted(Comparator.comparingInt(this::errorPriorityIndex))
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(MISSING_REQUIRED_PARAMETER);
-        return badRequest(allErrorCodes, VALIDATION_MESSAGE);
+        return badRequest(allErrorCodes);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableMessage(HttpMessageNotReadableException ex) {
-        return badRequest(mapUnreadableMessage(ex), VALIDATION_MESSAGE);
+        return badRequest(mapUnreadableMessage(ex));
     }
 
     @ExceptionHandler(ResponseStatusException.class)
@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiError> handleUnexpectedException(RuntimeException ex) {
+    public ResponseEntity<ApiError> handleUnexpectedException() {
         return new ResponseEntity<>(
                 new ApiError(INTERNAL_SERVER_ERROR_CODE, INTERNAL_SERVER_ERROR_MESSAGE),
                 HttpStatus.INTERNAL_SERVER_ERROR);
@@ -231,14 +231,15 @@ public class GlobalExceptionHandler {
     }
 
     private boolean isBlankWorkstreamValue(HttpMessageNotReadableException ex, String message) {
+        String combinedMessage = combineMessages(message, ex.getMostSpecificCause());
         InvalidFormatException invalidFormatException = findInvalidFormatCause(ex.getMostSpecificCause());
         if (invalidFormatException != null) {
             return StringUtils.isBlank(invalidFormatException.getValue() == null
                     ? null
                     : String.valueOf(invalidFormatException.getValue()))
-                    || isBlankWorkstreamText(normalize(message));
+                    || isBlankWorkstreamText(combinedMessage);
         }
-        return isBlankWorkstreamText(normalize(message));
+        return isBlankWorkstreamText(combinedMessage);
     }
 
     private String mapUnreadableMessageText(String message) {
@@ -264,12 +265,28 @@ public class GlobalExceptionHandler {
 
     private boolean isBlankWorkstreamText(String normalizedMessage) {
         return normalizedMessage.contains("from string \"\"")
+                || normalizedMessage.contains("from string \\\"\\\"")
+                || normalizedMessage.contains("from string ''")
+                || normalizedMessage.contains("from value ''")
+                || normalizedMessage.contains("unexpected value ''")
+                || normalizedMessage.contains("unexpected value \"\"")
+                || normalizedMessage.contains("coerce empty string")
+                || normalizedMessage.contains("value \"\"")
+                || normalizedMessage.contains("value \\\"\\\"")
+                || normalizedMessage.contains("\\\"\\\"")
                 || normalizedMessage.contains("empty string")
                 || normalizedMessage.contains("(\"\")");
     }
 
     private String normalize(String message) {
         return message == null ? "" : message.toLowerCase(Locale.ROOT);
+    }
+
+    private String combineMessages(String primaryMessage, Throwable cause) {
+        if (cause == null || cause.getMessage() == null) {
+            return normalize(primaryMessage);
+        }
+        return normalize(primaryMessage) + " " + normalize(cause.getMessage());
     }
 
     private int errorPriorityIndex(String errorCode) {
@@ -284,7 +301,7 @@ public class GlobalExceptionHandler {
         return String.valueOf(value).length();
     }
 
-    private ResponseEntity<ApiError> badRequest(String errorCode, String message) {
-        return new ResponseEntity<>(new ApiError(errorCode, message), HttpStatus.BAD_REQUEST);
+    private ResponseEntity<ApiError> badRequest(String errorCode) {
+        return new ResponseEntity<>(new ApiError(errorCode, GlobalExceptionHandler.VALIDATION_MESSAGE), HttpStatus.BAD_REQUEST);
     }
 }

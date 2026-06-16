@@ -4,12 +4,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +40,13 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 class StrikeOffPartnerWithdrawalsControllerTest {
 
     private static final String WITHDRAWALS_PATH = "/company/12345678/strike-off-partner-objections-withdrawals";
+    private static final String COMPANY_NUMBER = "12345678";
+    private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
+    private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
+    private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
+    private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
+    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
+    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final String VALID_WITHDRAWAL_REQUEST = """
             {
               "submission_company_name": "ACME LTD",
@@ -39,6 +55,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
               "partner_contact_email": "case.owner@example.com"
             }
             """;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
@@ -93,8 +110,80 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value("MISSING_REQUIRED_PARAMETER, MISSING_WORKSTREAM"))
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER + ", " + MISSING_WORKSTREAM))
                 .andExpect(jsonPath("$.message").value("Invalid Message"));
+        verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
+    @ParameterizedTest
+    @MethodSource("missingOrBlankEmailCases")
+    void withdrawAllObjections_returnsMissingRequiredParameter_whenEmailIsMissingOrBlank(
+            Consumer<ObjectNode> requestMutator) throws Exception {
+        ObjectNode request = baseValidRequest();
+        requestMutator.accept(request);
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidEmailCases")
+    void withdrawAllObjections_returnsEmailIncorrectFormat_whenEmailIsInvalid(String invalidEmail) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_contact_email", invalidEmail);
+
+        assertBadRequestWithoutServiceCall(request, EMAIL_INCORRECT_FORMAT);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsEmailMaxLength_whenEmailExceeds255() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_contact_email", "a".repeat(247) + "@test.com");
+
+        assertBadRequestWithoutServiceCall(request, EMAIL_INCORRECT_FORMAT + ", " + EMAIL_MAX_LENGTH);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsMaxLengthExceeded_whenCaseReferenceExceeds64() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_case_reference", "a".repeat(65));
+
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsMaxLengthExceeded_whenCompanyNameExceeds160() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("submission_company_name", "a".repeat(161));
+
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
+    }
+
+    @ParameterizedTest
+    @MethodSource("workstreamCases")
+    void withdrawAllObjections_returnsExpectedWorkstreamErrorCode(
+            Consumer<ObjectNode> requestMutator,
+            String expectedErrorCode) throws Exception {
+        ObjectNode request = baseValidRequest();
+        requestMutator.accept(request);
+
+        assertBadRequestWithoutServiceCall(request, expectedErrorCode);
+    }
+
+    @Test
+    void withdrawAllObjections_callsService_whenRequestIsValid() throws Exception {
+        WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
+        serviceResponse.setWithdrawalId("withdrawal-123");
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any())).thenReturn(serviceResponse);
+
+        postWithdrawals(baseValidRequest())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.withdrawal_id").value("withdrawal-123"));
+
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -163,7 +252,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
             final HttpStatus status,
             final String reason,
             final String expectedErrorCode) throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq("12345678"),
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
                 org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new ResponseStatusException(status, reason));
 
@@ -173,5 +262,58 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(status().is(status.value()))
                 .andExpect(jsonPath("$.error_code").value(expectedErrorCode))
                 .andExpect(jsonPath("$.message").value(reason));
+    }
+
+    private static Stream<Arguments> missingOrBlankEmailCases() {
+        return Stream.of(
+                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_contact_email")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_contact_email", "")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_contact_email", "   "))
+        );
+    }
+
+    private static Stream<Arguments> invalidEmailCases() {
+        return Stream.of(
+                Arguments.of("invalid-email"),
+                Arguments.of("test@")
+        );
+    }
+
+    private static Stream<Arguments> workstreamCases() {
+        return Stream.of(
+                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "other"),
+                        INVALID_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
+                        INVALID_WORKSTREAM)
+        );
+    }
+
+    private ObjectNode baseValidRequest() {
+        ObjectNode request = objectMapper.createObjectNode();
+        request.put("submission_company_name", "ACME LTD");
+        request.put("partner_case_reference", "CASE-123");
+        request.put("partner_objection_workstream", "individuals-and-small-business-compliance");
+        request.put("partner_contact_email", "case.owner@example.com");
+        return request;
+    }
+
+    private org.springframework.test.web.servlet.ResultActions postWithdrawals(JsonNode request) throws Exception {
+        return mockMvc().perform(post(WITHDRAWALS_PATH)
+                .contentType(APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
+    }
+
+    private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
+        postWithdrawals(payload)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(expectedErrorCode))
+                .andExpect(jsonPath("$.message").value("Invalid Message"));
+        verifyNoInteractions(strikeOffPartnerWithdrawalsService);
     }
 }

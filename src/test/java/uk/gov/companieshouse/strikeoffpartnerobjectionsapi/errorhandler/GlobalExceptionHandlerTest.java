@@ -178,7 +178,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUnexpectedExceptionReturnsInternalServerError() {
-        ResponseEntity<ApiError> response = handler.handleUnexpectedException(new RuntimeException("boom"));
+        ResponseEntity<ApiError> response = handler.handleUnexpectedException();
         ApiError body = requireBody(response);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
