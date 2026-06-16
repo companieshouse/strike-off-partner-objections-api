@@ -141,7 +141,15 @@ class StrikeOffObjectionPartnerServiceTest {
     }
 
     @Test
-    void getObjection_WhenDoesntExist_ReturnsCorrectErrorMessage() {
-        assertThrows(ObjectionNotFoundException.class, () -> strikeOffObjectionPartnerService.getObjection("1", "2"), format("Objection not found for company number=%s, objectionId=%s", "1", "2"));
+    void getObjection_WhenDoesntExist_ThrowsObjectionNotFoundExceptionWithMessage() {
+        when(objectionRepository.findByCompanyNumberAndObjectionId("1", "2")).thenReturn(null);
+        ObjectionNotFoundException ex = assertThrows(
+                ObjectionNotFoundException.class,
+                () -> strikeOffObjectionPartnerService.getObjection("1", "2"));
+        assertEquals(
+                format("Objection not found for company number=%s, objectionId=%s", "1", "2"),
+                ex.getMessage());
+        verify(objectionRepository).findByCompanyNumberAndObjectionId("1", "2");
+        verifyNoInteractions(objectionResponseMapper);
     }
 }
