@@ -48,6 +48,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
+    private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private static final String VALID_WITHDRAWAL_REQUEST = """
             {
               "submission_company_name": "ACME LTD",
@@ -116,6 +117,26 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
     }
 
+    @Test
+    void withdrawAllObjections_returnsMissingRequiredParameter_whenBodyIsMissing() throws Exception {
+        mockMvc().perform(post(WITHDRAWALS_PATH).contentType(APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
+                .andExpect(jsonPath("$.message").value("Invalid Message"));
+        verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsMissingRequiredParameter_whenJsonIsMalformed() throws Exception {
+        mockMvc().perform(post(WITHDRAWALS_PATH)
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"partner_contact_email\":\"valid@email.com\","))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
+                .andExpect(jsonPath("$.message").value("Invalid Message"));
+        verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
     @ParameterizedTest
     @MethodSource("missingOrBlankEmailCases")
     void withdrawAllObjections_returnsMissingRequiredParameter_whenEmailIsMissingOrBlank(
@@ -157,6 +178,54 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         request.put("submission_company_name", "a".repeat(161));
 
         assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
+    }
+
+    @Test
+    void withdrawAllObjections_returnsCreated_whenEmailIsAt255CharBoundary() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_contact_email", "a".repeat(64) + "@"
+                + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(62));
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated());
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void withdrawAllObjections_returnsCreated_whenCaseReferenceIsAt64CharBoundary() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_case_reference", "a".repeat(64));
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated());
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void withdrawAllObjections_returnsCreated_whenCompanyNameIsAt160CharBoundary() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("submission_company_name", "a".repeat(160));
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated());
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @ParameterizedTest
+    @MethodSource("wrongTypeCases")
+    void withdrawAllObjections_returnsMissingRequiredParameter_whenFieldTypeIsInvalid(
+            String fieldName,
+            JsonNode wrongTypeValue) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.set(fieldName, wrongTypeValue);
+
+        assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
     }
 
     @ParameterizedTest
@@ -319,6 +388,14 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                         INVALID_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
                         INVALID_WORKSTREAM)
+        );
+    }
+
+    private static Stream<Arguments> wrongTypeCases() {
+        return Stream.of(
+                Arguments.of("partner_contact_email", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string")),
+                Arguments.of("partner_case_reference", STATIC_OBJECT_MAPPER.createObjectNode().put("bad", "value")),
+                Arguments.of("submission_company_name", STATIC_OBJECT_MAPPER.createArrayNode().add("not-a-string"))
         );
     }
 
