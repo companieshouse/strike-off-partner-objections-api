@@ -6,13 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Getter
 @Setter
 @Document(collection = "objections")
+@CompoundIndex(name = "company_number_objection_id_idx", def = "{'company_number': 1, 'objection_id': 1}", unique = true)
 public class ObjectionDocument {
 
 	@Id
@@ -40,7 +41,6 @@ public class ObjectionDocument {
 	private String partnerContactEmail;
 
 	@Field("objection_id")
-	@Indexed
 	private String objectionId;
 
 	@Field("processing_status")
