@@ -1,7 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,9 +36,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,6 +58,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     private static final String COMPANY_NUMBER = "12345678";
     private static final String CREATE_OBJECTION_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
+    private static final String GET_OBJECTION_URL = "/company/%s/strike-off-partner-objections/%s";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
     private static final String VALID_REASON = "compliance-issue-outstanding";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
@@ -94,24 +95,23 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionCallsServiceWithCompanyNumberAndObjectionId() {
-        StrikeOffObjectionPartnerController controller =
-                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
-        controller.getObjection(COMPANY_NUMBER, "objection-123");
+    void getObjectionCallsServiceWithCompanyNumberAndObjectionId() throws Exception {
+        performGetObjection(COMPANY_NUMBER, "objection-123")
+                .andExpect(status().isOk());
+
         verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, "objection-123");
     }
 
     @Test
-    void getObjectionFound_Returns200AndContainsCorrectAttributes() {
-        StrikeOffObjectionPartnerController controller =
-                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+    void getObjectionFound_Returns200AndContainsCorrectAttributes() throws Exception {
         when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenReturn(defaultCreatedResponse());
 
-        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
-        JsonNode responseBody = objectMapper.valueToTree(response.getBody());
+        MvcResult result = performGetObjection(COMPANY_NUMBER, "objection-123")
+                .andExpect(status().isOk())
+                .andReturn();
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        JsonNode responseBody = objectMapper.readTree(result.getResponse().getContentAsString());
 
         String[] expectedFields = {
                 "company_number",
@@ -137,34 +137,31 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionNotFound_Returns404() {
-        StrikeOffObjectionPartnerController controller =
-                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+    void getObjectionNotFound_Returns404() throws Exception {
         when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.getObjection(COMPANY_NUMBER, "objection-123"));
-
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        performGetObjection(COMPANY_NUMBER, "objection-123")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Objection not found"));
     }
 
     @Test
-    void getObjectionWithIncorrectCompanyNumber_Returns404() {
-        StrikeOffObjectionPartnerController controller =
-                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+    void getObjectionWithIncorrectCompanyNumber_Returns404() throws Exception {
         when(strikeOffObjectionPartnerService.getObjection("123", "objection-123"))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
         when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenReturn(defaultCreatedResponse());
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.getObjection("123", "objection-123"));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        performGetObjection("123", "objection-123")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Objection not found"));
 
-        // Proving here that the Objection ID is valid, it is the company number that causes the 404
-        ResponseEntity<BaseObjectionResponse> goodResponse = controller.getObjection(COMPANY_NUMBER, "objection-123");
-        assertEquals(HttpStatus.OK, goodResponse.getStatusCode());
+        // Proving here that the objection ID is valid; it is the company number that causes the 404.
+        performGetObjection(COMPANY_NUMBER, "objection-123")
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -465,6 +462,11 @@ class StrikeOffObjectionPartnerControllerTest {
 
     private ResultActions postCreateObjectionWithoutBody() throws Exception {
         return mockMvc.perform(post(CREATE_OBJECTION_URL).contentType(APPLICATION_JSON));
+    }
+
+    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+                .contentType(APPLICATION_JSON));
     }
 
     private static Stream<Arguments> invalidEmailCases() {
