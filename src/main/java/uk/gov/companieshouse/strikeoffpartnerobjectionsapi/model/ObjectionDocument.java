@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -41,6 +42,7 @@ public class ObjectionDocument {
 	private String partnerContactEmail;
 
 	@Field("objection_id")
+	@Indexed(unique=true)
 	private String objectionId;
 
 	@Field("processing_status")
