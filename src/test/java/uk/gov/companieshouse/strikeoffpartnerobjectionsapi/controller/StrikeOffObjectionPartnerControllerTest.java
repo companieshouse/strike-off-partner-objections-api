@@ -146,6 +146,22 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
+    void getObjectionWithIncorrectCompanyNumber_Returns404() {
+        StrikeOffObjectionPartnerController controller =
+                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+        when(strikeOffObjectionPartnerService.getObjection("123", "objection-123"))
+                .thenThrow(ObjectionNotFoundException.class);
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+                .thenReturn(defaultCreatedResponse());
+        ResponseEntity<BaseObjectionResponse> response = controller.getObjection("123", "objection-123");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        // Proving here that the Objection ID is valid, is the company number that causes the 404
+        ResponseEntity<BaseObjectionResponse> goodResponse = controller.getObjection(COMPANY_NUMBER, "objection-123");
+        assertEquals(HttpStatus.OK, goodResponse.getStatusCode());
+    }
+
+    @Test
     void missingBodyReturnsMissingRequiredParameter() throws Exception {
         postCreateObjectionWithoutBody()
                 .andExpect(status().isBadRequest())
