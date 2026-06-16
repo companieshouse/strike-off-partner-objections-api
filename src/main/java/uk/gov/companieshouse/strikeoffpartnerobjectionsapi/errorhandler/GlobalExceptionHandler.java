@@ -2,6 +2,8 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.List;
@@ -26,6 +28,10 @@ public class GlobalExceptionHandler {
     private static final String ERROR_CODE = "error";
     private static final String INTERNAL_SERVER_ERROR_CODE = "internal_server_error";
     private static final String INTERNAL_SERVER_ERROR_MESSAGE = "Internal Server Error";
+    private static final String SERVICE_UNAVAILABLE_CODE = "service_unavailable";
+    private static final String SERVICE_UNAVAILABLE_MESSAGE = "Service Unavailable";
+    private static final String GATEWAY_TIMEOUT_CODE = "gateway_timeout";
+    private static final String GATEWAY_TIMEOUT_MESSAGE = "Gateway Timeout";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
@@ -89,6 +95,20 @@ public class GlobalExceptionHandler {
         HttpStatusCode statusCode = ex.getStatusCode();
         return ResponseEntity.status(statusCode)
                 .body(new ApiError(toErrorCode(statusCode), DEFAULT_RESPONSE_STATUS_MESSAGE));
+    }
+
+    @ExceptionHandler(SocketTimeoutException.class)
+    public ResponseEntity<ApiError> handleSocketTimeoutException(SocketTimeoutException ex) {
+        return new ResponseEntity<>(
+                new ApiError(GATEWAY_TIMEOUT_CODE, GATEWAY_TIMEOUT_MESSAGE),
+                HttpStatus.GATEWAY_TIMEOUT);
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiError> handleIOException(IOException ex) {
+        return new ResponseEntity<>(
+                new ApiError(SERVICE_UNAVAILABLE_CODE, SERVICE_UNAVAILABLE_MESSAGE),
+                HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(RuntimeException.class)

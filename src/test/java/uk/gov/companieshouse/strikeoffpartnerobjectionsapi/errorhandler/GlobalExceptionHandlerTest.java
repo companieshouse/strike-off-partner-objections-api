@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Tag;
@@ -155,6 +157,26 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleSocketTimeoutExceptionReturnsGatewayTimeout() {
+        ResponseEntity<ApiError> response = handler.handleSocketTimeoutException(new SocketTimeoutException("timeout"));
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.GATEWAY_TIMEOUT, response.getStatusCode());
+        assertEquals("gateway_timeout", body.getErrorCode());
+        assertEquals("Gateway Timeout", body.getMessage());
+    }
+
+    @Test
+    void handleIOExceptionReturnsServiceUnavailable() {
+        ResponseEntity<ApiError> response = handler.handleIOException(new IOException("connection failed"));
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertEquals("service_unavailable", body.getErrorCode());
+        assertEquals("Service Unavailable", body.getMessage());
+    }
+
+    @Test
     void handleUnexpectedExceptionReturnsInternalServerError() {
         ResponseEntity<ApiError> response = handler.handleUnexpectedException(new RuntimeException("boom"));
         ApiError body = requireBody(response);
@@ -198,5 +220,3 @@ class GlobalExceptionHandlerTest {
         return body;
     }
 }
-
-
