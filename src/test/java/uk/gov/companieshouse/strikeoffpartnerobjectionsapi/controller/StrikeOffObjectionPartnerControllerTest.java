@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
@@ -16,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.OffsetDateTime;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -33,6 +35,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -41,7 +44,11 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
+import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
 
 @Tag("unit-test")
@@ -60,11 +67,10 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Autowired
     private MockMvc mockMvc;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockitoBean
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
@@ -92,6 +98,51 @@ class StrikeOffObjectionPartnerControllerTest {
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
         controller.getObjection(COMPANY_NUMBER, "objection-123");
         verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, "objection-123");
+    }
+
+    @Test
+    void getObjectionFound_Returns200AndContainsCorrectAttributes() {
+        StrikeOffObjectionPartnerController controller =
+                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+        when(strikeOffObjectionPartnerService.getObjection(eq(COMPANY_NUMBER), eq("objection-123")))
+                .thenReturn(defaultCreatedResponse());
+
+        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
+        JsonNode responseBody = objectMapper.valueToTree(response.getBody());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        String[] expectedFields = {
+                "company_number",
+                "submission_company_name",
+                "objection_id",
+                "partner_case_reference",
+                "partner_objection_workstream",
+                "partner_objection_reason",
+                "partner_contact_email",
+                "processing_status",
+                "links",
+                "kind",
+                "created_at",
+                "etag",
+                "processing_status_changed_at",
+                "initial_expiration_on",
+                "failure_reason"
+        };
+
+        for (String field : expectedFields) {
+            assertTrue(responseBody.has(field), "Missing field in response body: " + field);
+        }
+    }
+
+    @Test
+    void getObjectionNotFound_Returns404() {
+        StrikeOffObjectionPartnerController controller =
+                new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
+        when(strikeOffObjectionPartnerService.getObjection(eq(COMPANY_NUMBER), eq("objection-123")))
+                .thenThrow(ObjectionNotFoundException.class);
+        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     @Test
@@ -461,12 +512,23 @@ class StrikeOffObjectionPartnerControllerTest {
 
     private BaseObjectionResponse defaultCreatedResponse() {
         BaseObjectionResponse response = new BaseObjectionResponse();
+        response.setCompanyNumber(COMPANY_NUMBER);
+        response.setSubmissionCompanyName("Valid Company Ltd");
         response.setObjectionId("objection-123");
+        response.setPartnerCaseReference("CASE123");
+        response.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        response.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
+        response.setPartnerContactEmail("valid@email.com");
         response.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
         response.setLinks(new BaseObjectionResponseLinks()
                 .self("/company/12345678/strike-off-partner-objections/objection-123"));
+        response.setKind("strike-off-partner-objection#objection");
         response.setCreatedAt(OffsetDateTime.parse("2026-06-03T12:00:00Z"));
         response.setEtag("etag-1");
+        response.setProcessingStatusChangedAt(OffsetDateTime.parse("2026-06-03T13:00:00Z"));
+        response.setInitialExpirationOn(OffsetDateTime.parse("2026-12-03T12:00:00Z"));
+        response.setFailureReason(FailureReason.COMPANY_HAS_BEEN_DISSOLVED);
         return response;
     }
+
 }
