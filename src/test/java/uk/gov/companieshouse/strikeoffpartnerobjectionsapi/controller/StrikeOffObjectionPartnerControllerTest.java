@@ -104,7 +104,7 @@ class StrikeOffObjectionPartnerControllerTest {
     void getObjectionFound_Returns200AndContainsCorrectAttributes() {
         StrikeOffObjectionPartnerController controller =
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
-        when(strikeOffObjectionPartnerService.getObjection(eq(COMPANY_NUMBER), eq("objection-123")))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenReturn(defaultCreatedResponse());
 
         ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
@@ -139,7 +139,7 @@ class StrikeOffObjectionPartnerControllerTest {
     void getObjectionNotFound_Returns404() {
         StrikeOffObjectionPartnerController controller =
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
-        when(strikeOffObjectionPartnerService.getObjection(eq(COMPANY_NUMBER), eq("objection-123")))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenThrow(ObjectionNotFoundException.class);
         ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
