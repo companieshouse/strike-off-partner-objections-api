@@ -7,6 +7,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAdapter;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 
 @ControllerAdvice
 public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
@@ -15,7 +16,9 @@ public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
     public boolean supports(MethodParameter methodParameter,
                             java.lang.reflect.Type targetType,
                             Class<? extends HttpMessageConverter<?>> converterType) {
-        return CreateObjectionRequest.class.isAssignableFrom(methodParameter.getParameterType());
+        Class<?> parameterType = methodParameter.getParameterType();
+        return CreateObjectionRequest.class.isAssignableFrom(parameterType)
+                || WithdrawAllObjectionsRequest.class.isAssignableFrom(parameterType);
     }
 
     @Override
@@ -25,13 +28,40 @@ public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
                                 java.lang.reflect.Type targetType,
                                 Class<? extends HttpMessageConverter<?>> converterType) {
         if (body instanceof CreateObjectionRequest request) {
-            request.setPartnerContactEmail(StringUtils.trim(request.getPartnerContactEmail()));
-            request.setPartnerCaseReference(StringUtils.trim(request.getPartnerCaseReference()));
-            request.setSubmissionCompanyName(StringUtils.trim(request.getSubmissionCompanyName()));
+            trimObjectionRequestFields(request);
+        } else if (body instanceof WithdrawAllObjectionsRequest request) {
+            trimWithdrawalRequestFields(request);
         }
         return body;
     }
 
+    private void trimObjectionRequestFields(CreateObjectionRequest request) {
+        trimRequestFields(request.getPartnerContactEmail(),
+                request.getPartnerCaseReference(),
+                request.getSubmissionCompanyName(),
+                request::setPartnerContactEmail,
+                request::setPartnerCaseReference,
+                request::setSubmissionCompanyName);
+    }
+
+    private void trimWithdrawalRequestFields(WithdrawAllObjectionsRequest request) {
+        trimRequestFields(request.getPartnerContactEmail(),
+                request.getPartnerCaseReference(),
+                request.getSubmissionCompanyName(),
+                request::setPartnerContactEmail,
+                request::setPartnerCaseReference,
+                request::setSubmissionCompanyName);
+    }
+
+    private void trimRequestFields(String partnerContactEmail,
+                                   String partnerCaseReference,
+                                   String submissionCompanyName,
+                                   java.util.function.Consumer<String> emailSetter,
+                                   java.util.function.Consumer<String> caseReferenceSetter,
+                                   java.util.function.Consumer<String> companyNameSetter) {
+        emailSetter.accept(StringUtils.trim(partnerContactEmail));
+        caseReferenceSetter.accept(StringUtils.trim(partnerCaseReference));
+        companyNameSetter.accept(StringUtils.trim(submissionCompanyName));
+    }
+
 }
-
-

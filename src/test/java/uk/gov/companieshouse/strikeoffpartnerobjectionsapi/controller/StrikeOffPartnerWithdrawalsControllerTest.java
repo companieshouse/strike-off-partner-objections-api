@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -65,7 +66,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     private MockMvc mockMvc() {
         return MockMvcBuilders.standaloneSetup(strikeOffPartnerWithdrawalsController)
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new CreateObjectionRequestBodyAdvice(), new GlobalExceptionHandler())
                 .build();
     }
 
@@ -184,6 +185,33 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
                 org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void withdrawAllObjections_trimsWhitespaceFields_beforeCallingService() throws Exception {
+        WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
+        serviceResponse.setWithdrawalId("withdrawal-123");
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                org.mockito.ArgumentMatchers.any())).thenReturn(serviceResponse);
+
+        ObjectNode request = baseValidRequest();
+        request.put("partner_contact_email", " case.owner@example.com ");
+        request.put("partner_case_reference", " CASE-123 ");
+        request.put("submission_company_name", " ACME LTD ");
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.withdrawal_id").value("withdrawal-123"));
+
+        ArgumentCaptor<WithdrawAllObjectionsRequest> requestCaptor =
+                ArgumentCaptor.forClass(WithdrawAllObjectionsRequest.class);
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                requestCaptor.capture());
+        assertEquals("case.owner@example.com", requestCaptor.getValue().getPartnerContactEmail());
+        assertEquals("CASE-123", requestCaptor.getValue().getPartnerCaseReference());
+        assertEquals("ACME LTD", requestCaptor.getValue().getSubmissionCompanyName());
     }
 
     @Test
