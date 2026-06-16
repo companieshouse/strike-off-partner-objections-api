@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerObjectionsInterface;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
@@ -37,7 +38,8 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
                     strikeOffObjectionPartnerService.getObjection(companyNumber, objectionId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (ObjectionNotFoundException ex) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, ex.getMessage(), ex);
         }
     }
 }

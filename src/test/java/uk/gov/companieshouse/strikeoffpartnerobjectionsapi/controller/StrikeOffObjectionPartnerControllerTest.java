@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -140,9 +141,12 @@ class StrikeOffObjectionPartnerControllerTest {
         StrikeOffObjectionPartnerController controller =
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
         when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
-                .thenThrow(ObjectionNotFoundException.class);
-        ResponseEntity<BaseObjectionResponse> response = controller.getObjection(COMPANY_NUMBER, "objection-123");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+                .thenThrow(new ObjectionNotFoundException("Objection not found"));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.getObjection(COMPANY_NUMBER, "objection-123"));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
@@ -150,13 +154,15 @@ class StrikeOffObjectionPartnerControllerTest {
         StrikeOffObjectionPartnerController controller =
                 new StrikeOffObjectionPartnerController(strikeOffObjectionPartnerService);
         when(strikeOffObjectionPartnerService.getObjection("123", "objection-123"))
-                .thenThrow(ObjectionNotFoundException.class);
+                .thenThrow(new ObjectionNotFoundException("Objection not found"));
         when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
                 .thenReturn(defaultCreatedResponse());
-        ResponseEntity<BaseObjectionResponse> response = controller.getObjection("123", "objection-123");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
 
-        // Proving here that the Objection ID is valid, is the company number that causes the 404
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.getObjection("123", "objection-123"));
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+
+        // Proving here that the Objection ID is valid, it is the company number that causes the 404
         ResponseEntity<BaseObjectionResponse> goodResponse = controller.getObjection(COMPANY_NUMBER, "objection-123");
         assertEquals(HttpStatus.OK, goodResponse.getStatusCode());
     }
