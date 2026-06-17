@@ -40,16 +40,20 @@ public class StrikeOffPartnerWithdrawalsService {
         LOGGER.info(format("Retrieving withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
 
-        WithdrawalDocument document = withdrawalRepository
-                .findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        format("Withdrawal not found: withdrawalId=%s for company=%s", withdrawalId, companyNumber)));
+        try {
+            WithdrawalDocument document = withdrawalRepository
+                    .findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            format("Withdrawal not found: withdrawalId=%s for company=%s", withdrawalId, companyNumber)));
 
-        LOGGER.info(format("Withdrawal retrieved successfully: withdrawalId=%s, companyNumber=%s",
-                document.getWithdrawalId(), document.getCompanyNumber()));
+            LOGGER.info(format("Withdrawal retrieved successfully: withdrawalId=%s, companyNumber=%s",
+                    document.getWithdrawalId(), document.getCompanyNumber()));
 
-        return withdrawalMapper.toWithdrawAllObjectionsResponse(document);
+            return withdrawalMapper.toWithdrawAllObjectionsResponse(document);
+        } catch (DataAccessException ex) {
+            throw new WithdrawalPersistenceException("Failed to retrieve withdrawal", ex);
+        }
     }
 
     public WithdrawAllObjections201Response withdrawAllObjections(

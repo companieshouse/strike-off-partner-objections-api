@@ -84,7 +84,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void getAllWithdrawals_returnsNotFoundError_whenCompanyNumberNotMatch() throws Exception {
+    void getAllWithdrawals_returnsNotFoundError_whenCompanyNumberDoesNotMatch() throws Exception {
         when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Withdrawal not found: withdrawalId=withdrawal-123 for company=12345678"));

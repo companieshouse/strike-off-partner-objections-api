@@ -117,7 +117,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_throwsNotFoundException_whenCompanyNumberNotMatch() {
+    void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
                 .thenReturn(Optional.empty());
 
