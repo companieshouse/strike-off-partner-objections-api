@@ -2,10 +2,10 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -127,6 +128,25 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
     }
 
+    @Test
+    void getWithdrawal_throwsWithdrawalPersistenceException_whenRepositoryThrowsDataAccessException() {
+        String companyNumber = "12345678";
+        String withdrawalId = "withdrawal-123";
+        DataAccessException dataAccessException = new DataAccessResourceFailureException("DB down");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId))
+                .thenThrow(dataAccessException);
+
+        WithdrawalPersistenceException ex = assertThrows(
+                WithdrawalPersistenceException.class,
+                () -> strikeOffPartnerWithdrawalsService.getWithdrawal(companyNumber, withdrawalId));
+
+        assertEquals("Failed to retrieve withdrawal", ex.getMessage());
+        assertSame(dataAccessException, ex.getCause());
+
+        verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId);
+        verifyNoInteractions(withdrawalMapper);
+    }
 
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
