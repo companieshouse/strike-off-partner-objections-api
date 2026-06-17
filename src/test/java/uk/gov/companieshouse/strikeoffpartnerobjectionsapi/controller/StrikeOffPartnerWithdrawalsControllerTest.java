@@ -158,8 +158,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_returnsEmailIncorrectFormatAndMaxLength_whenEmailExceeds255() throws Exception {
+        ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "a".repeat(247) + "@test.com");
-
         assertBadRequestWithoutServiceCall(request, EMAIL_INCORRECT_FORMAT + ", " + EMAIL_MAX_LENGTH);
     }
 
