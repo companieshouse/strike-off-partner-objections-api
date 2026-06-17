@@ -88,6 +88,54 @@
       "response": []
     },
     {
+      "name": "Get Objection",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Host",
+            "value": "{{hostHeader}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "test-request-002",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections/{{objectionId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyNumber}}",
+            "strike-off-partner-objections",
+            "{{objectionId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"returns 200 for successful get objection\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"response contains objection_id\", function () {",
+              "  var body = pm.response.json();",
+              "  pm.expect(body.objection_id).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
       "name": "Create Withdrawals",
       "request": {
         "method": "POST",
@@ -455,6 +503,10 @@
     {
       "key": "companyNumber",
       "value": "12345678"
+    },
+    {
+      "key": "objectionId",
+      "value": "objection-123"
     }
   ]
 }

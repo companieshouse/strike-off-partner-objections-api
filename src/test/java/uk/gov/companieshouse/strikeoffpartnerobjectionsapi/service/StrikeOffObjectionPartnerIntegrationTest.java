@@ -33,6 +33,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
     void setUp() {
         objectionRepository.deleteAll();
     }
+
     @Test
     void createObjectionPersistsDocumentInMongo() {
         String companyNumber = "01234567";
@@ -49,6 +50,28 @@ class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
         assertSavedDocument(saved, companyNumber, before, after);
 
         assertResponse(response, saved);
+    }
+
+    @Test
+    void getObjectionFetchesDocumentInMongo() {
+        String companyNumber = "01234567";
+        CreateObjectionRequest request = buildValidRequest();
+
+        BaseObjectionResponse created = strikeOffObjectionPartnerService.createObjection(companyNumber, request);
+
+        BaseObjectionResponse fetched = strikeOffObjectionPartnerService.getObjection(
+                companyNumber,
+                created.getObjectionId());
+
+        List<ObjectionDocument> savedDocs = objectionRepository.findAll();
+        assertThat(savedDocs).hasSize(1);
+        ObjectionDocument saved = savedDocs.getFirst();
+
+        assertResponse(fetched, saved);
+        assertThat(fetched.getCompanyNumber()).isEqualTo(companyNumber);
+        assertThat(fetched.getSubmissionCompanyName()).isEqualTo(request.getSubmissionCompanyName());
+        assertThat(fetched.getPartnerCaseReference()).isEqualTo(request.getPartnerCaseReference());
+        assertThat(fetched.getPartnerContactEmail()).isEqualTo(request.getPartnerContactEmail());
     }
 
     private static void assertResponse(BaseObjectionResponse response, ObjectionDocument saved) {
