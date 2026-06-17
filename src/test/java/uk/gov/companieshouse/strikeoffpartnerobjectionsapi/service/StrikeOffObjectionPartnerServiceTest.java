@@ -41,6 +41,9 @@ class StrikeOffObjectionPartnerServiceTest {
     @Mock
     private ObjectionResponseMapper objectionResponseMapper;
 
+    @Mock
+    private CompanyProfileService companyProfileService;
+
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
 
     @BeforeEach
@@ -48,8 +51,8 @@ class StrikeOffObjectionPartnerServiceTest {
         strikeOffObjectionPartnerService = new StrikeOffObjectionPartnerService(
                 objectionRepository,
                 objectionRequestMapper,
-                objectionResponseMapper
-
+                objectionResponseMapper,
+                companyProfileService
         );
     }
     @Test

@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import java.util.UUID;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
@@ -22,11 +23,16 @@ public class StrikeOffObjectionPartnerService {
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
+    private final CompanyProfileService companyProfileService;
 
-    public StrikeOffObjectionPartnerService(ObjectionRepository objectionRepository, ObjectionRequestMapper objectionRequestMapper, ObjectionResponseMapper objectionResponseMapper) {
+    public StrikeOffObjectionPartnerService(ObjectionRepository objectionRepository,
+                                            ObjectionRequestMapper objectionRequestMapper,
+                                            ObjectionResponseMapper objectionResponseMapper,
+                                            CompanyProfileService companyProfileService) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
+        this.companyProfileService = companyProfileService;
     }
 
     public BaseObjectionResponse createObjection(final String companyNumber,
@@ -36,6 +42,10 @@ public class StrikeOffObjectionPartnerService {
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
                 companyNumber, PARTNER_ORGANISATION, objectionId));
+
+        CompanyProfileApi companyProfile = companyProfileService.getCompanyProfile(companyNumber);
+        LOGGER.info(format("Retrieved company profile: companyNumber=%s, companyName=%s, companyStatus=%s",
+                companyNumber, companyProfile.getCompanyName(), companyProfile.getCompanyStatus()));
 
         ObjectionDocument document = objectionRequestMapper.toObjectionDocument(
                 createObjectionRequest,
