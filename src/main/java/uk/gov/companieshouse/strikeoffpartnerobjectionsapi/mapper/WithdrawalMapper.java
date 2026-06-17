@@ -9,8 +9,10 @@ import org.mapstruct.Named;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponseLinks;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
+import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 
@@ -61,6 +63,11 @@ public interface WithdrawalMapper {
         return value == null ? null : WithdrawalRequestedStatus.fromValue(value);
     }
 
+    @Named("stringToWithdrawalProcessingStatus")
+    default WithdrawalProcessingStatus stringToWithdrawalProcessingStatus(String value) {
+        return value == null ? null : WithdrawalProcessingStatus.fromValue(value);
+    }
+
     @Named("instantToOffsetDateTime")
     default OffsetDateTime instantToOffsetDateTime(Instant value) {
         return value == null ? null : value.atOffset(ZoneOffset.UTC);
@@ -97,5 +104,12 @@ public interface WithdrawalMapper {
         links.setCompanyProfile(String.format("/company/%s", companyNumber));
         return links;
     }
-}
 
+    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "stringToWithdrawalProcessingStatus")
+    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "stringToWorkstream")
+    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "instantToOffsetDateTime")
+    @Mapping(target = "links", source = "links", qualifiedByName = "withdrawalLinksToResponseLinks")
+    @Mapping(target = "failureReason", ignore = true)
+    @Mapping(target = "processingStatusChangedAt", ignore = true)
+    WithdrawAllObjectionsResponse toWithdrawAllObjectionsResponse(WithdrawalDocument document);
+}

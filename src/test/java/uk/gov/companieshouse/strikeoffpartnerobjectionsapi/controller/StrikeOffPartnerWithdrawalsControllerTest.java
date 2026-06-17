@@ -1,11 +1,11 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,6 +31,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 class StrikeOffPartnerWithdrawalsControllerTest {
 
     private static final String WITHDRAWALS_PATH = "/company/12345678/strike-off-partner-objections-withdrawals";
+    private static final String GET_WITHDRAWAL_PATH = "/company/12345678/strike-off-partner-objections-withdrawals/withdrawal-123";
     private static final String VALID_WITHDRAWAL_REQUEST = """
             {
               "submission_company_name": "ACME LTD",
@@ -52,14 +53,114 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .build();
     }
 
+    // ===== GET Withdrawal Tests =====
+
     @Test
-    void getAllWithdrawals_returnsNotImplemented_whenInvoked() {
-        ResponseEntity<WithdrawAllObjectionsResponse> response =
+    void getAllWithdrawals_returnsOkAndDelegatesToService_whenWithdrawalFound() {
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
+        response.setWithdrawalId("withdrawal-123");
+
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenReturn(response);
+
+        ResponseEntity<WithdrawAllObjectionsResponse> result =
                 strikeOffPartnerWithdrawalsController.getAllWithdrawals("12345678", "withdrawal-123");
 
-        assertEquals(HttpStatus.NOT_IMPLEMENTED, response.getStatusCode());
-        assertNull(response.getBody());
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertSame(response, result.getBody());
+        verify(strikeOffPartnerWithdrawalsService).getWithdrawal("12345678", "withdrawal-123");
     }
+
+    @Test
+    void getAllWithdrawals_returnsNotFoundError_whenWithdrawalNotFound() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Withdrawal not found: withdrawalId=withdrawal-123 for company=12345678"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Withdrawal not found: withdrawalId=withdrawal-123 for company=12345678"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsNotFoundError_whenCompanyNumberNotMatch() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Withdrawal not found: withdrawalId=withdrawal-123 for company=12345678"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsUnauthorizedErrorResponse_whenAuthenticationFails() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized access"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error_code").value("unauthorized"))
+                .andExpect(jsonPath("$.message").value("Unauthorized access"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsForbiddenErrorResponse_whenAuthorizationFails() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden access"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code").value("forbidden"))
+                .andExpect(jsonPath("$.message").value("Forbidden access"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsInternalServerErrorResponse_whenServiceThrowsRuntimeException() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error_code").value("internal_server_error"))
+                .andExpect(jsonPath("$.message").value("Internal Server Error"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsBadGatewayErrorResponse_whenServiceThrowsBadGatewayException() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Upstream bad gateway"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error_code").value("bad_gateway"))
+                .andExpect(jsonPath("$.message").value("Upstream bad gateway"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsServiceUnavailableErrorResponse_whenServiceUnavailable() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error_code").value("service_unavailable"))
+                .andExpect(jsonPath("$.message").value("Service unavailable"));
+    }
+
+    @Test
+    void getAllWithdrawals_returnsGatewayTimeoutErrorResponse_whenGatewayTimeout() throws Exception {
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenThrow(new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "Gateway timeout"));
+
+        mockMvc().perform(get(GET_WITHDRAWAL_PATH))
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.error_code").value("gateway_timeout"))
+                .andExpect(jsonPath("$.message").value("Gateway timeout"));
+    }
+
+    // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
     void withdrawAllObjections_returnsCreatedAndDelegatesToService_whenRequestIsValid() {
