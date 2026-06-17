@@ -49,6 +49,15 @@ public class GlobalExceptionHandler {
     private static final String PARTNER_OBJECTION_WORKSTREAM_SNAKE = "partner_objection_workstream";
     private static final String PARTNER_OBJECTION_REASON_SNAKE = "partner_objection_reason";
     private static final String REQUIRED_BODY_MISSING = "Required request body is missing";
+    private static final List<String> BLANK_WORKSTREAM_TOKENS = List.of(
+            "from string \"\"",
+            "from string ''",
+            "from value ''",
+            "unexpected value ''",
+            "unexpected value \"\"",
+            "coerce empty string",
+            "empty string",
+            "(\"\")");
     private static final List<String> ERROR_PRIORITY_ORDER = List.of(
             MISSING_REQUIRED_PARAMETER,
             EMAIL_INCORRECT_FORMAT,
@@ -263,19 +272,11 @@ public class GlobalExceptionHandler {
         return PARTNER_OBJECTION_WORKSTREAM_SNAKE.equals(field) || PARTNER_OBJECTION_WORKSTREAM.equals(field);
     }
 
+    // Normalizes common Jackson parser text variants so blank-workstream inputs
+    // are consistently treated as missing workstream rather than invalid value.
     private boolean isBlankWorkstreamText(String normalizedMessage) {
-        return normalizedMessage.contains("from string \"\"")
-                || normalizedMessage.contains("from string \\\"\\\"")
-                || normalizedMessage.contains("from string ''")
-                || normalizedMessage.contains("from value ''")
-                || normalizedMessage.contains("unexpected value ''")
-                || normalizedMessage.contains("unexpected value \"\"")
-                || normalizedMessage.contains("coerce empty string")
-                || normalizedMessage.contains("value \"\"")
-                || normalizedMessage.contains("value \\\"\\\"")
-                || normalizedMessage.contains("\\\"\\\"")
-                || normalizedMessage.contains("empty string")
-                || normalizedMessage.contains("(\"\")");
+        String unescapedQuotes = normalizedMessage.replace("\\\"\\\"", "\"\"");
+        return BLANK_WORKSTREAM_TOKENS.stream().anyMatch(unescapedQuotes::contains);
     }
 
     private String normalize(String message) {
@@ -302,6 +303,6 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiError> badRequest(String errorCode) {
-        return new ResponseEntity<>(new ApiError(errorCode, GlobalExceptionHandler.VALIDATION_MESSAGE), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(new ApiError(errorCode, VALIDATION_MESSAGE), HttpStatus.BAD_REQUEST);
     }
 }

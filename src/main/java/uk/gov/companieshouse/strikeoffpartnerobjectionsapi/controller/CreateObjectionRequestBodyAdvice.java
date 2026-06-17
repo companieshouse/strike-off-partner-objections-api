@@ -1,11 +1,13 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
-import org.apache.commons.lang3.StringUtils;
+import static org.apache.commons.lang3.StringUtils.trim;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAdapter;
+import java.util.function.Consumer;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 
@@ -56,12 +58,12 @@ public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
     private void trimRequestFields(String partnerContactEmail,
                                    String partnerCaseReference,
                                    String submissionCompanyName,
-                                   java.util.function.Consumer<String> emailSetter,
-                                   java.util.function.Consumer<String> caseReferenceSetter,
-                                   java.util.function.Consumer<String> companyNameSetter) {
-        emailSetter.accept(StringUtils.trim(partnerContactEmail));
-        caseReferenceSetter.accept(StringUtils.trim(partnerCaseReference));
-        companyNameSetter.accept(StringUtils.trim(submissionCompanyName));
+                                   Consumer<String> emailSetter,
+                                   Consumer<String> caseReferenceSetter,
+                                   Consumer<String> companyNameSetter) {
+        emailSetter.accept(trim(partnerContactEmail));
+        caseReferenceSetter.accept(trim(partnerCaseReference));
+        companyNameSetter.accept(trim(submissionCompanyName));
     }
 
 }

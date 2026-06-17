@@ -210,6 +210,9 @@ class GlobalExceptionHandlerTest {
         return Stream.of(
                 Arguments.of("Value for partner_objection_reason is invalid", "INVALID_REASON"),
                 Arguments.of("Cannot deserialize partner_objection_workstream from string \"\"", "MISSING_WORKSTREAM"),
+                Arguments.of("Cannot deserialize partner_objection_workstream from string \\\"\\\"",
+                        "MISSING_WORKSTREAM"),
+                Arguments.of("Cannot deserialize partner_objection_workstream from value ''", "MISSING_WORKSTREAM"),
                 Arguments.of("completely unknown parse issue", "MISSING_REQUIRED_PARAMETER")
         );
     }

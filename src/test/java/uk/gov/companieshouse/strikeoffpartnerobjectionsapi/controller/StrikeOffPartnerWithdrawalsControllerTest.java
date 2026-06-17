@@ -3,6 +3,8 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -28,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
@@ -188,8 +191,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         postWithdrawals(request)
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any());
+                eq(COMPANY_NUMBER),
+                any());
     }
 
     @Test
@@ -200,8 +203,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         postWithdrawals(request)
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any());
+                eq(COMPANY_NUMBER),
+                any());
     }
 
     @Test
@@ -212,8 +215,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         postWithdrawals(request)
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any());
+                eq(COMPANY_NUMBER),
+                any());
     }
 
     @ParameterizedTest
@@ -243,16 +246,16 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any())).thenReturn(serviceResponse);
+                eq(COMPANY_NUMBER),
+                any())).thenReturn(serviceResponse);
 
         postWithdrawals(baseValidRequest())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.withdrawal_id").value("withdrawal-123"));
 
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any());
+                eq(COMPANY_NUMBER),
+                any());
     }
 
     @Test
@@ -260,8 +263,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any())).thenReturn(serviceResponse);
+                eq(COMPANY_NUMBER),
+                any())).thenReturn(serviceResponse);
 
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", " case.owner@example.com ");
@@ -275,7 +278,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         ArgumentCaptor<WithdrawAllObjectionsRequest> requestCaptor =
                 ArgumentCaptor.forClass(WithdrawAllObjectionsRequest.class);
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
-                org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
+                eq(COMPANY_NUMBER),
                 requestCaptor.capture());
         assertEquals("case.owner@example.com", requestCaptor.getValue().getPartnerContactEmail());
         assertEquals("CASE-123", requestCaptor.getValue().getPartnerCaseReference());
@@ -284,8 +287,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_returnsInternalServerErrorResponse_whenServiceThrowsRuntimeException() throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq("12345678"),
-                org.mockito.ArgumentMatchers.any()))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
+                any()))
                 .thenThrow(new RuntimeException("Downstream unavailable"));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -298,8 +301,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_returnsConflictErrorResponse_whenServiceThrowsConflictResponseStatusException() throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq("12345678"),
-                org.mockito.ArgumentMatchers.any()))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
+                any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate withdrawal request"));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -348,8 +351,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
             final HttpStatus status,
             final String reason,
             final String expectedErrorCode) throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(org.mockito.ArgumentMatchers.eq(COMPANY_NUMBER),
-                org.mockito.ArgumentMatchers.any()))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq(COMPANY_NUMBER),
+                any()))
                 .thenThrow(new ResponseStatusException(status, reason));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -407,7 +410,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         return request;
     }
 
-    private org.springframework.test.web.servlet.ResultActions postWithdrawals(JsonNode request) throws Exception {
+    private ResultActions postWithdrawals(JsonNode request) throws Exception {
         return mockMvc().perform(post(WITHDRAWALS_PATH)
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)));
