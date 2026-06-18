@@ -7,7 +7,7 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public abstract class MongoDbIntegration {
-    public static final MongoDBContainer mongoDBContainer = new MongoDBContainer( DockerImageName.parse( "mongo:7.0.17-jammy" ) );
+    protected static final MongoDBContainer mongoDBContainer = new MongoDBContainer( DockerImageName.parse( "mongo:7.0.17-jammy" ) );
 
     @DynamicPropertySource
     public static void setProperties( final DynamicPropertyRegistry registry ) {
