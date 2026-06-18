@@ -306,3 +306,4 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(new ApiError(errorCode, VALIDATION_MESSAGE), HttpStatus.BAD_REQUEST);
     }
 }
+
