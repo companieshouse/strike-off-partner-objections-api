@@ -26,7 +26,7 @@ public interface WithdrawalMapper {
     @Mapping(target = "submissionCompanyName", source = "request.submissionCompanyName")
     @Mapping(target = "partnerCaseReference", source = "request.partnerCaseReference")
     @Mapping(target = "partnerContactEmail", source = "request.partnerContactEmail")
-    @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream", qualifiedByName = "mapWorkstreamToString")
+    @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream", qualifiedByName = "fromWorkstream")
     @Mapping(target = "processingStatus", expression = "java(getInitialWithdrawalStatus())")
     @Mapping(target = "kind", expression = "java(getWithdrawalKind())")
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, withdrawalId))")
@@ -40,41 +40,41 @@ public interface WithdrawalMapper {
             String etag
     );
 
-    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "mapStringToWithdrawalRequestedStatus")
-    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "mapStringToWorkstream")
-    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "mapInstantToOffsetDateTime")
-    @Mapping(target = "links", source = "links", qualifiedByName = "mapWithdrawalLinksToResponseLinks")
+    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "toWithdrawalRequestedStatus")
+    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "toWorkstream")
+    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "toOffsetDateTime")
+    @Mapping(target = "links", source = "links", qualifiedByName = "toResponseLinks")
     @Mapping(target = "failureReason", ignore = true)
     @Mapping(target = "processingStatusChangedAt", ignore = true)
     WithdrawAllObjections201Response toWithdrawAllObjections201Response(WithdrawalDocument document);
 
-    @Named("mapWorkstreamToString")
-    default String mapWorkstreamToString(PartnerObjectionWorkstream value) {
+    @Named("fromWorkstream")
+    default String fromWorkstream(PartnerObjectionWorkstream value) {
         return value == null ? null : value.getValue();
     }
 
-    @Named("mapStringToWorkstream")
-    default PartnerObjectionWorkstream mapStringToWorkstream(String value) {
+    @Named("toWorkstream")
+    default PartnerObjectionWorkstream toWorkstream(String value) {
         return value == null ? null : PartnerObjectionWorkstream.fromValue(value);
     }
 
-    @Named("mapStringToWithdrawalRequestedStatus")
-    default WithdrawalRequestedStatus mapStringToWithdrawalRequestedStatus(String value) {
+    @Named("toWithdrawalRequestedStatus")
+    default WithdrawalRequestedStatus toWithdrawalRequestedStatus(String value) {
         return value == null ? null : WithdrawalRequestedStatus.fromValue(value);
     }
 
-    @Named("mapStringToWithdrawalProcessingStatus")
-    default WithdrawalProcessingStatus mapStringToWithdrawalProcessingStatus(String value) {
+    @Named("toWithdrawalProcessingStatus")
+    default WithdrawalProcessingStatus toWithdrawalProcessingStatus(String value) {
         return value == null ? null : WithdrawalProcessingStatus.fromValue(value);
     }
 
-    @Named("mapInstantToOffsetDateTime")
-    default OffsetDateTime mapInstantToOffsetDateTime(Instant value) {
+    @Named("toOffsetDateTime")
+    default OffsetDateTime toOffsetDateTime(Instant value) {
         return value == null ? null : value.atOffset(ZoneOffset.UTC);
     }
 
-    @Named("mapWithdrawalLinksToResponseLinks")
-    default WithdrawAllObjectionsResponseLinks mapWithdrawalLinksToResponseLinks(WithdrawalLinks links) {
+    @Named("toResponseLinks")
+    default WithdrawAllObjectionsResponseLinks toResponseLinks(WithdrawalLinks links) {
         if (links == null) {
             return null;
         }
@@ -105,10 +105,10 @@ public interface WithdrawalMapper {
         return links;
     }
 
-    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "mapStringToWithdrawalProcessingStatus")
-    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "mapStringToWorkstream")
-    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "mapInstantToOffsetDateTime")
-    @Mapping(target = "links", source = "links", qualifiedByName = "mapWithdrawalLinksToResponseLinks")
+    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "toWithdrawalProcessingStatus")
+    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "toWorkstream")
+    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "toOffsetDateTime")
+    @Mapping(target = "links", source = "links", qualifiedByName = "toResponseLinks")
     @Mapping(target = "failureReason", ignore = true)
     @Mapping(target = "processingStatusChangedAt", ignore = true)
     WithdrawAllObjectionsResponse toWithdrawAllObjectionsResponse(WithdrawalDocument document);
