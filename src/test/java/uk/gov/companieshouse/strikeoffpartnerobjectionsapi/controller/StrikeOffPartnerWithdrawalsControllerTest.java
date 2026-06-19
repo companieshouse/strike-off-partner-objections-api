@@ -1,7 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,12 +26,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
@@ -62,6 +59,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
             """;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+
     @Mock
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
@@ -74,14 +72,26 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .build();
     }
 
+    // ===== GET Withdrawal Tests =====
+
     @Test
-    void getAllWithdrawals_returnsNotImplemented_whenInvoked() {
-        ResponseEntity<WithdrawAllObjectionsResponse> response =
+    void getAllWithdrawals_returnsOkAndDelegatesToService_whenWithdrawalFound() {
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
+        response.setWithdrawalId("withdrawal-123");
+
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+                .thenReturn(response);
+
+        ResponseEntity<WithdrawAllObjectionsResponse> result =
                 strikeOffPartnerWithdrawalsController.getAllWithdrawals("12345678", "withdrawal-123");
 
-        assertEquals(HttpStatus.NOT_IMPLEMENTED, response.getStatusCode());
-        assertNull(response.getBody());
+        assertEquals(200, result.getStatusCode().value());
+        assertSame(response, result.getBody());
+        verify(strikeOffPartnerWithdrawalsService).getWithdrawal("12345678", "withdrawal-123");
     }
+
+
+    // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
     void withdrawAllObjections_returnsCreatedAndDelegatesToService_whenRequestIsValid() {
@@ -100,7 +110,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         ResponseEntity<WithdrawAllObjections201Response> response =
                 strikeOffPartnerWithdrawalsController.withdrawAllObjections("12345678", request);
 
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals(201, response.getStatusCode().value());
         assertSame(serviceResponse, response.getBody());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections("12345678", request);
     }

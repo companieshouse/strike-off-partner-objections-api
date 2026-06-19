@@ -22,7 +22,9 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
     @Override
     public ResponseEntity<WithdrawAllObjectionsResponse> getAllWithdrawals(
             final String companyNumber, final String withdrawalId) {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService
+                .getWithdrawal(companyNumber, withdrawalId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Override

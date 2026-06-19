@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
@@ -257,6 +258,67 @@ class WithdrawalMapperTest {
     void toWithdrawAllObjections201Response_returnsNull_whenDocumentIsNull() {
         WithdrawAllObjections201Response response =
                 mapper.toWithdrawAllObjections201Response(null);
+
+        assertThat(response).isNull();
+    }
+
+    // -----------------------------------------------------------------------
+    // toWithdrawAllObjectionsResponse – document → response (new GET mapping)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void toWithdrawAllObjectionsResponse_mapsAllDocumentFields_whenDocumentIsFullyPopulated() {
+        WithdrawalDocument doc = buildSavedDocument(Instant.now());
+
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
+
+        assertThat(response.getWithdrawalId()).isEqualTo(WITHDRAWAL_ID);
+        assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+        assertThat(response.getSubmissionCompanyName()).isEqualTo("ACME LTD");
+        assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-001");
+        assertThat(response.getPartnerContactEmail()).isEqualTo("owner@example.com");
+        assertThat(response.getEtag()).isEqualTo(ETAG);
+        assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
+    }
+
+    @Test
+    void toWithdrawAllObjectionsResponse_convertsProcessingStatusToEnum_whenProcessingStatusIsSet() {
+        WithdrawalDocument doc = buildSavedDocument(Instant.now());
+        doc.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
+
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
+
+        assertThat(response.getProcessingStatus()).isNotNull();
+    }
+
+    @Test
+    void toWithdrawAllObjectionsResponse_mapsProcessingStatusToNull_whenProcessingStatusIsNull() {
+        WithdrawalDocument doc = buildSavedDocument(Instant.now());
+        doc.setProcessingStatus(null);
+
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
+
+        assertThat(response.getProcessingStatus()).isNull();
+    }
+
+    @Test
+    void toWithdrawAllObjectionsResponse_leavesFailureReasonAndProcessingStatusChangedAtNull_whenMappingIsPerformed() {
+        WithdrawalDocument doc = buildSavedDocument(Instant.now());
+
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
+
+        assertThat(response.getFailureReason()).isNull();
+        assertThat(response.getProcessingStatusChangedAt()).isNull();
+    }
+
+    @Test
+    void toWithdrawAllObjectionsResponse_returnsNull_whenDocumentIsNull() {
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(null);
 
         assertThat(response).isNull();
     }
