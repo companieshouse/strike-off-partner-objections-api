@@ -14,6 +14,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.http.MockHttpInputMessage;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 
 @Tag("unit-test")
 class CreateObjectionRequestBodyAdviceTest {
@@ -28,6 +29,17 @@ class CreateObjectionRequestBodyAdviceTest {
         assertTrue(advice.supports(
                 parameter,
                 CreateObjectionRequest.class,
+                StringHttpMessageConverter.class));
+    }
+
+    @Test
+    void supportsReturnsTrueForWithdrawAllObjectionsRequest() {
+        MethodParameter parameter = mock(MethodParameter.class);
+        doReturn(WithdrawAllObjectionsRequest.class).when(parameter).getParameterType();
+
+        assertTrue(advice.supports(
+                parameter,
+                WithdrawAllObjectionsRequest.class,
                 StringHttpMessageConverter.class));
     }
 
@@ -79,6 +91,42 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
+    void afterBodyReadTrimsSupportedWithdrawalFields() {
+        WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
+        request.setPartnerContactEmail(" owner@example.com ");
+        request.setPartnerCaseReference(" CASE-123 ");
+        request.setSubmissionCompanyName(" ACME LTD ");
+
+        Object result = advice.afterBodyRead(
+                request,
+                new MockHttpInputMessage(new byte[0]),
+                mock(MethodParameter.class),
+                WithdrawAllObjectionsRequest.class,
+                StringHttpMessageConverter.class);
+
+        assertSame(request, result);
+        assertEquals("owner@example.com", request.getPartnerContactEmail());
+        assertEquals("CASE-123", request.getPartnerCaseReference());
+        assertEquals("ACME LTD", request.getSubmissionCompanyName());
+    }
+
+    @Test
+    void afterBodyReadLeavesNullWithdrawalValuesAsNull() {
+        WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
+
+        advice.afterBodyRead(
+                request,
+                new MockHttpInputMessage(new byte[0]),
+                mock(MethodParameter.class),
+                WithdrawAllObjectionsRequest.class,
+                StringHttpMessageConverter.class);
+
+        assertNull(request.getPartnerContactEmail());
+        assertNull(request.getPartnerCaseReference());
+        assertNull(request.getSubmissionCompanyName());
+    }
+
+    @Test
     void afterBodyReadReturnsNonCreateRequestBodyUnchanged() {
         String body = "raw-body";
 
@@ -92,7 +140,6 @@ class CreateObjectionRequestBodyAdviceTest {
         assertSame(body, result);
     }
 }
-
 
 
 

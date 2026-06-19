@@ -533,7 +533,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
-                        INVALID_WORKSTREAM),
+                        MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
                         INVALID_WORKSTREAM)
         );
