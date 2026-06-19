@@ -9,7 +9,7 @@ import org.testcontainers.utility.DockerImageName;
 @Import(TestKafkaConfiguration.class)
 public abstract class BaseTestIntegration extends MongoDbIntegration {
     protected static final KafkaContainer kafkaContainer =
-            new KafkaContainer(DockerImageName.parse("apache/kafka:3.7.0"));
+            new KafkaContainer(DockerImageName.parse("apache/kafka:4.0.0"));
 
 
     @DynamicPropertySource

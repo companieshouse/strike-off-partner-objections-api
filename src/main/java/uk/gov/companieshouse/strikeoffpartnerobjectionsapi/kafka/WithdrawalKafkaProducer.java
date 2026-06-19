@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
@@ -41,7 +42,7 @@ public class WithdrawalKafkaProducer {
         try {
             kafkaTemplate.send(withdrawalRecord).get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
             LOGGER.info("Successfully sent WITHDRAWAL event: " + withdrawalDocument.getWithdrawalId());
-        } catch (ExecutionException | TimeoutException | InterruptedException ex) {
+        } catch (ExecutionException | TimeoutException | InterruptedException | KafkaException ex) {
             if (ex.getCause() instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }

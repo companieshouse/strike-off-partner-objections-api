@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@Tag("unit-test")
 class WithdrawalKafkaProducerTest {
 
     private static final String TOPIC = "test-topic";
@@ -63,6 +65,17 @@ class WithdrawalKafkaProducerTest {
                 KafkaPublishException.class,
                 () -> producer.publishWithdrawalEvent(document));
 
+    }
+
+    @Test
+    void publishWithdrawalEventWhenKafkaFailsThrowsInterruptedException() {
+        WithdrawalDocument document = buildDocument();
+        when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
+                .thenReturn(CompletableFuture.failedFuture(
+                        new InterruptedException()));
+        assertThrows(
+                KafkaPublishException.class,
+                () -> producer.publishWithdrawalEvent(document));
     }
 
     private WithdrawalDocument buildDocument() {

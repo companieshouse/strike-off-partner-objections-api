@@ -315,20 +315,22 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
      * Uses AvroDeserializer to decode the raw byte[] payload.
      */
     private List<StrikeOffPartnerObjections> pollKafkaForEvents(List<String> expectedWithdrawalIds) {
-        AvroDeserializer<StrikeOffPartnerObjections> deserializer =
-                new AvroDeserializer<>(StrikeOffPartnerObjections.class);
+        try (AvroDeserializer<StrikeOffPartnerObjections> deserializer =
+                new AvroDeserializer<>(StrikeOffPartnerObjections.class)) {
 
-        List<StrikeOffPartnerObjections> collected = new ArrayList<>();
+            List<StrikeOffPartnerObjections> collected = new ArrayList<>();
 
-        await().atMost(10, SECONDS).until(() -> {
-            ConsumerRecords<String, byte[]> records =
-                    testConsumer.poll(Duration.ofMillis(500));
+            await().atMost(10, SECONDS).until(() -> {
+                ConsumerRecords<String, byte[]> records =
+                        testConsumer.poll(Duration.ofMillis(500));
 
-            records.forEach(r -> collected.add(deserializer.deserialize(r.topic(), r.value())));
+                records.forEach(r -> collected.add(deserializer.deserialize(r.topic(), r.value())));
 
-            return collected.size() >= expectedWithdrawalIds.size();
-        });
-        return collected.stream().filter(e -> expectedWithdrawalIds.contains(e.getStrikeOffEventId())).toList();
+                return collected.size() >= expectedWithdrawalIds.size();
+            });
+
+            return collected.stream().filter(e -> expectedWithdrawalIds.contains(e.getStrikeOffEventId())).toList();
+        }
     }
 
     private WithdrawAllObjectionsRequest buildRequest() {
