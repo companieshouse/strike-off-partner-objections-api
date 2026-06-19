@@ -180,6 +180,55 @@
       "response": []
     },
     {
+      "name": "Get Withdrawal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Host",
+            "value": "{{hostHeader}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "test-request-002",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawalId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyNumber}}",
+            "strike-off-partner-objections-withdrawals",
+            "{{withdrawalId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"returns 200 for valid get withdrawal\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"response contains expected identifiers\", function () {",
+              "  var body = pm.response.json();",
+              "  pm.expect(body.company_number).to.eql(pm.variables.get(\"companyNumber\"));",
+              "  pm.expect(body.withdrawal_id).to.eql(pm.variables.get(\"withdrawalId\"));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
       "name": "Objection Validation Test Cases",
       "item": [
         {
@@ -507,6 +556,10 @@
     {
       "key": "objectionId",
       "value": "objection-123"
+    },
+    {
+      "key": "withdrawalId",
+      "value": "replace-with-created-withdrawal-id"
     }
   ]
 }

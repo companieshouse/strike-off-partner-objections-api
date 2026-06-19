@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface WithdrawalRepository extends MongoRepository<WithdrawalDocument, String> {
 
     Optional<WithdrawalDocument> findByWithdrawalId(String withdrawalId);
+
+    Optional<WithdrawalDocument> findByCompanyNumberAndWithdrawalId(String companyNumber, String withdrawalId);
 }

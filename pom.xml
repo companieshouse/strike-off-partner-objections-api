@@ -77,6 +77,12 @@
                 <artifactId>tomcat-embed-websocket</artifactId>
                 <version>${tomcat.version}</version>
             </dependency>
+            <!--Dependency to fix CVE-2026-41178 -->
+            <dependency>
+                <groupId>io.opentelemetry.semconv</groupId>
+                <artifactId>opentelemetry-semconv</artifactId>
+                <version>1.42.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
