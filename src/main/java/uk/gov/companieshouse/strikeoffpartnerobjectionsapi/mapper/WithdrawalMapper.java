@@ -6,6 +6,7 @@ import java.time.ZoneOffset;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
@@ -27,7 +28,7 @@ public interface WithdrawalMapper {
     @Mapping(target = "partnerCaseReference", source = "request.partnerCaseReference")
     @Mapping(target = "partnerContactEmail", source = "request.partnerContactEmail")
     @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream", qualifiedByName = "fromWorkstream")
-    @Mapping(target = "processingStatus", expression = "java(getInitialWithdrawalStatus())")
+    @Mapping(target = "processingStatus", expression = "java(getStatus())")
     @Mapping(target = "kind", expression = "java(getWithdrawalKind())")
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, withdrawalId))")
     @Mapping(target = "id", ignore = true)
@@ -86,7 +87,7 @@ public interface WithdrawalMapper {
     /**
      * Processing status set on all newly created withdrawals.
      */
-    default String getInitialWithdrawalStatus() {
+    default String getStatus() {
         return WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue();
     }
 
@@ -94,7 +95,7 @@ public interface WithdrawalMapper {
      * KIND is constant for all withdrawals created by this API.
      */
     default String getWithdrawalKind() {
-        return "strike-off-partner-objection#withdrawal";
+        return CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL.getValue();
     }
 
     default WithdrawalLinks buildLinks(String companyNumber, String withdrawalId) {
