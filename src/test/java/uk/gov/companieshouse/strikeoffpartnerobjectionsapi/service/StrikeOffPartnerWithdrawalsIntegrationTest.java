@@ -1,12 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-
 import consumer.deserialization.AvroDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -38,6 +31,7 @@ import java.util.Optional;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
