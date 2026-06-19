@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -185,12 +186,16 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(mappedDocument);
+        doNothing().when(withdrawalKafkaProducer)
+                .publishWithdrawalEvent(mappedDocument);
+
         when(withdrawalMapper.toWithdrawAllObjections201Response(mappedDocument))
                 .thenReturn(new WithdrawAllObjections201Response());
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         verify(withdrawalRepository).insert(mappedDocument);
+        verify(withdrawalKafkaProducer).publishWithdrawalEvent(mappedDocument);
     }
 
     @Test
