@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.apache.commons.lang3.StringUtils.trim;
 
+import org.jspecify.annotations.NullMarked;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -11,6 +12,7 @@ import java.util.function.Consumer;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 
+@NullMarked
 @ControllerAdvice
 public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
 
