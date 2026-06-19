@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.util.List;
@@ -11,9 +12,12 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
@@ -24,6 +28,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.Withdrawal
 class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
+    private static final String SECOND_COMPANY_NUMBER = "87654321";
 
     @Autowired
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
@@ -35,6 +40,94 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
     void setUp() {
         withdrawalRepository.deleteAll();
     }
+
+    // ===== GET Withdrawal Tests =====
+
+    @Test
+    void getWithdrawal_retrievesWithdrawalFromMongo_whenWithdrawalFound() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawAllObjections201Response createResponse =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        WithdrawAllObjectionsResponse retrieveResponse =
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId());
+
+        assertThat(retrieveResponse).isNotNull();
+        assertThat(retrieveResponse.getWithdrawalId()).isEqualTo(createResponse.getWithdrawalId());
+        assertThat(retrieveResponse.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+    }
+
+    @Test
+    void getWithdrawal_returnsMappedResponseWithAllFields_whenRetrieved() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawAllObjections201Response createResponse =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        WithdrawAllObjectionsResponse retrieveResponse =
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId());
+
+        // Verify all fields have correct values and links
+        assertThat(retrieveResponse.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+        assertThat(retrieveResponse.getSubmissionCompanyName()).isEqualTo("Acme Limited");
+        assertThat(retrieveResponse.getWithdrawalId()).isEqualTo(createResponse.getWithdrawalId());
+        assertThat(retrieveResponse.getPartnerContactEmail()).isEqualTo("test@example.com");
+        assertThat(retrieveResponse.getPartnerCaseReference()).isEqualTo("CASE-123");
+        assertThat(retrieveResponse.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        assertThat(retrieveResponse.getProcessingStatus()).hasToString("withdrawal-requested");
+        assertThat(retrieveResponse.getCreatedAt()).isNotNull();
+        assertThat(retrieveResponse.getEtag()).isNotBlank();
+        assertThat(retrieveResponse.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
+        assertThat(retrieveResponse.getLinks()).isNotNull();
+        assertThat(retrieveResponse.getLinks().getSelf())
+                .isEqualTo("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/" + createResponse.getWithdrawalId());
+        assertThat(retrieveResponse.getLinks().getCompanyProfile())
+                .isEqualTo("/company/" + COMPANY_NUMBER);
+    }
+
+    @Test
+    void getWithdrawal_throwsNotFoundException_whenWithdrawalDoesNotExist() {
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, "non-existent-id"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawAllObjections201Response createResponse =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        String withdrawalId = createResponse.getWithdrawalId();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(
+                        SECOND_COMPANY_NUMBER, withdrawalId))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void getWithdrawal_retrievesCorrectWithdrawalAcrossMultiple_whenMultipleExist() {
+        // Create first withdrawal for company A
+        WithdrawAllObjectionsRequest request1 = buildRequest();
+        WithdrawAllObjections201Response createResponse1 =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request1);
+
+        // Create second withdrawal for company B
+        WithdrawAllObjectionsRequest request2 = buildRequest();
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(SECOND_COMPANY_NUMBER, request2);
+
+        // Retrieve first withdrawal
+        WithdrawAllObjectionsResponse retrieveResponse1 =
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse1.getWithdrawalId());
+
+        // Verify we get the correct withdrawal
+        assertThat(retrieveResponse1.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+        assertThat(retrieveResponse1.getWithdrawalId()).isEqualTo(createResponse1.getWithdrawalId());
+    }
+
+
+    // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
     void withdrawAllObjections_persistsDocumentInMongo_whenRequestIsValid() {
@@ -99,25 +192,19 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
     }
 
     @Test
-    void withdrawalDocument_containsAllRequiredFields_whenPersisted() {
+    void withdrawalDocument_canBeRetrievedByCompanyNumberAndWithdrawalId_afterWithdrawalIsPersisted() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        WithdrawAllObjections201Response response =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
-        WithdrawalDocument saved = withdrawalRepository.findAll().getFirst();
+        Optional<WithdrawalDocument> found =
+                withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, response.getWithdrawalId());
 
-        assertThat(saved.getCompanyNumber()).isNotBlank();
-        assertThat(saved.getSubmissionCompanyName()).isNotBlank();
-        assertThat(saved.getWithdrawalId()).isNotBlank();
-        assertThat(saved.getPartnerOrganisation()).isNotBlank();
-        assertThat(saved.getPartnerContactEmail()).isNotBlank();
-        assertThat(saved.getPartnerCaseReference()).isNotBlank();
-        assertThat(saved.getPartnerObjectionWorkstream()).isNotBlank();
-        assertThat(saved.getProcessingStatus()).isNotBlank();
-        assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getEtag()).isNotBlank();
-        assertThat(saved.getLinks()).isNotNull();
-        assertThat(saved.getKind()).isNotBlank();
+        assertThat(found).isPresent();
+        assertThat(found.get().getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+        assertThat(found.get().getWithdrawalId()).isEqualTo(response.getWithdrawalId());
     }
+
 
     @Test
     void withdrawAllObjections_persistsWithUniqueWithdrawalId_onEachCall() {

@@ -2,12 +2,17 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,10 +22,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
+import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
@@ -33,6 +42,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.Withdrawal
 class StrikeOffPartnerWithdrawalsServiceTest {
 
     private static final String COMPANY_NUMBER = "12345678";
+    private static final String WITHDRAWAL_ID = "withdrawal-123";
 
     @Mock
     private WithdrawalRepository withdrawalRepository;
@@ -47,6 +57,102 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper);
     }
+
+    // ===== GET Withdrawal Tests =====
+
+    @Test
+    void getWithdrawal_delegatesToRepositoryToFindByCompanyNumberAndWithdrawalId_whenRetrieving() {
+        WithdrawalDocument document = buildSavedDocument();
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(document));
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(document))
+                .thenReturn(response);
+
+        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+
+        verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
+    }
+
+    @Test
+    void getWithdrawal_mapsDocumentToResponse_whenWithdrawalFound() {
+        WithdrawalDocument document = buildSavedDocument();
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(document));
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(document))
+                .thenReturn(response);
+
+        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+
+        verify(withdrawalMapper).toWithdrawAllObjectionsResponse(document);
+    }
+
+    @Test
+    void getWithdrawal_returnsResponseFromMapper_whenWithdrawalFound() {
+        WithdrawalDocument document = buildSavedDocument();
+        WithdrawAllObjectionsResponse expectedResponse = new WithdrawAllObjectionsResponse();
+        expectedResponse.setWithdrawalId(WITHDRAWAL_ID);
+        expectedResponse.setCompanyNumber(COMPANY_NUMBER);
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(document));
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(document))
+                .thenReturn(expectedResponse);
+
+        WithdrawAllObjectionsResponse result =
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+
+        assertThat(result).isSameAs(expectedResponse);
+    }
+
+    @Test
+    void getWithdrawal_throwsNotFoundException_whenWithdrawalNotFound() {
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND)
+                .hasMessageContaining(WITHDRAWAL_ID)
+                .hasMessageContaining(COMPANY_NUMBER);
+    }
+
+    @Test
+    void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void getWithdrawal_throwsWithdrawalPersistenceException_whenRepositoryThrowsDataAccessException() {
+        String companyNumber = "12345678";
+        String withdrawalId = "withdrawal-123";
+        DataAccessException dataAccessException = new DataAccessResourceFailureException("DB down");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId))
+                .thenThrow(dataAccessException);
+
+        WithdrawalPersistenceException ex = assertThrows(
+                WithdrawalPersistenceException.class,
+                () -> strikeOffPartnerWithdrawalsService.getWithdrawal(companyNumber, withdrawalId));
+
+        assertEquals("Failed to retrieve withdrawal", ex.getMessage());
+        assertSame(dataAccessException, ex.getCause());
+
+        verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId);
+        verifyNoInteractions(withdrawalMapper);
+    }
+
+    // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
     void withdrawAllObjections_delegatesToMapperToCreateDocument_whenRequestIsValid() {
