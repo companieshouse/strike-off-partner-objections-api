@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
@@ -29,6 +28,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
     private static final String SECOND_COMPANY_NUMBER = "87654321";
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Autowired
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
@@ -72,7 +72,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
         assertThat(retrieveResponse.getWithdrawalId()).isEqualTo(createResponse.getWithdrawalId());
         assertThat(retrieveResponse.getPartnerContactEmail()).isEqualTo("test@example.com");
         assertThat(retrieveResponse.getPartnerCaseReference()).isEqualTo("CASE-123");
-        assertThat(retrieveResponse.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        assertThat(retrieveResponse.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(retrieveResponse.getProcessingStatus()).hasToString("withdrawal-requested");
         assertThat(retrieveResponse.getCreatedAt()).isNotNull();
         assertThat(retrieveResponse.getEtag()).isNotBlank();
@@ -157,7 +157,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
         assertThat(saved.getPartnerObjectionWorkstream())
-                .isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+                .isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(saved.getPartnerOrganisation()).isEqualTo("hmrc");
 
         // Verify expected status values
@@ -232,7 +232,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
         assertThat(response.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(response.getPartnerContactEmail()).isEqualTo("test@example.com");
-        assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
         assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
         assertThat(response.getWithdrawalId()).isNotBlank();
@@ -249,7 +249,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends MongoDbIntegration {
         request.setSubmissionCompanyName("Acme Limited");
         request.setPartnerCaseReference("CASE-123");
         request.setPartnerContactEmail("test@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         return request;
     }
 }

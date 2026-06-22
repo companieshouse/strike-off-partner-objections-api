@@ -32,7 +32,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
@@ -48,7 +47,6 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
-    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private static final String VALID_WITHDRAWAL_REQUEST = """
@@ -101,7 +99,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
         request.setPartnerContactEmail("owner@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.values()[0]);
+        request.setPartnerObjectionWorkstream("individuals-and-small-business-compliance");
 
         WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
         serviceResponse.setWithdrawalId("withdrawal-123");
@@ -395,13 +393,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "other"),
-                        INVALID_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
-                        INVALID_WORKSTREAM)
+                        MISSING_WORKSTREAM)
         );
     }
 

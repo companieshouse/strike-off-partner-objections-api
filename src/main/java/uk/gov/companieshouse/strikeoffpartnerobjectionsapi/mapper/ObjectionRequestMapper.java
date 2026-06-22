@@ -6,7 +6,6 @@ import org.mapstruct.Named;
 import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
 
@@ -25,7 +24,7 @@ public interface ObjectionRequestMapper {
     @Mapping(target = "partnerOrganisation", source = "partnerOrganisation")
     @Mapping(target = "submissionCompanyName", source = "request.submissionCompanyName")
     @Mapping(target = "partnerCaseReference", source = "request.partnerCaseReference")
-    @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream", qualifiedByName = "workstreamToString")
+    @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream")
     @Mapping(target = "partnerObjectionReason", source = "request.partnerObjectionReason", qualifiedByName = "reasonToString")
     @Mapping(target = "partnerContactEmail", source = "request.partnerContactEmail")
     ObjectionDocument toObjectionDocument(
@@ -39,10 +38,6 @@ public interface ObjectionRequestMapper {
         return OBJECTION_SUBMITTED.getValue();
     }
 
-    @Named("workstreamToString")
-    default String workstreamToString(PartnerObjectionWorkstream value) {
-        return value == null ? null : value.getValue();
-    }
 
     /**
      * KIND is constant for all objections created by this API, so it is set as a constant in the mapping annotation.

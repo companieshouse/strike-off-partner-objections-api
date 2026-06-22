@@ -9,7 +9,6 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
@@ -22,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @Tag("integration-test")
 class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
+
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Autowired
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
@@ -91,7 +92,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
         assertThat(saved.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
-        assertThat(saved.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        assertThat(saved.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(saved.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.OTHER.getValue());
         assertThat(saved.getId()).isNotBlank();
         assertThat(saved.getEtag()).isNotBlank();
@@ -110,7 +111,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends MongoDbIntegration {
         request.setSubmissionCompanyName("Acme Limited");
         request.setPartnerCaseReference("CASE-123");
         request.setPartnerContactEmail("test@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
         return request;
     }

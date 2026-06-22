@@ -48,7 +48,6 @@ import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
 
@@ -66,7 +65,6 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_REASON = "INVALID_REASON";
-    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -531,11 +529,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
-                        INVALID_WORKSTREAM)
+                        MISSING_WORKSTREAM)
         );
     }
 
@@ -562,7 +556,7 @@ class StrikeOffObjectionPartnerControllerTest {
         response.setSubmissionCompanyName("Valid Company Ltd");
         response.setObjectionId("objection-123");
         response.setPartnerCaseReference("CASE123");
-        response.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        response.setPartnerObjectionWorkstream("debt-management");
         response.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
         response.setPartnerContactEmail("valid@email.com");
         response.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);

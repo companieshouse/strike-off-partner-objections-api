@@ -12,7 +12,6 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
 
@@ -23,6 +22,7 @@ class ObjectionResponseMapperTest {
 
     private static final String OBJECTION_ID = "obj-123";
     private static final String ETAG = "etag-abc";
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
     private static final Instant CREATED_AT = Instant.parse("2026-06-11T10:00:00Z");
     private static final Instant STATUS_CHANGED_AT = Instant.parse("2026-06-11T11:00:00Z");
     private static final Instant EXPIRATION_ON = Instant.parse("2026-11-11T10:00:00Z");
@@ -36,7 +36,7 @@ class ObjectionResponseMapperTest {
         assertThat(response.getObjectionId()).isEqualTo(OBJECTION_ID);
         assertThat(response.getEtag()).isEqualTo(ETAG);
         assertThat(response.getProcessingStatus()).isEqualTo(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
-        assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(response.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.OTHER);
         assertThat(response.getFailureReason()).isEqualTo(FailureReason.COMPANY_HAS_BEEN_DISSOLVED);
         assertThat(response.getProcessingStatusChangedAt()).isEqualTo(OffsetDateTime.ofInstant(STATUS_CHANGED_AT, ZoneOffset.UTC));
@@ -114,7 +114,7 @@ class ObjectionResponseMapperTest {
         document.setObjectionId(OBJECTION_ID);
         document.setEtag(ETAG);
         document.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED.getValue());
-        document.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        document.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         document.setPartnerObjectionReason(PartnerObjectionReason.OTHER.getValue());
         document.setFailureReason(FailureReason.COMPANY_HAS_BEEN_DISSOLVED.getValue());
         document.setProcessingStatusChangedAt(STATUS_CHANGED_AT);
