@@ -48,7 +48,6 @@ import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
 
@@ -57,6 +56,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObje
 class StrikeOffObjectionPartnerControllerTest {
 
     private static final String COMPANY_NUMBER = "12345678";
+    private static final String OBJECTION_ID = "objection-123";
     private static final String CREATE_OBJECTION_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
     private static final String GET_OBJECTION_URL = "/company/%s/strike-off-partner-objections/%s";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
@@ -66,7 +66,6 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_REASON = "INVALID_REASON";
-    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -96,18 +95,18 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionCallsServiceWithCompanyNumberAndObjectionId() throws Exception {
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
 
-        verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, "objection-123");
+        verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, OBJECTION_ID);
     }
 
     @Test
     void getObjectionFound_Returns200AndContainsCorrectAttributes() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenReturn(defaultCreatedResponse());
 
-        MvcResult result = performGetObjection(COMPANY_NUMBER, "objection-123")
+        MvcResult result = performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -138,10 +137,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionNotFound_Returns404() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
 
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
@@ -149,18 +148,18 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionWithIncorrectCompanyNumber_Returns404() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection("123", "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection("123", OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenReturn(defaultCreatedResponse());
 
-        performGetObjection("123", "objection-123")
+        performGetObjection("123")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
 
         // Proving here that the objection ID is valid; it is the company number that causes the 404.
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
     }
 
@@ -486,8 +485,8 @@ class StrikeOffObjectionPartnerControllerTest {
         return mockMvc.perform(post(CREATE_OBJECTION_URL).contentType(APPLICATION_JSON));
     }
 
-    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
-        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+    private ResultActions performGetObjection(String companyNumber) throws Exception {
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, OBJECTION_ID))
                 .contentType(APPLICATION_JSON));
     }
 
@@ -531,11 +530,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "a".repeat(101)),
-                        INVALID_WORKSTREAM)
+                        MISSING_WORKSTREAM)
         );
     }
 
@@ -562,7 +557,7 @@ class StrikeOffObjectionPartnerControllerTest {
         response.setSubmissionCompanyName("Valid Company Ltd");
         response.setObjectionId("objection-123");
         response.setPartnerCaseReference("CASE123");
-        response.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        response.setPartnerObjectionWorkstream("debt-management");
         response.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
         response.setPartnerContactEmail("valid@email.com");
         response.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);

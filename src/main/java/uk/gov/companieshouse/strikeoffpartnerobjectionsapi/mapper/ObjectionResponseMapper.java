@@ -8,7 +8,6 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
 
@@ -19,7 +18,7 @@ import java.time.ZoneOffset;
 @Mapper(componentModel = "spring")
 public interface ObjectionResponseMapper {
 
-    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream", qualifiedByName = "toWorkstream")
+    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream")
     @Mapping(target = "partnerObjectionReason", source = "partnerObjectionReason", qualifiedByName = "toReason")
     @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "toStatus")
     @Mapping(target = "links", source = "links")
@@ -41,10 +40,6 @@ public interface ObjectionResponseMapper {
         return responseLinks;
     }
 
-    @Named("toWorkstream")
-    default PartnerObjectionWorkstream toWorkstream(String value) {
-        return value == null ? null : PartnerObjectionWorkstream.fromValue(value);
-    }
 
     @Named("toReason")
     default PartnerObjectionReason toReason(String value) {

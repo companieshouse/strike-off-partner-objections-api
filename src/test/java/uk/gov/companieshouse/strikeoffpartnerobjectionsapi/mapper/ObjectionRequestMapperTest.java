@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
 @Tag("unit-test")
@@ -18,6 +17,7 @@ class ObjectionRequestMapperTest {
     private static final String COMPANY_NUMBER = "01234567";
     private static final String PARTNER_ORG = "hmrc";
     private static final String OBJECTION_ID = "obj-abc-123";
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Test
     void toObjectionDocumentMapsRequestFieldsCorrectly() {
@@ -25,7 +25,7 @@ class ObjectionRequestMapperTest {
         request.setSubmissionCompanyName("Acme Ltd");
         request.setPartnerCaseReference("CASE-001");
         request.setPartnerContactEmail("test@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
 
         ObjectionDocument doc = mapper.toObjectionDocument(
@@ -72,7 +72,7 @@ class ObjectionRequestMapperTest {
     @Test
     void toObjectionDocumentMapsWorkstreamAndReasonAsString() {
         CreateObjectionRequest request = new CreateObjectionRequest();
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
 
         ObjectionDocument doc = mapper.toObjectionDocument(

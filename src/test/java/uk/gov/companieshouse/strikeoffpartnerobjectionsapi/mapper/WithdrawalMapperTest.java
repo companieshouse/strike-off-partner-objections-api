@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
@@ -23,6 +22,7 @@ class WithdrawalMapperTest {
     private static final String PARTNER_ORG = "hmrc";
     private static final String WITHDRAWAL_ID = "wdl-abc-123";
     private static final String ETAG = "etag-xyz";
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     // -----------------------------------------------------------------------
     // toWithdrawalDocument – request → document
@@ -45,15 +45,15 @@ class WithdrawalMapperTest {
     }
 
     @Test
-    void toWithdrawalDocument_convertsWorkstreamEnumToString_whenWorkstreamIsSet() {
+    void toWithdrawalDocument_mapsWorkstreamAsString_whenWorkstreamIsSet() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
 
         WithdrawalDocument doc = mapper.toWithdrawalDocument(
                 request, COMPANY_NUMBER, PARTNER_ORG, WITHDRAWAL_ID, ETAG);
 
         assertThat(doc.getPartnerObjectionWorkstream())
-                .isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+                .isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
     }
 
     @Test
@@ -163,15 +163,15 @@ class WithdrawalMapperTest {
     }
 
     @Test
-    void toWithdrawAllObjections201Response_convertsWorkstreamToEnum_whenWorkstreamIsSet() {
+    void toWithdrawAllObjections201Response_mapsWorkstreamString_whenWorkstreamIsSet() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
-        doc.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        doc.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
 
         WithdrawAllObjections201Response response =
                 mapper.toWithdrawAllObjections201Response(doc);
 
         assertThat(response.getPartnerObjectionWorkstream())
-                .isEqualTo(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+                .isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
     }
 
     @Test
@@ -332,7 +332,7 @@ class WithdrawalMapperTest {
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
         request.setPartnerContactEmail("owner@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         return request;
     }
 
@@ -344,7 +344,7 @@ class WithdrawalMapperTest {
         doc.setSubmissionCompanyName("ACME LTD");
         doc.setPartnerCaseReference("CASE-001");
         doc.setPartnerContactEmail("owner@example.com");
-        doc.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        doc.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         doc.setPartnerOrganisation(PARTNER_ORG);
         doc.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
         doc.setKind("strike-off-partner-objection#withdrawal");

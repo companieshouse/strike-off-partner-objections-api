@@ -27,7 +27,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
@@ -45,6 +44,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     private static final String COMPANY_NUMBER = "12345678";
     private static final String WITHDRAWAL_ID = "withdrawal-123";
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Mock
     private WithdrawalRepository withdrawalRepository;
@@ -293,7 +293,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
         request.setPartnerContactEmail("owner@example.com");
-        request.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT);
+        request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         return request;
     }
 
@@ -305,7 +305,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         doc.setWithdrawalId(withdrawalId);
         doc.setPartnerCaseReference("CASE-001");
         doc.setPartnerContactEmail("owner@example.com");
-        doc.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        doc.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         doc.setPartnerOrganisation("hmrc");
         doc.setProcessingStatus("withdrawal-requested");
         doc.setEtag(UUID.randomUUID().toString());
