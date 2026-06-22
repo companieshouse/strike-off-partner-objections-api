@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.KafkaException;
-import uk.gov.companieshouse.api.objections.model.PartnerObjectionWorkstream;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 
@@ -20,6 +19,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 })
 @Tag("unit-test")
 class KafkaFailureTest {
+    private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
+
     @Autowired
     private WithdrawalKafkaProducer withdrawalKafkaProducer;
 
@@ -35,7 +36,7 @@ class KafkaFailureTest {
     private WithdrawalDocument buildDocument() {
         WithdrawalDocument document = new WithdrawalDocument();
         document.setCompanyNumber("12345678");
-        document.setPartnerObjectionWorkstream(PartnerObjectionWorkstream.DEBT_MANAGEMENT.getValue());
+        document.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         document.setWithdrawalId(UUID.randomUUID().toString());
         document.setEtag(UUID.randomUUID().toString());
         return document;
