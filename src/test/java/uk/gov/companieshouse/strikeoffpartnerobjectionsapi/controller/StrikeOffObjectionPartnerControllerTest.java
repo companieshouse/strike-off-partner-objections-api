@@ -56,6 +56,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObje
 class StrikeOffObjectionPartnerControllerTest {
 
     private static final String COMPANY_NUMBER = "12345678";
+    private static final String OBJECTION_ID = "objection-123";
     private static final String CREATE_OBJECTION_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
     private static final String GET_OBJECTION_URL = "/company/%s/strike-off-partner-objections/%s";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
@@ -94,18 +95,18 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionCallsServiceWithCompanyNumberAndObjectionId() throws Exception {
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
 
-        verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, "objection-123");
+        verify(strikeOffObjectionPartnerService, times(1)).getObjection(COMPANY_NUMBER, OBJECTION_ID);
     }
 
     @Test
     void getObjectionFound_Returns200AndContainsCorrectAttributes() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenReturn(defaultCreatedResponse());
 
-        MvcResult result = performGetObjection(COMPANY_NUMBER, "objection-123")
+        MvcResult result = performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -136,10 +137,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionNotFound_Returns404() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
 
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
@@ -147,18 +148,18 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjectionWithIncorrectCompanyNumber_Returns404() throws Exception {
-        when(strikeOffObjectionPartnerService.getObjection("123", "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection("123", OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
-        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, "objection-123"))
+        when(strikeOffObjectionPartnerService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenReturn(defaultCreatedResponse());
 
-        performGetObjection("123", "objection-123")
+        performGetObjection("123")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
 
         // Proving here that the objection ID is valid; it is the company number that causes the 404.
-        performGetObjection(COMPANY_NUMBER, "objection-123")
+        performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
     }
 
@@ -484,8 +485,8 @@ class StrikeOffObjectionPartnerControllerTest {
         return mockMvc.perform(post(CREATE_OBJECTION_URL).contentType(APPLICATION_JSON));
     }
 
-    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
-        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+    private ResultActions performGetObjection(String companyNumber) throws Exception {
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, OBJECTION_ID))
                 .contentType(APPLICATION_JSON));
     }
 
