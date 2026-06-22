@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka;
 
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -10,8 +9,6 @@ import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObject
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 
-import java.time.Instant;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,23 +18,27 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Component
 public class WithdrawalKafkaProducer {
     private final KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate;
-    private final String topic;
     private final long timeoutMilliseconds;
+    private final KafkaProducerEventFactory kafkaProducerEventFactory;
 
     public WithdrawalKafkaProducer(
             KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate,
-            @Value("${kafka.topic.strikeoff.partner.objections}") String topic,
+            KafkaProducerEventFactory kafkaProducerEventFactory,
             @Value("${kafka.max-block-milliseconds}") long timeoutMilliseconds) {
         this.kafkaTemplate = kafkaTemplate;
-        this.topic = topic;
+        this.kafkaProducerEventFactory = kafkaProducerEventFactory;
         this.timeoutMilliseconds = timeoutMilliseconds;
     }
 
     public void publishWithdrawalEvent(WithdrawalDocument withdrawalDocument) {
-        ProducerRecord<String, StrikeOffPartnerObjections> withdrawalRecord = mapToRecord(withdrawalDocument);
+        var withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(
+                withdrawalDocument.getWithdrawalId(),
+                withdrawalDocument.getPartnerOrganisation(),
+                EventType.WITHDRAWAL
+        );
 
         LOGGER.info(String.format("Sending WITHDRAWAL event to topic: %s, objectionId: %s",
-                topic, withdrawalDocument.getWithdrawalId()));
+                withdrawalRecord.topic(), withdrawalDocument.getWithdrawalId()));
 
         try {
             kafkaTemplate.send(withdrawalRecord).get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
@@ -49,17 +50,5 @@ public class WithdrawalKafkaProducer {
             throw new KafkaPublishException("Failed to send Kafka message for objection: "
                     + withdrawalDocument.getWithdrawalId(), ex);
         }
-    }
-
-    private ProducerRecord<String, StrikeOffPartnerObjections> mapToRecord(WithdrawalDocument doc) {
-        StrikeOffPartnerObjections message = StrikeOffPartnerObjections.newBuilder()
-                .setEventId(UUID.randomUUID().toString())
-                .setEventTime(Instant.now().toString())
-                .setSource("strike-off-partner-objections-api")
-                .setEventType(EventType.WITHDRAWAL)
-                .setPartnerOrganisation(doc.getPartnerOrganisation())
-                .setStrikeOffEventId(doc.getWithdrawalId())  // withdrawalId maps to strike_off_event__id
-                .build();
-        return new ProducerRecord<>(topic, doc.getWithdrawalId(), message);
     }
 }

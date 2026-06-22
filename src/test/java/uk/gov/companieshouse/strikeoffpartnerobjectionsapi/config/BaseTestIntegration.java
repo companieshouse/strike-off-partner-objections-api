@@ -6,10 +6,12 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestConstants.KAFKA_VERSION;
+
 @Import(TestKafkaConfiguration.class)
 public abstract class BaseTestIntegration extends MongoDbIntegration {
     protected static final KafkaContainer kafkaContainer =
-            new KafkaContainer(DockerImageName.parse("apache/kafka:4.0.0"));
+            new KafkaContainer(DockerImageName.parse("apache/kafka:" + KAFKA_VERSION));
 
 
     @DynamicPropertySource

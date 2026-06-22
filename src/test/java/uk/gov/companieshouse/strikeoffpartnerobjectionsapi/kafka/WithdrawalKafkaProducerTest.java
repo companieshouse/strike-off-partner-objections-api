@@ -9,14 +9,18 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
+import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,11 +36,14 @@ class WithdrawalKafkaProducerTest {
 
     private WithdrawalKafkaProducer producer;
 
+    @Mock
+    private KafkaProducerEventFactory kafkaProducerEventFactory;
+
     @BeforeEach
     void setUp() {
         producer = new WithdrawalKafkaProducer(
                 kafkaTemplate,
-                TOPIC,
+                kafkaProducerEventFactory,
                 TIMEOUT);
     }
 
@@ -46,6 +53,26 @@ class WithdrawalKafkaProducerTest {
         when(kafkaTemplate.send(
                 ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
+
+        when(kafkaProducerEventFactory.createProducerRecord(
+                eq(document.getWithdrawalId()),
+                eq(document.getPartnerOrganisation()),
+                any(EventType.class)))
+                .thenReturn(
+                        new ProducerRecord<>(
+                                TOPIC,
+                                document.getWithdrawalId(),
+                                StrikeOffPartnerObjections.newBuilder()
+                                        .setEventId("event-id")
+                                        .setEventTime(Instant.now().toString())
+                                        .setSource("test")
+                                        .setEventType(EventType.WITHDRAWAL)
+                                        .setPartnerOrganisation(document.getPartnerOrganisation())
+                                        .setStrikeOffEventId(document.getWithdrawalId())
+                                        .build()
+                        )
+                );
+
 
         assertDoesNotThrow(() ->
                 producer.publishWithdrawalEvent(document));
@@ -60,6 +87,11 @@ class WithdrawalKafkaProducerTest {
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(
                         new RuntimeException("Kafka failure")));
+        when(kafkaProducerEventFactory.createProducerRecord(
+                eq(document.getWithdrawalId()),
+                eq(document.getPartnerOrganisation()),
+                any(EventType.class)))
+                .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
 
         assertThrows(
                 KafkaPublishException.class,
@@ -73,6 +105,11 @@ class WithdrawalKafkaProducerTest {
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(
                         new InterruptedException()));
+        when(kafkaProducerEventFactory.createProducerRecord(
+                eq(document.getWithdrawalId()),
+                eq(document.getPartnerOrganisation()),
+                any(EventType.class)))
+                .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
         assertThrows(
                 KafkaPublishException.class,
                 () -> producer.publishWithdrawalEvent(document));
