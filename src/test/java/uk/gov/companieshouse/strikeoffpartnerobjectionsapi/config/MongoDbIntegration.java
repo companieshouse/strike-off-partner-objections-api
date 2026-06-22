@@ -6,8 +6,10 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestConstants.MONGO_VERSION;
+
 public abstract class MongoDbIntegration {
-    public static final MongoDBContainer mongoDBContainer = new MongoDBContainer( DockerImageName.parse( "mongo:7.0.17-jammy" ) );
+    protected static final MongoDBContainer mongoDBContainer = new MongoDBContainer( DockerImageName.parse( "mongo:" + MONGO_VERSION ) );
 
     @DynamicPropertySource
     public static void setProperties( final DynamicPropertyRegistry registry ) {

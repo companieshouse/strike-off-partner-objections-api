@@ -8,6 +8,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Respon
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
@@ -25,12 +26,14 @@ public class StrikeOffPartnerWithdrawalsService {
 
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
+    private final WithdrawalKafkaProducer withdrawalKafkaProducer;
 
     public StrikeOffPartnerWithdrawalsService(
             final WithdrawalRepository withdrawalRepository,
-            final WithdrawalMapper withdrawalMapper) {
+            final WithdrawalMapper withdrawalMapper, WithdrawalKafkaProducer withdrawalKafkaProducer) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
+        this.withdrawalKafkaProducer = withdrawalKafkaProducer;
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
@@ -73,6 +76,9 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalDocument saved = withdrawalRepository.insert(document);
             LOGGER.info(format("Withdrawal created successfully: withdrawalId=%s, companyNumber=%s",
                     saved.getWithdrawalId(), saved.getCompanyNumber()));
+            withdrawalKafkaProducer.publishWithdrawalEvent(saved);
+            LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s", saved.getWithdrawalId()));
+
             return withdrawalMapper.toWithdrawAllObjections201Response(saved);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);

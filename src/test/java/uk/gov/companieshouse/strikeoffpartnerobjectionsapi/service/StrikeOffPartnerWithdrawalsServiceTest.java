@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,6 +33,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
@@ -50,12 +52,15 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private WithdrawalMapper withdrawalMapper;
 
+    @Mock
+    private WithdrawalKafkaProducer withdrawalKafkaProducer;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
     void setUp() {
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -181,12 +186,16 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(mappedDocument);
+        doNothing().when(withdrawalKafkaProducer)
+                .publishWithdrawalEvent(mappedDocument);
+
         when(withdrawalMapper.toWithdrawAllObjections201Response(mappedDocument))
                 .thenReturn(new WithdrawAllObjections201Response());
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         verify(withdrawalRepository).insert(mappedDocument);
+        verify(withdrawalKafkaProducer).publishWithdrawalEvent(mappedDocument);
     }
 
     @Test
