@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -16,12 +16,12 @@ import java.util.concurrent.TimeoutException;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
-public class WithdrawalKafkaProducer {
+public class ObjectionKafkaProducer {
     private final KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate;
     private final long timeoutMilliseconds;
     private final KafkaProducerEventFactory kafkaProducerEventFactory;
 
-    public WithdrawalKafkaProducer(
+    public ObjectionKafkaProducer(
             KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate,
             KafkaProducerEventFactory kafkaProducerEventFactory,
             @Value("${kafka.max-block-milliseconds}") long timeoutMilliseconds) {
@@ -30,25 +30,25 @@ public class WithdrawalKafkaProducer {
         this.timeoutMilliseconds = timeoutMilliseconds;
     }
 
-    public void publishWithdrawalEvent(WithdrawalDocument withdrawalDocument) {
-        var withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(
-                withdrawalDocument.getWithdrawalId(),
-                withdrawalDocument.getPartnerOrganisation(),
-                EventType.WITHDRAWAL
+    public void publishObjectionEvent(ObjectionDocument objectionDocument) {
+        var objectionRecord = kafkaProducerEventFactory.createProducerRecord(
+                objectionDocument.getObjectionId(),
+                objectionDocument.getPartnerOrganisation(),
+                EventType.OBJECTION
         );
 
-        LOGGER.info(String.format("Sending WITHDRAWAL event to topic: %s, withdrawalId: %s",
-                withdrawalRecord.topic(), withdrawalDocument.getWithdrawalId()));
+        LOGGER.info(String.format("Sending OBJECTION event to topic: %s, objectionId: %s",
+                objectionRecord.topic(), objectionDocument.getObjectionId()));
 
         try {
-            kafkaTemplate.send(withdrawalRecord).get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
-            LOGGER.info("Successfully sent WITHDRAWAL event: " + withdrawalDocument.getWithdrawalId());
+            kafkaTemplate.send(objectionRecord).get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
+            LOGGER.info("Successfully sent OBJECTION event: " + objectionDocument.getObjectionId());
         } catch (ExecutionException | TimeoutException | InterruptedException | KafkaException ex) {
             if (ex.getCause() instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             throw new KafkaPublishException("Failed to send Kafka message for objection: "
-                    + withdrawalDocument.getWithdrawalId(), ex);
+                    + objectionDocument.getObjectionId(), ex);
         }
     }
 }

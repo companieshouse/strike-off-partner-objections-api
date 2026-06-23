@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -23,6 +24,7 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
@@ -41,6 +43,8 @@ class StrikeOffObjectionPartnerServiceTest {
     @Mock
     private ObjectionResponseMapper objectionResponseMapper;
 
+    @Mock
+    private ObjectionKafkaProducer objectionKafkaProducer;
     private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
 
     @BeforeEach
@@ -48,7 +52,8 @@ class StrikeOffObjectionPartnerServiceTest {
         strikeOffObjectionPartnerService = new StrikeOffObjectionPartnerService(
                 objectionRepository,
                 objectionRequestMapper,
-                objectionResponseMapper
+                objectionResponseMapper,
+                objectionKafkaProducer
 
         );
     }
@@ -65,6 +70,7 @@ class StrikeOffObjectionPartnerServiceTest {
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
+        doNothing().when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
 
 
         BaseObjectionResponse result = strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
@@ -74,6 +80,7 @@ class StrikeOffObjectionPartnerServiceTest {
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);
         verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
+        verify(objectionKafkaProducer).publishObjectionEvent(savedDocument);
     }
 
     @Test

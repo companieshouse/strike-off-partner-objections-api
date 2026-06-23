@@ -7,6 +7,7 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
@@ -22,11 +23,13 @@ public class StrikeOffObjectionPartnerService {
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
+    private final ObjectionKafkaProducer objectionKafkaProducer;
 
-    public StrikeOffObjectionPartnerService(ObjectionRepository objectionRepository, ObjectionRequestMapper objectionRequestMapper, ObjectionResponseMapper objectionResponseMapper) {
+    public StrikeOffObjectionPartnerService(ObjectionRepository objectionRepository, ObjectionRequestMapper objectionRequestMapper, ObjectionResponseMapper objectionResponseMapper, ObjectionKafkaProducer objectionKafkaProducer) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
+        this.objectionKafkaProducer = objectionKafkaProducer;
     }
 
     public BaseObjectionResponse createObjection(final String companyNumber,
@@ -46,6 +49,9 @@ public class StrikeOffObjectionPartnerService {
         try {
             ObjectionDocument saved = objectionRepository.insert(document);
             LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s", saved.getObjectionId(), saved.getCompanyNumber()));
+            objectionKafkaProducer.publishObjectionEvent(saved);
+            LOGGER.info(format("OBJECTION event published successfully: objectionId=%s", saved.getObjectionId()));
+
             return objectionResponseMapper.toObjectionApiResponse(saved);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
