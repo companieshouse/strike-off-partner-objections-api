@@ -43,7 +43,11 @@ public class ObjectionKafkaProducer {
         try {
             kafkaTemplate.send(objectionRecord).get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
             LOGGER.info("Successfully sent OBJECTION event: " + objectionDocument.getObjectionId());
-        } catch (ExecutionException | TimeoutException | InterruptedException | KafkaException ex) {
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new KafkaPublishException("Failed to send Kafka message for objection: "
+                    + objectionDocument.getObjectionId(), ex);
+        } catch (ExecutionException | TimeoutException | KafkaException ex) {
             if (ex.getCause() instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }

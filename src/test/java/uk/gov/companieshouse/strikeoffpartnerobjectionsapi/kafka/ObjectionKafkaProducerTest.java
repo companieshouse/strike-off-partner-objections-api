@@ -71,7 +71,7 @@ class ObjectionKafkaProducerTest {
 
 
     @Test
-    void publishObjectionEventWhenKafkaFailsThrowsInterruptedException() {
+    void publishObjectionEventWhenKafkaSendIsInterruptedThrowsKafkaPublishException() {
         var document = buildDocument();
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(
