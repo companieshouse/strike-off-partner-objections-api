@@ -48,6 +48,9 @@ class StrikeOffPartnerObjectionServiceTest {
     private ObjectionResponseMapper objectionResponseMapper;
 
     @Mock
+    private CompanyProfileService companyProfileService;
+    
+    @Mock
     private ObjectionKafkaProducer objectionKafkaProducer;
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
@@ -57,9 +60,11 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRepository,
                 objectionRequestMapper,
                 objectionResponseMapper,
+                companyProfileService,
                 objectionKafkaProducer
 
         );
+        when(companyProfileService.getCompanyProfile(anyString())).thenReturn(new uk.gov.companieshouse.api.model.company.CompanyProfileApi());
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {

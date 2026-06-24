@@ -18,7 +18,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -118,6 +120,28 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 new ApiError(SERVICE_UNAVAILABLE_CODE, SERVICE_UNAVAILABLE_MESSAGE),
                 HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @ExceptionHandler(ServiceException.class)
+    public ResponseEntity<ApiError> handleServiceException(ServiceException ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof ApiErrorResponseException apiErrorResponseException) {
+            HttpStatus status = HttpStatus.resolve(apiErrorResponseException.getStatusCode());
+            if (status != null) {
+                String upstreamMessage = apiErrorResponseException.getStatusMessage();
+                String message = (upstreamMessage == null || upstreamMessage.isBlank())
+                        ? DEFAULT_RESPONSE_STATUS_MESSAGE
+                        : upstreamMessage;
+                if (ex.getMessage() != null && !ex.getMessage().isBlank()) {
+                    message = ex.getMessage() + ": " + message;
+                }
+                return ResponseEntity.status(status)
+                        .body(new ApiError(toErrorCode(status), message));
+            }
+        }
+        return new ResponseEntity<>(
+                new ApiError(INTERNAL_SERVER_ERROR_CODE, INTERNAL_SERVER_ERROR_MESSAGE),
+                HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(RuntimeException.class)
