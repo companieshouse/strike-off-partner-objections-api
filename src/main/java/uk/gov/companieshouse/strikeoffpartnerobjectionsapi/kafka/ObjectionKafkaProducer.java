@@ -26,9 +26,6 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
                 EventType.OBJECTION
         );
 
-        sendMessage(objectionRecord.topic(),
-                objectionDocument.getObjectionId(),
-                objectionRecord.value(),
-                EventType.OBJECTION);
+        sendMessage(objectionRecord);
     }
 }

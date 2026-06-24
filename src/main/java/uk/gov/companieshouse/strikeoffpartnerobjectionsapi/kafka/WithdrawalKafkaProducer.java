@@ -26,9 +26,6 @@ public class WithdrawalKafkaProducer extends AbstractKafkaProducer {
                 EventType.WITHDRAWAL
         );
 
-        sendMessage(withdrawalRecord.topic(),
-                withdrawalDocument.getWithdrawalId(),
-                withdrawalRecord.value(),
-                EventType.WITHDRAWAL);
+        sendMessage(withdrawalRecord);
     }
 }
