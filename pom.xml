@@ -112,7 +112,7 @@
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
             <exclusions>
                 <exclusion>
-                    <groupId>org.springframework.boot</groupId>
+                    <groupId>org.springframework.data</groupId>
                     <artifactId>spring-boot-data-mongodb</artifactId>
                 </exclusion>
             </exclusions>
