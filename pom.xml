@@ -13,7 +13,7 @@
     <properties>
         <java.version>21</java.version>
         <structured-logging.version>3.0.57</structured-logging.version>
-        <spring-boot-dependencies.version>4.1.0</spring-boot-dependencies.version>
+        <spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <spring-framework.version>7.0.8</spring-framework.version>
@@ -90,7 +90,7 @@
             <dependency>
                 <groupId>org.springframework.data</groupId>
                 <artifactId>spring-data-mongodb</artifactId>
-                <version>5.1.0</version>
+                <version>5.0.6</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
