@@ -184,6 +184,11 @@
             <artifactId>kafka-models</artifactId>
             <version>${kafka-models.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-mongodb</artifactId>
+            <version>5.0.6</version>
+        </dependency>
     </dependencies>
 
 	<build>
