@@ -4,7 +4,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
@@ -59,7 +58,7 @@ public class StrikeOffPartnerWithdrawalsService {
         }
     }
 
-    public WithdrawAllObjections201Response withdrawAllObjections(
+    public WithdrawAllObjectionsResponse withdrawAllObjections(
             final String companyNumber,
             final WithdrawAllObjectionsRequest request) {
 
@@ -79,7 +78,7 @@ public class StrikeOffPartnerWithdrawalsService {
             withdrawalKafkaProducer.publishWithdrawalEvent(saved);
             LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s", saved.getWithdrawalId()));
 
-            return withdrawalMapper.toWithdrawAllObjections201Response(saved);
+            return withdrawalMapper.toWithdrawAllObjectionsResponse(saved);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);
         }

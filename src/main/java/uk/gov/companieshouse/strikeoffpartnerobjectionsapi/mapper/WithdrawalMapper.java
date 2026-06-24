@@ -7,7 +7,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponseLinks;
@@ -40,18 +39,6 @@ public interface WithdrawalMapper {
             String etag
     );
 
-    @Mapping(target = "processingStatus", source = "processingStatus", qualifiedByName = "toWithdrawalRequestedStatus")
-    @Mapping(target = "partnerObjectionWorkstream", source = "partnerObjectionWorkstream")
-    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "toOffsetDateTime")
-    @Mapping(target = "links", source = "links", qualifiedByName = "toResponseLinks")
-    @Mapping(target = "failureReason", ignore = true)
-    @Mapping(target = "processingStatusChangedAt", ignore = true)
-    WithdrawAllObjections201Response toWithdrawAllObjections201Response(WithdrawalDocument document);
-
-    @Named("toWithdrawalRequestedStatus")
-    default WithdrawalRequestedStatus toWithdrawalRequestedStatus(String value) {
-        return value == null ? null : WithdrawalRequestedStatus.fromValue(value);
-    }
 
     @Named("toWithdrawalProcessingStatus")
     default WithdrawalProcessingStatus toWithdrawalProcessingStatus(String value) {

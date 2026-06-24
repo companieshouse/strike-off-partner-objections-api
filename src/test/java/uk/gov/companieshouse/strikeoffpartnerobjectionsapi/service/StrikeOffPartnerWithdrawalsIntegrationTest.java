@@ -12,10 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
-import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
+import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
@@ -62,7 +61,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void getWithdrawal_retrievesWithdrawalFromMongo_whenWithdrawalFound() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawAllObjections201Response createResponse =
+        WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         WithdrawAllObjectionsResponse retrieveResponse =
@@ -76,7 +75,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void getWithdrawal_returnsMappedResponseWithAllFields_whenRetrieved() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawAllObjections201Response createResponse =
+        WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         WithdrawAllObjectionsResponse retrieveResponse =
@@ -111,7 +110,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawAllObjections201Response createResponse =
+        WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
         String withdrawalId = createResponse.getWithdrawalId();
 
@@ -126,7 +125,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void getWithdrawal_retrievesCorrectWithdrawalAcrossMultiple_whenMultipleExist() {
         // Create first withdrawal for company A
         WithdrawAllObjectionsRequest request1 = buildRequest();
-        WithdrawAllObjections201Response createResponse1 =
+        WithdrawAllObjectionsResponse createResponse1 =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request1);
 
         // Create second withdrawal for company B
@@ -150,7 +149,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-        WithdrawAllObjections201Response response =
+        WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
         Instant after = Instant.now();
 
@@ -190,13 +189,13 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         // Verify the response is mapped from persisted data
         assertThat(response.getWithdrawalId()).isEqualTo(saved.getWithdrawalId());
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
-        assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
+        assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
     }
 
     @Test
     void withdrawalDocument_canBeRetrievedByWithdrawalId_afterWithdrawalIsPersisted() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawAllObjections201Response response =
+        WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         Optional<WithdrawalDocument> found =
@@ -210,7 +209,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void withdrawalDocument_canBeRetrievedByCompanyNumberAndWithdrawalId_afterWithdrawalIsPersisted() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        WithdrawAllObjections201Response response =
+        WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         Optional<WithdrawalDocument> found =
@@ -241,7 +240,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void withdrawAllObjections_returnsMappedResponseFromPersistedDocument_whenRequestIsValid() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        WithdrawAllObjections201Response response =
+        WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
@@ -249,7 +248,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(response.getPartnerContactEmail()).isEqualTo("test@example.com");
         assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
-        assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
+        assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
         assertThat(response.getWithdrawalId()).isNotBlank();
         assertThat(response.getEtag()).isNotBlank();
