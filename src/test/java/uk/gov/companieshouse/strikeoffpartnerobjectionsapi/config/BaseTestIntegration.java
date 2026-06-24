@@ -56,7 +56,6 @@ public abstract class BaseTestIntegration extends MongoDbIntegration {
                 long matched = collected.stream()
                         .map(StrikeOffPartnerObjections::getStrikeOffEventId)
                         .filter(expectedIds::contains)
-                        .distinct()
                         .count();
 
                 return matched >= expectedIds.size();
