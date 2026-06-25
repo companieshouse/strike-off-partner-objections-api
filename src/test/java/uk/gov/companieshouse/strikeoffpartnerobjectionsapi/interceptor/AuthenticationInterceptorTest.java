@@ -1,10 +1,16 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -32,10 +38,25 @@ class AuthenticationInterceptorTest {
     private Object handler;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
         authenticationInterceptor = new AuthenticationInterceptor();
         handler = new Object();
+        
+        // Setup mock response to handle getWriter() calls
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(printWriter);
+        
+        // Setup mock request to handle setAttribute/getAttribute
+        Map<String, Object> attributes = new HashMap<>();
+        doAnswer(invocation -> {
+            attributes.put(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(request).setAttribute(any(), any());
+        when(request.getAttribute(any())).thenAnswer(
+            invocation -> attributes.get(invocation.getArgument(0))
+        );
     }
 
     @Test
