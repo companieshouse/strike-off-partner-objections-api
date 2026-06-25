@@ -1,6 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import java.util.UUID;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
@@ -18,19 +20,13 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
+@RequiredArgsConstructor
 public class StrikeOffObjectionPartnerService {
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
-
-    public StrikeOffObjectionPartnerService(ObjectionRepository objectionRepository, ObjectionRequestMapper objectionRequestMapper, ObjectionResponseMapper objectionResponseMapper, ObjectionKafkaProducer objectionKafkaProducer) {
-        this.objectionRepository = objectionRepository;
-        this.objectionRequestMapper = objectionRequestMapper;
-        this.objectionResponseMapper = objectionResponseMapper;
-        this.objectionKafkaProducer = objectionKafkaProducer;
-    }
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
