@@ -32,7 +32,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler.GlobalExceptionHandler;
@@ -101,13 +100,13 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         request.setPartnerContactEmail("owner@example.com");
         request.setPartnerObjectionWorkstream("individuals-and-small-business-compliance");
 
-        WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
+        WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
         serviceResponse.setWithdrawalId("withdrawal-123");
 
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections("12345678", request))
                 .thenReturn(serviceResponse);
 
-        ResponseEntity<WithdrawAllObjections201Response> response =
+        ResponseEntity<WithdrawAllObjectionsResponse> response =
                 strikeOffPartnerWithdrawalsController.withdrawAllObjections("12345678", request);
 
         assertEquals(201, response.getStatusCode().value());
@@ -253,7 +252,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_callsService_whenRequestIsValid() throws Exception {
-        WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
+        WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
                 eq(COMPANY_NUMBER),
@@ -270,7 +269,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_trimsWhitespaceFields_beforeCallingService() throws Exception {
-        WithdrawAllObjections201Response serviceResponse = new WithdrawAllObjections201Response();
+        WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
                 eq(COMPANY_NUMBER),

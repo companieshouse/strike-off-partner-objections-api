@@ -6,10 +6,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
-import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
+import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 
@@ -62,7 +61,7 @@ class WithdrawalMapperTest {
                 new WithdrawAllObjectionsRequest(), COMPANY_NUMBER, PARTNER_ORG, WITHDRAWAL_ID, ETAG);
 
         assertThat(doc.getProcessingStatus())
-                .isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
+                .isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED.getValue());
     }
 
     @Test
@@ -130,16 +129,16 @@ class WithdrawalMapperTest {
     }
 
     // -----------------------------------------------------------------------
-    // toWithdrawAllObjections201Response – document → response
+    // toWithdrawAllObjectionsResponse – document → response (used by POST)
     // -----------------------------------------------------------------------
 
     @Test
-    void toWithdrawAllObjections201Response_mapsAllDocumentFields_whenDocumentIsFullyPopulated() {
+    void toWithdrawAllObjectionsResponse_mapsAllDocumentFields_whenDocumentIsFullyPopulated_forCreatePath() {
         Instant now = Instant.now();
         WithdrawalDocument doc = buildSavedDocument(now);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getWithdrawalId()).isEqualTo(WITHDRAWAL_ID);
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
@@ -151,47 +150,47 @@ class WithdrawalMapperTest {
     }
 
     @Test
-    void toWithdrawAllObjections201Response_convertsProcessingStatusToEnum_whenProcessingStatusIsSet() {
+    void toWithdrawAllObjectionsResponse_convertsProcessingStatusToEnum_whenProcessingStatusIsSet_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
-        doc.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
+        doc.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED.getValue());
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getProcessingStatus())
-                .isEqualTo(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
+                .isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsWorkstreamString_whenWorkstreamIsSet() {
+    void toWithdrawAllObjectionsResponse_mapsWorkstreamString_whenWorkstreamIsSet_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
         doc.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getPartnerObjectionWorkstream())
                 .isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
     }
 
     @Test
-    void toWithdrawAllObjections201Response_convertsCreatedAtToOffsetDateTime_whenCreatedAtIsSet() {
+    void toWithdrawAllObjectionsResponse_convertsCreatedAtToOffsetDateTime_whenCreatedAtIsSet_forCreatePath() {
         Instant now = Instant.now();
         WithdrawalDocument doc = buildSavedDocument(now);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getCreatedAt()).isNotNull();
         assertThat(response.getCreatedAt()).isEqualTo(now.atOffset(ZoneOffset.UTC));
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsLinks_whenLinksAreSet() {
+    void toWithdrawAllObjectionsResponse_mapsLinks_whenLinksAreSet_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getLinks()).isNotNull();
         assertThat(response.getLinks().getSelf())
@@ -201,111 +200,50 @@ class WithdrawalMapperTest {
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsProcessingStatusToNull_whenProcessingStatusIsNull() {
+    void toWithdrawAllObjectionsResponse_mapsProcessingStatusToNull_whenProcessingStatusIsNull_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
         doc.setProcessingStatus(null);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getProcessingStatus()).isNull();
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsWorkstreamToNull_whenWorkstreamIsNull() {
+    void toWithdrawAllObjectionsResponse_mapsWorkstreamToNull_whenWorkstreamIsNull_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
         doc.setPartnerObjectionWorkstream(null);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getPartnerObjectionWorkstream()).isNull();
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsCreatedAtToNull_whenCreatedAtIsNull() {
+    void toWithdrawAllObjectionsResponse_mapsCreatedAtToNull_whenCreatedAtIsNull_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(null);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getCreatedAt()).isNull();
     }
 
     @Test
-    void toWithdrawAllObjections201Response_mapsLinksToNull_whenLinksAreNull() {
+    void toWithdrawAllObjectionsResponse_mapsLinksToNull_whenLinksAreNull_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
         doc.setLinks(null);
 
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
+        WithdrawAllObjectionsResponse response =
+                mapper.toWithdrawAllObjectionsResponse(doc);
 
         assertThat(response.getLinks()).isNull();
     }
 
     @Test
-    void toWithdrawAllObjections201Response_leavesFailureReasonAndProcessingStatusChangedAtNull_whenMappingIsPerformed() {
-        WithdrawalDocument doc = buildSavedDocument(Instant.now());
-
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(doc);
-
-        assertThat(response.getFailureReason()).isNull();
-        assertThat(response.getProcessingStatusChangedAt()).isNull();
-    }
-
-    @Test
-    void toWithdrawAllObjections201Response_returnsNull_whenDocumentIsNull() {
-        WithdrawAllObjections201Response response =
-                mapper.toWithdrawAllObjections201Response(null);
-
-        assertThat(response).isNull();
-    }
-
-    // -----------------------------------------------------------------------
-    // toWithdrawAllObjectionsResponse – document → response (new GET mapping)
-    // -----------------------------------------------------------------------
-
-    @Test
-    void toWithdrawAllObjectionsResponse_mapsAllDocumentFields_whenDocumentIsFullyPopulated() {
-        WithdrawalDocument doc = buildSavedDocument(Instant.now());
-
-        WithdrawAllObjectionsResponse response =
-                mapper.toWithdrawAllObjectionsResponse(doc);
-
-        assertThat(response.getWithdrawalId()).isEqualTo(WITHDRAWAL_ID);
-        assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
-        assertThat(response.getSubmissionCompanyName()).isEqualTo("ACME LTD");
-        assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-001");
-        assertThat(response.getPartnerContactEmail()).isEqualTo("owner@example.com");
-        assertThat(response.getEtag()).isEqualTo(ETAG);
-        assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
-    }
-
-    @Test
-    void toWithdrawAllObjectionsResponse_convertsProcessingStatusToEnum_whenProcessingStatusIsSet() {
-        WithdrawalDocument doc = buildSavedDocument(Instant.now());
-        doc.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
-
-        WithdrawAllObjectionsResponse response =
-                mapper.toWithdrawAllObjectionsResponse(doc);
-
-        assertThat(response.getProcessingStatus()).isNotNull();
-    }
-
-    @Test
-    void toWithdrawAllObjectionsResponse_mapsProcessingStatusToNull_whenProcessingStatusIsNull() {
-        WithdrawalDocument doc = buildSavedDocument(Instant.now());
-        doc.setProcessingStatus(null);
-
-        WithdrawAllObjectionsResponse response =
-                mapper.toWithdrawAllObjectionsResponse(doc);
-
-        assertThat(response.getProcessingStatus()).isNull();
-    }
-
-    @Test
-    void toWithdrawAllObjectionsResponse_leavesFailureReasonAndProcessingStatusChangedAtNull_whenMappingIsPerformed() {
+    void toWithdrawAllObjectionsResponse_leavesFailureReasonAndProcessingStatusChangedAtNull_whenMappingIsPerformed_forCreatePath() {
         WithdrawalDocument doc = buildSavedDocument(Instant.now());
 
         WithdrawAllObjectionsResponse response =
@@ -316,12 +254,13 @@ class WithdrawalMapperTest {
     }
 
     @Test
-    void toWithdrawAllObjectionsResponse_returnsNull_whenDocumentIsNull() {
+    void toWithdrawAllObjectionsResponse_returnsNull_whenDocumentIsNull_forCreatePath() {
         WithdrawAllObjectionsResponse response =
                 mapper.toWithdrawAllObjectionsResponse(null);
 
         assertThat(response).isNull();
     }
+
 
     // -----------------------------------------------------------------------
     // helpers
@@ -346,7 +285,7 @@ class WithdrawalMapperTest {
         doc.setPartnerContactEmail("owner@example.com");
         doc.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         doc.setPartnerOrganisation(PARTNER_ORG);
-        doc.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED.getValue());
+        doc.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED.getValue());
         doc.setKind("strike-off-partner-objection#withdrawal");
         doc.setCreatedAt(createdAt);
 

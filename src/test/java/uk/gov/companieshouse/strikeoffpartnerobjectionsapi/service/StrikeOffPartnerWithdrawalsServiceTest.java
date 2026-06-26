@@ -27,10 +27,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import uk.gov.companieshouse.api.objections.model.WithdrawAllObjections201Response;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
-import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
+import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
@@ -169,8 +168,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        when(withdrawalMapper.toWithdrawAllObjections201Response(savedDocument))
-                .thenReturn(new WithdrawAllObjections201Response());
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
+                .thenReturn(new WithdrawAllObjectionsResponse());
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
@@ -189,8 +188,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         doNothing().when(withdrawalKafkaProducer)
                 .publishWithdrawalEvent(mappedDocument);
 
-        when(withdrawalMapper.toWithdrawAllObjections201Response(mappedDocument))
-                .thenReturn(new WithdrawAllObjections201Response());
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(mappedDocument))
+                .thenReturn(new WithdrawAllObjectionsResponse());
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
@@ -202,18 +201,18 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_returnsResponseFromMapper_whenDocumentIsPersisted() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        WithdrawAllObjections201Response expectedResponse = buildResponse(savedDocument);
+        WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(savedDocument);
         when(withdrawalRepository.insert(savedDocument)).thenReturn(savedDocument);
-        when(withdrawalMapper.toWithdrawAllObjections201Response(savedDocument))
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
                 .thenReturn(expectedResponse);
 
-        WithdrawAllObjections201Response result =
+        WithdrawAllObjectionsResponse result =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
 
-        verify(withdrawalMapper).toWithdrawAllObjections201Response(savedDocument);
+        verify(withdrawalMapper).toWithdrawAllObjectionsResponse(savedDocument);
         assertThat(result).isSameAs(expectedResponse);
     }
 
@@ -225,8 +224,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
-        when(withdrawalMapper.toWithdrawAllObjections201Response(any()))
-                .thenReturn(new WithdrawAllObjections201Response());
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(any()))
+                .thenReturn(new WithdrawAllObjectionsResponse());
 
         ArgumentCaptor<String> withdrawalIdCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -251,8 +250,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
-        when(withdrawalMapper.toWithdrawAllObjections201Response(any()))
-                .thenReturn(new WithdrawAllObjections201Response());
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(any()))
+                .thenReturn(new WithdrawAllObjectionsResponse());
 
         ArgumentCaptor<String> etagCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -321,11 +320,11 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         return doc;
     }
 
-    private WithdrawAllObjections201Response buildResponse(WithdrawalDocument doc) {
-        WithdrawAllObjections201Response response = new WithdrawAllObjections201Response();
+    private WithdrawAllObjectionsResponse buildResponse(WithdrawalDocument doc) {
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
         response.setCompanyNumber(doc.getCompanyNumber());
         response.setWithdrawalId(doc.getWithdrawalId());
-        response.setProcessingStatus(WithdrawalRequestedStatus.WITHDRAWAL_REQUESTED);
+        response.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         return response;
     }
 }
