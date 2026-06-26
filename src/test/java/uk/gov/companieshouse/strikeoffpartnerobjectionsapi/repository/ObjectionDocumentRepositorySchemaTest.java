@@ -31,11 +31,23 @@ class ObjectionDocumentRepositorySchemaTest {
 	}
 
 	private String getFieldName(String javaFieldName) throws Exception {
-		Field field = ObjectionDocument.class.getDeclaredField(javaFieldName);
+		Field field = findField(ObjectionDocument.class, javaFieldName);
 		org.springframework.data.mongodb.core.mapping.Field mongoField =
 				field.getAnnotation(org.springframework.data.mongodb.core.mapping.Field.class);
 		assertNotNull(mongoField);
 		return mongoField.value();
+	}
+
+	private Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
+		Class<?> current = type;
+		while (current != null) {
+			try {
+				return current.getDeclaredField(fieldName);
+			} catch (NoSuchFieldException ignored) {
+				current = current.getSuperclass();
+			}
+		}
+		throw new NoSuchFieldException(fieldName);
 	}
 }
 
