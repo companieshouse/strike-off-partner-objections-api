@@ -1,8 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import consumer.deserialization.AvroDeserializer;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.assertj.core.api.AssertionsForInterfaceTypes;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,14 +20,11 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.Withdrawal
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
 @Tag("integration-test")
@@ -46,8 +40,6 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Autowired
     private WithdrawalRepository withdrawalRepository;
 
-    @Autowired
-    private KafkaConsumer<String, byte[]> testConsumer;
 
     @BeforeEach
     void setUp() {
@@ -309,28 +301,6 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
                 .isEqualTo(response.getWithdrawalId());
     }
 
-    /**
-     * Polls until {@code expectedCount} records arrive or 10 seconds elapse.
-     * Uses AvroDeserializer to decode the raw byte[] payload.
-     */
-    private List<StrikeOffPartnerObjections> pollKafkaForEvents(List<String> expectedWithdrawalIds) {
-        try (AvroDeserializer<StrikeOffPartnerObjections> deserializer =
-                new AvroDeserializer<>(StrikeOffPartnerObjections.class)) {
-
-            List<StrikeOffPartnerObjections> collected = new ArrayList<>();
-
-            await().atMost(10, SECONDS).until(() -> {
-                ConsumerRecords<String, byte[]> records =
-                        testConsumer.poll(Duration.ofMillis(500));
-
-                records.forEach(r -> collected.add(deserializer.deserialize(r.topic(), r.value())));
-
-                return collected.size() >= expectedWithdrawalIds.size();
-            });
-
-            return collected.stream().filter(e -> expectedWithdrawalIds.contains(e.getStrikeOffEventId())).toList();
-        }
-    }
 
     private WithdrawAllObjectionsRequest buildRequest() {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();

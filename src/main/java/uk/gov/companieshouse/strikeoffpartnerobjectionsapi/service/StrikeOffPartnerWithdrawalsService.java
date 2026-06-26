@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Service
+@RequiredArgsConstructor
 public class StrikeOffPartnerWithdrawalsService {
 
     //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
@@ -26,14 +28,6 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
-
-    public StrikeOffPartnerWithdrawalsService(
-            final WithdrawalRepository withdrawalRepository,
-            final WithdrawalMapper withdrawalMapper, WithdrawalKafkaProducer withdrawalKafkaProducer) {
-        this.withdrawalRepository = withdrawalRepository;
-        this.withdrawalMapper = withdrawalMapper;
-        this.withdrawalKafkaProducer = withdrawalKafkaProducer;
-    }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
             final String companyNumber,
