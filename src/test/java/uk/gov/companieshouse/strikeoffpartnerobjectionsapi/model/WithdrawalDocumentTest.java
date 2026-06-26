@@ -97,7 +97,7 @@ class WithdrawalDocumentTest {
 
     @Test
     void testSetAndGetLinks() {
-        WithdrawalLinks links = new WithdrawalLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/withdrawals/123");
         withdrawalDocument.setLinks(links);
         assertEquals(links, withdrawalDocument.getLinks());
@@ -123,7 +123,7 @@ class WithdrawalDocumentTest {
         String status = "PENDING";
         Instant now = Instant.now();
         String etag = "etag-123";
-        WithdrawalLinks links = new WithdrawalLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/withdrawals/123");
         String kind = "withdrawal";
 

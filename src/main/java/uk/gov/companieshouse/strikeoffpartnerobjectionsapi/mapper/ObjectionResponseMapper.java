@@ -9,7 +9,7 @@ import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -30,7 +30,7 @@ public interface ObjectionResponseMapper {
     @Mapping(target = "initialExpirationOn", source = "initialExpirationOn", qualifiedByName = "toOffsetDateTime")
     BaseObjectionResponse toObjectionApiResponse(ObjectionDocument document);
 
-    default BaseObjectionResponseLinks map(ObjectionLinks links) {
+    default BaseObjectionResponseLinks map(PartnerLinks links) {
         if (links == null) {
             return null;
         }

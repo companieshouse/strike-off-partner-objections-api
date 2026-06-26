@@ -59,7 +59,7 @@ public class ObjectionDocument {
 
 	private String etag;
 
-	private ObjectionLinks links;
+	private PartnerLinks links;
 
 	private String kind;
 
@@ -183,11 +183,11 @@ public class ObjectionDocument {
 		this.etag = etag;
 	}
 
-	public ObjectionLinks getLinks() {
+	public PartnerLinks getLinks() {
 		return links;
 	}
 
-	public void setLinks(ObjectionLinks links) {
+	public void setLinks(PartnerLinks links) {
 		this.links = links;
 	}
 

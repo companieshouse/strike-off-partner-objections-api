@@ -46,7 +46,7 @@ public class WithdrawalDocument {
 
     private String etag;
 
-    private WithdrawalLinks links;
+    private PartnerLinks links;
 
     private String kind;
 
@@ -138,11 +138,11 @@ public class WithdrawalDocument {
         this.etag = etag;
     }
 
-    public WithdrawalLinks getLinks() {
+    public PartnerLinks getLinks() {
         return links;
     }
 
-    public void setLinks(WithdrawalLinks links) {
+    public void setLinks(PartnerLinks links) {
         this.links = links;
     }
 

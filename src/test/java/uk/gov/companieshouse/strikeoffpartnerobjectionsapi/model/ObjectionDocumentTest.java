@@ -125,7 +125,7 @@ class ObjectionDocumentTest {
 
     @Test
     void testSetAndGetLinks() {
-        ObjectionLinks links = new ObjectionLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/objections/123");
         objectionDocument.setLinks(links);
         assertEquals(links, objectionDocument.getLinks());
@@ -154,7 +154,7 @@ class ObjectionDocumentTest {
         Instant futureTime = Instant.now().plusSeconds(86400);
         String failureReason = "Test failure";
         String etag = "etag-123";
-        ObjectionLinks links = new ObjectionLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/objections/123");
         String kind = "objection";
 

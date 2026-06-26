@@ -13,7 +13,7 @@ import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 
 @Tag("unit-test")
 class ObjectionResponseMapperTest {
@@ -46,7 +46,7 @@ class ObjectionResponseMapperTest {
     @Test
     void toObjectionApiResponseMapsLinks() {
         ObjectionDocument document = new ObjectionDocument();
-        ObjectionLinks links = new ObjectionLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("/company/01234567/strike-off-partner-objections/obj-123");
         links.setCompanyProfile("/company/01234567");
         document.setLinks(links);
@@ -120,7 +120,7 @@ class ObjectionResponseMapperTest {
         document.setProcessingStatusChangedAt(STATUS_CHANGED_AT);
         document.setInitialExpirationOn(EXPIRATION_ON);
 
-        ObjectionLinks links = new ObjectionLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("/company/01234567/strike-off-partner-objections/" + OBJECTION_ID);
         links.setCompanyProfile("/company/01234567");
         document.setLinks(links);

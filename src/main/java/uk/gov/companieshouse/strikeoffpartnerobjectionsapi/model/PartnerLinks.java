@@ -2,7 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
 import org.springframework.data.mongodb.core.mapping.Field;
 
-public class WithdrawalLinks {
+public class PartnerLinks {
 
     private String self;
 
@@ -25,3 +25,4 @@ public class WithdrawalLinks {
         this.companyProfile = companyProfile;
     }
 }
+

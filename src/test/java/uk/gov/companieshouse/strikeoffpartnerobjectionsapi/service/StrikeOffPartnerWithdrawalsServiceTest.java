@@ -33,8 +33,8 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 @Tag("unit-test")
@@ -310,7 +310,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         doc.setEtag(UUID.randomUUID().toString());
         doc.setKind("strike-off-partner-objection#withdrawal");
 
-        WithdrawalLinks links = new WithdrawalLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/" + withdrawalId);
         links.setCompanyProfile("/company/" + COMPANY_NUMBER);
         doc.setLinks(links);

@@ -7,7 +7,7 @@ import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionLinks;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 
 import static uk.gov.companieshouse.GenerateEtagUtil.generateEtag;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_SUBMITTED;
@@ -52,8 +52,8 @@ public interface ObjectionRequestMapper {
         return value == null ? null : value.getValue();
     }
 
-    default ObjectionLinks buildLinks(String companyNumber, String objectionId) {
-        ObjectionLinks links = new ObjectionLinks();
+    default PartnerLinks buildLinks(String companyNumber, String objectionId) {
+        PartnerLinks links = new PartnerLinks();
         links.setSelf(String.format("/company/%s/strike-off-partner-objections/%s", companyNumber, objectionId));
         links.setCompanyProfile(String.format("/company/%s", companyNumber));
         return links;
