@@ -42,7 +42,6 @@ public class StrikeOffPartnerObjectionService {
         this.companyProfileService = companyProfileService;
         this.objectionKafkaProducer = objectionKafkaProducer;
     }
-
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 

@@ -27,6 +27,7 @@
         <!-- Override vulnerable Tomcat version -->
         <tomcat.version>11.0.22</tomcat.version>
         <private-api-sdk-java.version>7.0.1</private-api-sdk-java.version>
+        <api-sdk-manager-java-library.version>3.0.19</api-sdk-manager-java-library.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <api-security-java.version>2.0.27</api-security-java.version>
 
@@ -233,6 +234,22 @@
 				<artifactId>sonar-maven-plugin</artifactId>
 				<version>${sonar-maven-plugin.version}</version>
 			</plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <from>
+                        <image>416670754337.dkr.ecr.eu-west-2.amazonaws.com/ci-corretto-build-21</image>
+                    </from>
+                    <to>
+                        <image>416670754337.dkr.ecr.eu-west-2.amazonaws.com/strike-off-partner-objections-api</image>
+                    </to>
+                    <container>
+                        <expandClasspathDependencies>true</expandClasspathDependencies>
+                    </container>
+                </configuration>
+            </plugin>
 	    </plugins>
     </build>
 </project>
