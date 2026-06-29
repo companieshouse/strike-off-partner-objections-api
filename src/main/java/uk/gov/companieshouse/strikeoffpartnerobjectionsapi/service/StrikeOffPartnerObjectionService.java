@@ -20,14 +20,14 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
-public class StrikeOffObjectionPartnerService extends AbstractEventTrackingService {
+public class StrikeOffPartnerObjectionService extends AbstractEventTrackingService {
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
 
-    public StrikeOffObjectionPartnerService(
+    public StrikeOffPartnerObjectionService(
             ObjectionRepository objectionRepository,
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
@@ -85,3 +85,4 @@ public class StrikeOffObjectionPartnerService extends AbstractEventTrackingServi
         return objectionResponseMapper.toObjectionApiResponse(document);
     }
 }
+

@@ -5,7 +5,7 @@ import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerObjectionsInterf
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffObjectionPartnerService;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerObjectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObjectionsInterface {
 
-    private final StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
+    private final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
     public StrikeOffObjectionPartnerController(
-            final StrikeOffObjectionPartnerService strikeOffObjectionPartnerService) {
-        this.strikeOffObjectionPartnerService = strikeOffObjectionPartnerService;
+            final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService) {
+        this.strikeOffPartnerObjectionService = strikeOffPartnerObjectionService;
     }
 
     @Override
@@ -25,7 +25,7 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
             final String companyNumber,
             final CreateObjectionRequest createObjectionRequest) {
         BaseObjectionResponse response =
-                strikeOffObjectionPartnerService.createObjection(companyNumber, createObjectionRequest);
+                strikeOffPartnerObjectionService.createObjection(companyNumber, createObjectionRequest);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -35,7 +35,7 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
             final String objectionId) {
         try {
             BaseObjectionResponse response =
-                    strikeOffObjectionPartnerService.getObjection(companyNumber, objectionId);
+                    strikeOffPartnerObjectionService.getObjection(companyNumber, objectionId);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (ObjectionNotFoundException ex) {
             throw new ResponseStatusException(
