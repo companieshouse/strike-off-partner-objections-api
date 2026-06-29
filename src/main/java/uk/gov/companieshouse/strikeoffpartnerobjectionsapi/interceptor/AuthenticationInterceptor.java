@@ -16,6 +16,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
+    private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String ERIC_IDENTITY_TYPE_KEY = "key";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
@@ -25,7 +26,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
         String identityType = request.getHeader(ERIC_IDENTITY_TYPE_HEADER);
-        String apiKey = request.getHeader("CHS_API_KEY");
+        String identityHeader = request.getHeader(ERIC_IDENTITY_HEADER);
 
         if (identityType == null || identityType.isBlank()) {
             LOGGER.error("Authentication failed: requestId=" + requestId + ", reason=Missing ERIC-Identity-Type header");
@@ -39,7 +40,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if (apiKey == null || apiKey.isBlank()) {
+        if (identityHeader == null || identityHeader.isBlank()) {
             LOGGER.error("Authentication failed: requestId=" + requestId + ", identityType=" + identityType + ", reason=Missing or invalid API key");
             sendUnauthorizedResponse(response, requestId);
             return false;
