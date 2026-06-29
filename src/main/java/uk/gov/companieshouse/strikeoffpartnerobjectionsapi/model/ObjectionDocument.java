@@ -27,7 +27,6 @@ public class ObjectionDocument extends PartnerRequestDocument {
 	@Field("processing_status_changed_at")
 	private Instant processingStatusChangedAt;
 
-
 	@Field("initial_expiration_on")
 	private Instant initialExpirationOn;
 
@@ -89,7 +88,6 @@ public class ObjectionDocument extends PartnerRequestDocument {
 	public void setFailureReason(String failureReason) {
 		this.failureReason = failureReason;
 	}
-
 
 }
 

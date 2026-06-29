@@ -19,7 +19,6 @@ public class WithdrawalDocument extends PartnerRequestDocument {
     @Indexed
     private String processingStatus;
 
-
     public String getCompanyNumber() {
         return companyNumber;
     }
@@ -43,7 +42,6 @@ public class WithdrawalDocument extends PartnerRequestDocument {
     public void setProcessingStatus(String processingStatus) {
         this.processingStatus = processingStatus;
     }
-
 
 }
 
