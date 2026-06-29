@@ -162,6 +162,54 @@ class StrikeOffObjectionPartnerServiceTest {
     }
 
     @Test
+    void createObjectionWhenSaveAfterPublishFailsStillReturnsSuccessResponse() {
+        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        ObjectionDocument mappedDocument = new ObjectionDocument();
+        ObjectionDocument savedDocument = new ObjectionDocument();
+        String companyNumber = "12345";
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+        DataAccessResourceFailureException saveException =
+                new DataAccessResourceFailureException("mongo update failed");
+
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
+                .thenReturn(mappedDocument);
+        when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doNothing().when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
+        when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
+
+        assertThat(result).isSameAs(expectedResponse);
+        verify(objectionRepository).save(any(ObjectionDocument.class));
+    }
+
+    @Test
+    void createObjectionWhenKafkaFailsAndSaveAfterFailureThrowsStillRethrowsOriginalKafkaException() {
+        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        ObjectionDocument mappedDocument = new ObjectionDocument();
+        ObjectionDocument savedDocument = new ObjectionDocument();
+        String companyNumber = "12345";
+        KafkaPublishException kafkaException =
+                new KafkaPublishException("publish failed", new RuntimeException("boom"));
+        DataAccessResourceFailureException saveException =
+                new DataAccessResourceFailureException("mongo update failed");
+
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
+                .thenReturn(mappedDocument);
+        when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doThrow(kafkaException).when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
+
+        assertThatThrownBy(() -> strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto))
+                .isSameAs(kafkaException);
+
+        verify(objectionRepository).save(any(ObjectionDocument.class));
+    }
+
+    @Test
     void getObjection_WhenExists_ReturnsObjection() {
         String companyNumber = "12345";
         String objectionId = "objection-1";

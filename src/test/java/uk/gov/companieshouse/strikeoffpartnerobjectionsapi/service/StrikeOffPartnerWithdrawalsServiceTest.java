@@ -228,6 +228,52 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
+    void withdrawAllObjections_whenSaveAfterPublishFails_stillReturnsSuccessResponse() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
+        WithdrawalDocument savedDocument = buildSavedDocument();
+        WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
+        DataAccessResourceFailureException saveException =
+                new DataAccessResourceFailureException("mongo update failed");
+
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doNothing().when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+        when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(saveException);
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument)).thenReturn(expectedResponse);
+
+        WithdrawAllObjectionsResponse result =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        assertThat(result).isSameAs(expectedResponse);
+        verify(withdrawalRepository).save(any(WithdrawalDocument.class));
+    }
+
+    @Test
+    void withdrawAllObjections_whenKafkaFailsAndSaveAfterFailureThrows_stillRethrowsOriginalKafkaException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
+        WithdrawalDocument savedDocument = buildSavedDocument();
+        KafkaPublishException kafkaException =
+                new KafkaPublishException("publish failed", new RuntimeException("boom"));
+        DataAccessResourceFailureException saveException =
+                new DataAccessResourceFailureException("mongo update failed");
+
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doThrow(kafkaException).when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+        when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(saveException);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isSameAs(kafkaException);
+
+        verify(withdrawalRepository).save(any(WithdrawalDocument.class));
+    }
+
+    @Test
     void withdrawAllObjections_returnsResponseFromMapper_whenDocumentIsPersisted() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
