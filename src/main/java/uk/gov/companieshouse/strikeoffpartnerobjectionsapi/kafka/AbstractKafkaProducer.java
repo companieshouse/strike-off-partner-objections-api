@@ -12,11 +12,11 @@ import java.util.concurrent.TimeoutException;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
-public class AbstractKafkaProducer {
+public abstract class AbstractKafkaProducer {
     protected final KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate;
     protected final long timeoutMilliseconds;
 
-    public AbstractKafkaProducer(
+    protected AbstractKafkaProducer(
             KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate,
             long timeoutMilliseconds) {
         this.kafkaTemplate = kafkaTemplate;
