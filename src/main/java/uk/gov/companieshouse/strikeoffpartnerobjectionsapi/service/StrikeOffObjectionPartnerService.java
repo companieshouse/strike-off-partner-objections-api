@@ -72,12 +72,22 @@ public class StrikeOffObjectionPartnerService {
         try {
             objectionKafkaProducer.publishObjectionEvent(saved);
             setEventTrackingState(saved, eventCorrelationId, EventStatus.PUBLISHED, null);
-            objectionRepository.save(saved);
+            saveEventState(saved, "after publish");
             LOGGER.info(format("OBJECTION event published successfully: objectionId=%s", saved.getObjectionId()));
         } catch (KafkaPublishException ex) {
             setEventTrackingState(saved, eventCorrelationId, EventStatus.FAILED, ex.getMessage());
-            objectionRepository.save(saved);
+            saveEventState(saved, "after publish failure");
             throw ex;
+        }
+    }
+
+    private void saveEventState(ObjectionDocument saved, String context) {
+        try {
+            objectionRepository.save(saved);
+        } catch (DataAccessException dae) {
+            LOGGER.error(format(
+                    "Failed to update objection event tracking state %s: objectionId=%s",
+                    context, saved.getObjectionId()), dae);
         }
     }
 

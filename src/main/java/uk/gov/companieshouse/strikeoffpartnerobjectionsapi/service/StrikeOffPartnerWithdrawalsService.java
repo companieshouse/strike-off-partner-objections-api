@@ -92,12 +92,22 @@ public class StrikeOffPartnerWithdrawalsService {
         try {
             withdrawalKafkaProducer.publishWithdrawalEvent(saved);
             setEventTrackingState(saved, eventCorrelationId, EventStatus.PUBLISHED, null);
-            withdrawalRepository.save(saved);
+            saveEventState(saved, "after publish");
             LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s", saved.getWithdrawalId()));
         } catch (KafkaPublishException ex) {
             setEventTrackingState(saved, eventCorrelationId, EventStatus.FAILED, ex.getMessage());
-            withdrawalRepository.save(saved);
+            saveEventState(saved, "after publish failure");
             throw ex;
+        }
+    }
+
+    private void saveEventState(WithdrawalDocument saved, String context) {
+        try {
+            withdrawalRepository.save(saved);
+        } catch (DataAccessException dae) {
+            LOGGER.error(format(
+                    "Failed to update withdrawal event tracking state %s: withdrawalId=%s",
+                    context, saved.getWithdrawalId()), dae);
         }
     }
 
