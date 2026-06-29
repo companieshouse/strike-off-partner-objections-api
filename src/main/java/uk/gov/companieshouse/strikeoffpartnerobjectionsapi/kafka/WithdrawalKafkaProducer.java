@@ -23,7 +23,8 @@ public class WithdrawalKafkaProducer extends AbstractKafkaProducer {
         var withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(
                 withdrawalDocument.getWithdrawalId(),
                 withdrawalDocument.getPartnerOrganisation(),
-                EventType.WITHDRAWAL
+                EventType.WITHDRAWAL,
+                withdrawalDocument.getEventCorrelationId()
         );
 
         sendMessage(withdrawalRecord);

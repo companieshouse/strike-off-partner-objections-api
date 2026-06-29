@@ -57,7 +57,8 @@ class WithdrawalKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class)))
+                any(EventType.class),
+                eq(document.getEventCorrelationId())))
                 .thenReturn(
                         new ProducerRecord<>(
                                 TOPIC,
@@ -90,7 +91,8 @@ class WithdrawalKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class)))
+                any(EventType.class),
+                eq(document.getEventCorrelationId())))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
 
         assertThrows(
@@ -108,7 +110,8 @@ class WithdrawalKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class)))
+                any(EventType.class),
+                eq(document.getEventCorrelationId())))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
         assertThrows(
                 KafkaPublishException.class,
@@ -119,6 +122,7 @@ class WithdrawalKafkaProducerTest {
         WithdrawalDocument document = new WithdrawalDocument();
         document.setWithdrawalId("withdrawal-123");
         document.setPartnerOrganisation("TEST_PARTNER");
+        document.setEventCorrelationId("corr-withdrawal-123");
         return document;
     }
 }

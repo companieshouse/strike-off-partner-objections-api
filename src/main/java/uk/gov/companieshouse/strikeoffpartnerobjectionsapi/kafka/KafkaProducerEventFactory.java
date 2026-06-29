@@ -7,7 +7,7 @@ import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 
 import java.time.Instant;
-import java.util.UUID;
+import java.util.Objects;
 
 @Component
 public class KafkaProducerEventFactory {
@@ -19,9 +19,13 @@ public class KafkaProducerEventFactory {
         this.topic = topic;
     }
 
-    public ProducerRecord<String, StrikeOffPartnerObjections> createProducerRecord(String documentId, String partnerOrganization, EventType type ) {
+    public ProducerRecord<String, StrikeOffPartnerObjections> createProducerRecord(
+            String documentId,
+            String partnerOrganization,
+            EventType type,
+            String eventId) {
         StrikeOffPartnerObjections message = StrikeOffPartnerObjections.newBuilder()
-                .setEventId(UUID.randomUUID().toString())
+                .setEventId(Objects.requireNonNull(eventId, "eventId must not be null"))
                 .setEventTime(Instant.now().toString())
                 .setSource("strike-off-partner-objections-api")
                 .setEventType(type)

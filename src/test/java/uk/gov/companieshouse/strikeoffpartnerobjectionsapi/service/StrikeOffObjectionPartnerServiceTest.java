@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -24,10 +25,12 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 @Tag("unit-test")
@@ -79,8 +82,36 @@ class StrikeOffObjectionPartnerServiceTest {
         verify(objectionRequestMapper).toObjectionDocument(
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);
+        ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(savedCaptor.capture());
+        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED.name());
+        assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
         verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
         verify(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+    }
+
+    @Test
+    void createObjectionWhenKafkaPublishFailsMarksEventAsFailedAndRethrows() {
+        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        ObjectionDocument mappedDocument = new ObjectionDocument();
+        ObjectionDocument savedDocument = new ObjectionDocument();
+        String companyNumber = "12345";
+        KafkaPublishException kafkaException = new KafkaPublishException("publish failed", new RuntimeException("boom"));
+
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
+                .thenReturn(mappedDocument);
+        when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doThrow(kafkaException).when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+
+        assertThatThrownBy(() -> strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto))
+                .isSameAs(kafkaException);
+
+        ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(savedCaptor.capture());
+        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED.name());
+        assertThat(savedCaptor.getValue().getEventFailureReason()).contains("publish failed");
+        assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
     }
 
     @Test

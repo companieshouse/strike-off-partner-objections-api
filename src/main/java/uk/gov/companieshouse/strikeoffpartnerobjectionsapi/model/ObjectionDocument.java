@@ -27,6 +27,20 @@ public class ObjectionDocument extends PartnerRequestDocument {
 	@Field("processing_status_changed_at")
 	private Instant processingStatusChangedAt;
 
+	@Field("event_status")
+	@Indexed
+	private String eventStatus;
+
+	@Field("event_status_changed_at")
+	private Instant eventStatusChangedAt;
+
+	@Field("event_correlation_id")
+	@Indexed
+	private String eventCorrelationId;
+
+	@Field("event_failure_reason")
+	private String eventFailureReason;
+
 	@Field("initial_expiration_on")
 	private Instant initialExpirationOn;
 
@@ -87,6 +101,38 @@ public class ObjectionDocument extends PartnerRequestDocument {
 
 	public void setFailureReason(String failureReason) {
 		this.failureReason = failureReason;
+	}
+
+	public String getEventStatus() {
+		return eventStatus;
+	}
+
+	public void setEventStatus(String eventStatus) {
+		this.eventStatus = eventStatus;
+	}
+
+	public Instant getEventStatusChangedAt() {
+		return eventStatusChangedAt;
+	}
+
+	public void setEventStatusChangedAt(Instant eventStatusChangedAt) {
+		this.eventStatusChangedAt = eventStatusChangedAt;
+	}
+
+	public String getEventCorrelationId() {
+		return eventCorrelationId;
+	}
+
+	public void setEventCorrelationId(String eventCorrelationId) {
+		this.eventCorrelationId = eventCorrelationId;
+	}
+
+	public String getEventFailureReason() {
+		return eventFailureReason;
+	}
+
+	public void setEventFailureReason(String eventFailureReason) {
+		this.eventFailureReason = eventFailureReason;
 	}
 
 }

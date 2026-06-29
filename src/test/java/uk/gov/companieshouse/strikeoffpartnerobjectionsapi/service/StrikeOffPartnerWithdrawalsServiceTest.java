@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,8 +32,10 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
@@ -195,6 +198,33 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(mappedDocument);
+        ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+        verify(withdrawalRepository).save(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED.name());
+        assertThat(saveCaptor.getValue().getEventCorrelationId()).isNotBlank();
+    }
+
+    @Test
+    void withdrawAllObjections_marksEventAsFailedAndRethrows_whenKafkaPublishFails() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
+        WithdrawalDocument savedDocument = buildSavedDocument();
+        KafkaPublishException kafkaException = new KafkaPublishException("publish failed", new RuntimeException("boom"));
+
+        when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        doThrow(kafkaException).when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isSameAs(kafkaException);
+
+        ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+        verify(withdrawalRepository).save(saveCaptor.capture());
+        assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED.name());
+        assertThat(saveCaptor.getValue().getEventFailureReason()).contains("publish failed");
+        assertThat(saveCaptor.getValue().getEventCorrelationId()).isNotBlank();
     }
 
     @Test

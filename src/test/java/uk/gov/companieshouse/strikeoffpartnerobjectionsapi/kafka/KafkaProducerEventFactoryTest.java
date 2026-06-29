@@ -14,6 +14,7 @@ class KafkaProducerEventFactoryTest {
         String topic = "test-topic";
         String documentId = "12345";
         String partnerOrganisation = "PartnerA";
+        String eventCorrelationId = "corr-123";
 
         KafkaProducerEventFactory factory =
                 new KafkaProducerEventFactory(topic);
@@ -23,7 +24,8 @@ class KafkaProducerEventFactoryTest {
                 factory.createProducerRecord(
                         documentId,
                         partnerOrganisation,
-                        EventType.WITHDRAWAL);
+                        EventType.WITHDRAWAL,
+                        eventCorrelationId);
 
         // then
         assertThat(producerRecord.topic()).isEqualTo(topic);
@@ -44,7 +46,7 @@ class KafkaProducerEventFactoryTest {
                 .isEqualTo("strike-off-partner-objections-api");
 
         assertThat(message.getEventId())
-                .isNotBlank();
+                .isEqualTo(eventCorrelationId);
 
         assertThat(message.getEventTime())
                 .isNotBlank();

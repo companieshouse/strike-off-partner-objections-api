@@ -117,6 +117,34 @@ class ObjectionDocumentTest {
     }
 
     @Test
+    void testSetAndGetEventStatus() {
+        String status = "PENDING";
+        objectionDocument.setEventStatus(status);
+        assertEquals(status, objectionDocument.getEventStatus());
+    }
+
+    @Test
+    void testSetAndGetEventStatusChangedAt() {
+        Instant now = Instant.now();
+        objectionDocument.setEventStatusChangedAt(now);
+        assertEquals(now, objectionDocument.getEventStatusChangedAt());
+    }
+
+    @Test
+    void testSetAndGetEventCorrelationId() {
+        String eventCorrelationId = "corr-id-123";
+        objectionDocument.setEventCorrelationId(eventCorrelationId);
+        assertEquals(eventCorrelationId, objectionDocument.getEventCorrelationId());
+    }
+
+    @Test
+    void testSetAndGetEventFailureReason() {
+        String eventFailureReason = "Kafka publish failed";
+        objectionDocument.setEventFailureReason(eventFailureReason);
+        assertEquals(eventFailureReason, objectionDocument.getEventFailureReason());
+    }
+
+    @Test
     void testSetAndGetEtag() {
         String etag = "etag-123";
         objectionDocument.setEtag(etag);
@@ -153,6 +181,9 @@ class ObjectionDocumentTest {
         Instant now = Instant.now();
         Instant futureTime = Instant.now().plusSeconds(86400);
         String failureReason = "Test failure";
+        String eventStatus = "PENDING";
+        String eventCorrelationId = "corr-id-123";
+        String eventFailureReason = "Kafka publish failed";
         String etag = "etag-123";
         PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/objections/123");
@@ -172,6 +203,10 @@ class ObjectionDocumentTest {
         objectionDocument.setProcessingStatusChangedAt(now);
         objectionDocument.setInitialExpirationOn(futureTime);
         objectionDocument.setFailureReason(failureReason);
+        objectionDocument.setEventStatus(eventStatus);
+        objectionDocument.setEventStatusChangedAt(now);
+        objectionDocument.setEventCorrelationId(eventCorrelationId);
+        objectionDocument.setEventFailureReason(eventFailureReason);
         objectionDocument.setEtag(etag);
         objectionDocument.setLinks(links);
         objectionDocument.setKind(kind);
@@ -190,6 +225,10 @@ class ObjectionDocumentTest {
         assertEquals(now, objectionDocument.getProcessingStatusChangedAt());
         assertEquals(futureTime, objectionDocument.getInitialExpirationOn());
         assertEquals(failureReason, objectionDocument.getFailureReason());
+        assertEquals(eventStatus, objectionDocument.getEventStatus());
+        assertEquals(now, objectionDocument.getEventStatusChangedAt());
+        assertEquals(eventCorrelationId, objectionDocument.getEventCorrelationId());
+        assertEquals(eventFailureReason, objectionDocument.getEventFailureReason());
         assertEquals(etag, objectionDocument.getEtag());
         assertEquals(links, objectionDocument.getLinks());
         assertEquals(kind, objectionDocument.getKind());
@@ -211,6 +250,10 @@ class ObjectionDocumentTest {
         assertNull(objectionDocument.getProcessingStatusChangedAt());
         assertNull(objectionDocument.getInitialExpirationOn());
         assertNull(objectionDocument.getFailureReason());
+        assertNull(objectionDocument.getEventStatus());
+        assertNull(objectionDocument.getEventStatusChangedAt());
+        assertNull(objectionDocument.getEventCorrelationId());
+        assertNull(objectionDocument.getEventFailureReason());
         assertNull(objectionDocument.getEtag());
         assertNull(objectionDocument.getLinks());
         assertNull(objectionDocument.getKind());

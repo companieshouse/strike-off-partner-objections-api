@@ -23,7 +23,8 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
         var objectionRecord = kafkaProducerEventFactory.createProducerRecord(
                 objectionDocument.getObjectionId(),
                 objectionDocument.getPartnerOrganisation(),
-                EventType.OBJECTION
+                EventType.OBJECTION,
+                objectionDocument.getEventCorrelationId()
         );
 
         sendMessage(objectionRecord);
