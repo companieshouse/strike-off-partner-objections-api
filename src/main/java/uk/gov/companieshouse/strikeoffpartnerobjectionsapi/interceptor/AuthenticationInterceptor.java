@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -13,6 +14,7 @@ import java.util.Map;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
+@ConditionalOnProperty(name = "interceptor.authentication.enabled", havingValue = "true", matchIfMissing = true)
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
@@ -20,6 +22,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private static final String ERIC_IDENTITY_TYPE_KEY = "key";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
+    private static final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
+    private static final String IDENTITY_TYPE_SUFFIX = ", identityType=";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -29,24 +33,24 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String identityHeader = request.getHeader(ERIC_IDENTITY_HEADER);
 
         if (identityType == null || identityType.isBlank()) {
-            LOGGER.error("Authentication failed: requestId=" + requestId + ", reason=Missing ERIC-Identity-Type header");
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing ERIC-Identity-Type header");
             sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
             return false;
         }
 
         if (!ERIC_IDENTITY_TYPE_KEY.equals(identityType)) {
-            LOGGER.error("Authentication failed: requestId=" + requestId + ", identityType=" + identityType + ", reason=Invalid ERIC-Identity-Type header");
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
             sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
             return false;
         }
 
         if (identityHeader == null || identityHeader.isBlank()) {
-            LOGGER.error("Authentication failed: requestId=" + requestId + ", identityType=" + identityType + ", reason=Missing or invalid API key");
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Missing or invalid API key");
             sendUnauthorizedResponse(response, requestId);
             return false;
         }
 
-        LOGGER.info("Authentication successful: requestId=" + requestId + ", identityType=" + identityType);
+        LOGGER.info("Authentication successful: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType);
         request.setAttribute(ALLOW_REQUEST_ATTRIBUTE, true);
         return true;
     }

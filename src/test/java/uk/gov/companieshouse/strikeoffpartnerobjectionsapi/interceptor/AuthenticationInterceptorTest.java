@@ -14,6 +14,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -21,7 +23,7 @@ import org.mockito.MockitoAnnotations;
 class AuthenticationInterceptorTest {
 
     private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
-    private static final String CHS_API_KEY_HEADER = "CHS_API_KEY";
+    private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
     private static final String REQUEST_ID = "test-request-id-123";
@@ -63,7 +65,7 @@ class AuthenticationInterceptorTest {
     void validApiKeyAllowsRequest() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -74,7 +76,19 @@ class AuthenticationInterceptorTest {
     void invalidApiKeyReturns401() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(null);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertFalse(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "invalid"})
+    void invalidIdentityTypeReturns403(String invalidType) {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(invalidType);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -85,29 +99,7 @@ class AuthenticationInterceptorTest {
     void missingIdentityTypeReturns403() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(null);
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(VALID_API_KEY);
-
-        boolean result = authenticationInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-    }
-
-    @Test
-    void blankIdentityTypeReturns403() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn("");
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(VALID_API_KEY);
-
-        boolean result = authenticationInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-    }
-
-    @Test
-    void invalidIdentityTypeReturns403() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn("invalid");
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -118,7 +110,7 @@ class AuthenticationInterceptorTest {
     void successfulRequestSetsAllowRequestAttribute() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
-        when(request.getHeader(CHS_API_KEY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 

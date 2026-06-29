@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -13,11 +14,15 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.Authentic
 @Configuration
 public class ApplicationConfig implements WebMvcConfigurer {
 
-    @Autowired(required = false)
-    private AuthenticationInterceptor authenticationInterceptor;
+    private final AuthenticationInterceptor authenticationInterceptor;
+
+    public ApplicationConfig(@Autowired(required = false) AuthenticationInterceptor authenticationInterceptor) {
+        this.authenticationInterceptor = authenticationInterceptor;
+    }
 
     @Bean
     @Primary
+    @ConditionalOnProperty(name = "api.client.enabled", havingValue = "true", matchIfMissing = true)
     public InternalApiClient internalApiClient() {
         return ApiSdkManager.getPrivateSDK();
     }
