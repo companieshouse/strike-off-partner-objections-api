@@ -2,44 +2,20 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
 import java.time.Instant;
 
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-@Getter
-@Setter
 @Document(collection = "objections")
 @CompoundIndex(name = "company_number_objection_id_idx", def = "{'company_number': 1, 'objection_id': 1}", unique = true)
-public class ObjectionDocument {
-
-	@Id
-	private String id;
+public class ObjectionDocument extends PartnerRequestDocument {
 
     @Field("company_number")
 	private String companyNumber;
 
-	@Field("partner_organisation")
-	private String partnerOrganisation;
-
-	@Field("submission_company_name")
-	private String submissionCompanyName;
-
-	@Field("partner_case_reference")
-	private String partnerCaseReference;
-
-	@Field("partner_objection_workstream")
-	private String partnerObjectionWorkstream;
-
 	@Field("partner_objection_reason")
 	private String partnerObjectionReason;
-
-	@Field("partner_contact_email")
-	private String partnerContactEmail;
 
 	@Field("objection_id")
 	@Indexed(unique=true)
@@ -47,10 +23,6 @@ public class ObjectionDocument {
 
 	@Field("processing_status")
 	private String processingStatus;
-
-	@CreatedDate
-	@Field("created_at")
-	private Instant createdAt;
 
 	@Field("processing_status_changed_at")
 	private Instant processingStatusChangedAt;
@@ -61,10 +33,61 @@ public class ObjectionDocument {
 	@Field("failure_reason")
 	private String failureReason;
 
-	private String etag;
+	public String getCompanyNumber() {
+		return companyNumber;
+	}
 
-	private ObjectionLinks links;
+	public void setCompanyNumber(String companyNumber) {
+		this.companyNumber = companyNumber;
+	}
 
-	private String kind;
+	public String getPartnerObjectionReason() {
+		return partnerObjectionReason;
+	}
+
+	public void setPartnerObjectionReason(String partnerObjectionReason) {
+		this.partnerObjectionReason = partnerObjectionReason;
+	}
+
+	public String getObjectionId() {
+		return objectionId;
+	}
+
+	public void setObjectionId(String objectionId) {
+		this.objectionId = objectionId;
+	}
+
+	public String getProcessingStatus() {
+		return processingStatus;
+	}
+
+	public void setProcessingStatus(String processingStatus) {
+		this.processingStatus = processingStatus;
+	}
+
+	public Instant getProcessingStatusChangedAt() {
+		return processingStatusChangedAt;
+	}
+
+	public void setProcessingStatusChangedAt(Instant processingStatusChangedAt) {
+		this.processingStatusChangedAt = processingStatusChangedAt;
+	}
+
+	public Instant getInitialExpirationOn() {
+		return initialExpirationOn;
+	}
+
+	public void setInitialExpirationOn(Instant initialExpirationOn) {
+		this.initialExpirationOn = initialExpirationOn;
+	}
+
+	public String getFailureReason() {
+		return failureReason;
+	}
+
+	public void setFailureReason(String failureReason) {
+		this.failureReason = failureReason;
+	}
+
 }
 

@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 
 @Tag("unit-test")
 class WithdrawalMapperTest {
@@ -289,7 +289,7 @@ class WithdrawalMapperTest {
         doc.setKind("strike-off-partner-objection#withdrawal");
         doc.setCreatedAt(createdAt);
 
-        WithdrawalLinks links = new WithdrawalLinks();
+        PartnerLinks links = new PartnerLinks();
         links.setSelf("/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals/" + WITHDRAWAL_ID);
         links.setCompanyProfile("/company/" + COMPANY_NUMBER);
         doc.setLinks(links);

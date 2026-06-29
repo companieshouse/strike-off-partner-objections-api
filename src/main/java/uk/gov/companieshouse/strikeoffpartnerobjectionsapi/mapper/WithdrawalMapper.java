@@ -12,8 +12,8 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponseLinks;
 import uk.gov.companieshouse.api.objections.model.WithdrawalRequestedStatus;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalLinks;
 
 @Mapper(componentModel = "spring")
 public interface WithdrawalMapper {
@@ -51,7 +51,7 @@ public interface WithdrawalMapper {
     }
 
     @Named("toResponseLinks")
-    default WithdrawAllObjectionsResponseLinks toResponseLinks(WithdrawalLinks links) {
+    default WithdrawAllObjectionsResponseLinks toResponseLinks(PartnerLinks links) {
         if (links == null) {
             return null;
         }
@@ -74,8 +74,8 @@ public interface WithdrawalMapper {
         return CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL.getValue();
     }
 
-    default WithdrawalLinks buildLinks(String companyNumber, String withdrawalId) {
-        WithdrawalLinks links = new WithdrawalLinks();
+    default PartnerLinks buildLinks(String companyNumber, String withdrawalId) {
+        PartnerLinks links = new PartnerLinks();
         links.setSelf(String.format("/company/%s/strike-off-partner-objections-withdrawals/%s",
                 companyNumber, withdrawalId));
         links.setCompanyProfile(String.format("/company/%s", companyNumber));

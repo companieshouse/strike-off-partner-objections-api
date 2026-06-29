@@ -37,7 +37,7 @@ class WithdrawalDocumentRepositorySchemaTest {
 
     @Test
     void withdrawalId_hasUniqueIndex_whenAnnotated() throws Exception {
-        Field field = WithdrawalDocument.class.getDeclaredField("withdrawalId");
+        Field field = findField("withdrawalId");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "withdrawalId should have @Indexed annotation");
         assertTrue(indexed.unique(), "withdrawalId index should be unique");
@@ -45,24 +45,36 @@ class WithdrawalDocumentRepositorySchemaTest {
 
     @Test
     void companyNumber_hasIndex_whenAnnotated() throws Exception {
-        Field field = WithdrawalDocument.class.getDeclaredField("companyNumber");
+        Field field = findField("companyNumber");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "companyNumber should have @Indexed annotation");
     }
 
     @Test
     void processingStatus_hasIndex_whenAnnotated() throws Exception {
-        Field field = WithdrawalDocument.class.getDeclaredField("processingStatus");
+        Field field = findField("processingStatus");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "processingStatus should have @Indexed annotation");
     }
 
     private String getFieldName(String javaFieldName) throws Exception {
-        Field field = WithdrawalDocument.class.getDeclaredField(javaFieldName);
+        Field field = findField(javaFieldName);
         org.springframework.data.mongodb.core.mapping.Field mongoField =
                 field.getAnnotation(org.springframework.data.mongodb.core.mapping.Field.class);
         assertNotNull(mongoField, "Field " + javaFieldName + " should have @Field annotation");
         return mongoField.value();
+    }
+
+    private Field findField(String fieldName) throws NoSuchFieldException {
+        Class<?> current = WithdrawalDocument.class;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(fieldName);
     }
 }
 
