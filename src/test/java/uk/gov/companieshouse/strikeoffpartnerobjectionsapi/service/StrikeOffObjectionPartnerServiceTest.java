@@ -6,13 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -23,6 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
+import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
@@ -73,7 +74,7 @@ class StrikeOffObjectionPartnerServiceTest {
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
-        doNothing().when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-1"));
 
 
         BaseObjectionResponse result = strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
@@ -96,13 +97,14 @@ class StrikeOffObjectionPartnerServiceTest {
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
         String companyNumber = "12345";
-        KafkaPublishException kafkaException = new KafkaPublishException("publish failed", new RuntimeException("boom"));
+        KafkaPublishException kafkaException =
+                new KafkaPublishException("publish failed", "event-id-2", new RuntimeException("boom"));
 
         when(objectionRequestMapper.toObjectionDocument(
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doThrow(kafkaException).when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenThrow(kafkaException);
 
         assertThatThrownBy(() -> strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto))
                 .isSameAs(kafkaException);
@@ -150,6 +152,7 @@ class StrikeOffObjectionPartnerServiceTest {
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), objectionIdCaptor.capture()))
                 .thenReturn(new ObjectionDocument());
         when(objectionRepository.insert(any(ObjectionDocument.class))).thenReturn(new ObjectionDocument());
+        when(objectionKafkaProducer.publishObjectionEvent(any(ObjectionDocument.class))).thenReturn(getPublishedEvent("event-id-3"));
         when(objectionResponseMapper.toObjectionApiResponse(any())).thenReturn(new BaseObjectionResponse());
 
         strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto);
@@ -175,7 +178,7 @@ class StrikeOffObjectionPartnerServiceTest {
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doNothing().when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-4"));
         when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
 
@@ -192,7 +195,7 @@ class StrikeOffObjectionPartnerServiceTest {
         ObjectionDocument savedDocument = new ObjectionDocument();
         String companyNumber = "12345";
         KafkaPublishException kafkaException =
-                new KafkaPublishException("publish failed", new RuntimeException("boom"));
+                new KafkaPublishException("publish failed", "event-id-5", new RuntimeException("boom"));
         DataAccessResourceFailureException saveException =
                 new DataAccessResourceFailureException("mongo update failed");
 
@@ -200,7 +203,7 @@ class StrikeOffObjectionPartnerServiceTest {
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doThrow(kafkaException).when(objectionKafkaProducer).publishObjectionEvent(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenThrow(kafkaException);
         when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
 
         assertThatThrownBy(() -> strikeOffObjectionPartnerService.createObjection(companyNumber, requestDto))
@@ -237,5 +240,16 @@ class StrikeOffObjectionPartnerServiceTest {
                 ex.getMessage());
         verify(objectionRepository).findByCompanyNumberAndObjectionId("1", "2");
         verifyNoInteractions(objectionResponseMapper);
+    }
+
+    private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
+        return StrikeOffPartnerObjections.newBuilder()
+                .setEventId(eventId)
+                .setEventType(EventType.OBJECTION)
+                .setEventTime(java.time.Instant.now().toString())
+                .setSource("strike-off-partner-objections-api")
+                .setPartnerOrganisation("hmrc")
+                .setStrikeOffEventId(UUID.randomUUID().toString())
+                .build();
     }
 }

@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -28,6 +26,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
+import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
@@ -171,6 +171,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument))
+                .thenReturn(getPublishedEvent("event-id-0"));
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
@@ -188,8 +190,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(mappedDocument);
-        doNothing().when(withdrawalKafkaProducer)
-                .publishWithdrawalEvent(mappedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(mappedDocument))
+                .thenReturn(getPublishedEvent("event-id-1"));
 
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(mappedDocument))
                 .thenReturn(new WithdrawAllObjectionsResponse());
@@ -209,12 +211,13 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        KafkaPublishException kafkaException = new KafkaPublishException("publish failed", new RuntimeException("boom"));
+        KafkaPublishException kafkaException =
+                new KafkaPublishException("publish failed", "event-id-2", new RuntimeException("boom"));
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doThrow(kafkaException).when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument)).thenThrow(kafkaException);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
@@ -239,7 +242,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doNothing().when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument))
+                .thenReturn(getPublishedEvent("event-id-3"));
         when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(saveException);
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument)).thenReturn(expectedResponse);
 
@@ -256,14 +260,14 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
         KafkaPublishException kafkaException =
-                new KafkaPublishException("publish failed", new RuntimeException("boom"));
+                new KafkaPublishException("publish failed", "event-id-4", new RuntimeException("boom"));
         DataAccessResourceFailureException saveException =
                 new DataAccessResourceFailureException("mongo update failed");
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
         when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
-        doThrow(kafkaException).when(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument)).thenThrow(kafkaException);
         when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(saveException);
 
         assertThatThrownBy(() ->
@@ -282,6 +286,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(savedDocument);
         when(withdrawalRepository.insert(savedDocument)).thenReturn(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument))
+                .thenReturn(getPublishedEvent("event-id-5"));
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
                 .thenReturn(expectedResponse);
 
@@ -300,6 +306,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(any(WithdrawalDocument.class)))
+                .thenReturn(getPublishedEvent("event-id-6"));
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(any()))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
@@ -326,6 +334,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenReturn(doc);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(any(WithdrawalDocument.class)))
+                .thenReturn(getPublishedEvent("event-id-7"));
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(any()))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
@@ -361,6 +371,17 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasCause(cause);
 
         verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
+    }
+
+    private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
+        return StrikeOffPartnerObjections.newBuilder()
+                .setEventId(eventId)
+                .setEventType(EventType.WITHDRAWAL)
+                .setEventTime(Instant.now().toString())
+                .setSource("strike-off-partner-objections-api")
+                .setPartnerOrganisation("hmrc")
+                .setStrikeOffEventId(UUID.randomUUID().toString())
+                .build();
     }
 
     private WithdrawAllObjectionsRequest buildRequest() {

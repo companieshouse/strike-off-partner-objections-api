@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
@@ -9,7 +8,6 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -22,7 +20,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
-public class StrikeOffObjectionPartnerService {
+public class StrikeOffObjectionPartnerService extends AbstractEventTrackingService {
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
@@ -44,7 +42,6 @@ public class StrikeOffObjectionPartnerService {
                                                  final CreateObjectionRequest createObjectionRequest) {
 
         final String objectionId = UUID.randomUUID().toString();
-        final String eventCorrelationId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
                 companyNumber, PARTNER_ORGANISATION, objectionId));
@@ -55,52 +52,26 @@ public class StrikeOffObjectionPartnerService {
                 PARTNER_ORGANISATION,
                 objectionId
         );
-        setEventTrackingState(document, eventCorrelationId, EventStatus.PENDING, null);
+        setEventTrackingState(document, null, EventStatus.PENDING, null);
 
         try {
-            ObjectionDocument saved = objectionRepository.insert(document);
-            LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s", saved.getObjectionId(), saved.getCompanyNumber()));
-            publishAndUpdateEventState(saved, eventCorrelationId);
+            ObjectionDocument persistedObjection = objectionRepository.insert(document);
+            LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s",
+                    persistedObjection.getObjectionId(), persistedObjection.getCompanyNumber()));
+            publishAndUpdateEventState(
+                    persistedObjection,
+                    () -> objectionKafkaProducer.publishObjectionEvent(persistedObjection),
+                    objectionRepository::save,
+                    ObjectionDocument::getObjectionId,
+                    "objection",
+                    "objectionId");
 
-            return objectionResponseMapper.toObjectionApiResponse(saved);
+            return objectionResponseMapper.toObjectionApiResponse(persistedObjection);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
         }
     }
 
-    private void publishAndUpdateEventState(ObjectionDocument saved, String eventCorrelationId) {
-        try {
-            objectionKafkaProducer.publishObjectionEvent(saved);
-            setEventTrackingState(saved, eventCorrelationId, EventStatus.PUBLISHED, null);
-            saveEventState(saved, "after publish");
-            LOGGER.info(format("OBJECTION event published successfully: objectionId=%s", saved.getObjectionId()));
-        } catch (KafkaPublishException ex) {
-            setEventTrackingState(saved, eventCorrelationId, EventStatus.FAILED, ex.getMessage());
-            saveEventState(saved, "after publish failure");
-            throw ex;
-        }
-    }
-
-    private void saveEventState(ObjectionDocument saved, String context) {
-        try {
-            objectionRepository.save(saved);
-        } catch (DataAccessException dae) {
-            LOGGER.error(format(
-                    "Failed to update objection event tracking state %s: objectionId=%s",
-                    context, saved.getObjectionId()), dae);
-        }
-    }
-
-    private static void setEventTrackingState(
-            ObjectionDocument document,
-            String eventCorrelationId,
-            EventStatus eventStatus,
-            String failureReason) {
-        document.setEventCorrelationId(eventCorrelationId);
-        document.setEventStatus(eventStatus.name());
-        document.setEventStatusChangedAt(Instant.now());
-        document.setEventFailureReason(failureReason);
-    }
 
     public BaseObjectionResponse getObjection(final String companyNumber,
                                                  final String objectionId) throws ObjectionNotFoundException {

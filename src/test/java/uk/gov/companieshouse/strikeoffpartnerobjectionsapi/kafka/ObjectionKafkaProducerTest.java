@@ -59,8 +59,7 @@ class ObjectionKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class),
-                eq(document.getEventCorrelationId())))
+                any(EventType.class)))
                 .thenReturn(objectionEvent);
 
 
@@ -80,8 +79,7 @@ class ObjectionKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class),
-                eq(document.getEventCorrelationId())))
+                any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getObjectionId(), new StrikeOffPartnerObjections()));
         assertThrows(
                 KafkaPublishException.class,
@@ -98,8 +96,7 @@ class ObjectionKafkaProducerTest {
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
                 eq(document.getPartnerOrganisation()),
-                any(EventType.class),
-                eq(document.getEventCorrelationId())))
+                any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getObjectionId(), new StrikeOffPartnerObjections()));
 
         assertThrows(
@@ -111,7 +108,6 @@ class ObjectionKafkaProducerTest {
         ObjectionDocument document = new ObjectionDocument();
         document.setObjectionId("objection-123");
         document.setPartnerOrganisation("TEST_PARTNER");
-        document.setEventCorrelationId("corr-objection-123");
         return document;
     }
 

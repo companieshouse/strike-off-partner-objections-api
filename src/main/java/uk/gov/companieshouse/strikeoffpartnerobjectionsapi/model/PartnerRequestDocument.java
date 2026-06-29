@@ -37,7 +37,6 @@ public abstract class PartnerRequestDocument {
     private String kind;
 
     @Field("event_status")
-    @Indexed
     private String eventStatus;
 
     @Field("event_status_changed_at")

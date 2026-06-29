@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import java.time.Instant;
 import java.util.UUID;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -8,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
@@ -20,7 +18,7 @@ import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Service
-public class StrikeOffPartnerWithdrawalsService {
+public class StrikeOffPartnerWithdrawalsService extends AbstractEventTrackingService {
 
     //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
     private static final String PARTNER_ORGANISATION = "hmrc";
@@ -67,58 +65,29 @@ public class StrikeOffPartnerWithdrawalsService {
 
         final String withdrawalId = UUID.randomUUID().toString();
         final String etag = UUID.randomUUID().toString();
-        final String eventCorrelationId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, PARTNER_ORGANISATION, withdrawalId, etag);
-        setEventTrackingState(document, eventCorrelationId, EventStatus.PENDING, null);
+        setEventTrackingState(document, null, EventStatus.PENDING, null);
 
         try {
-            WithdrawalDocument saved = withdrawalRepository.insert(document);
+            WithdrawalDocument persistedWithdrawal = withdrawalRepository.insert(document);
             LOGGER.info(format("Withdrawal created successfully: withdrawalId=%s, companyNumber=%s",
-                    saved.getWithdrawalId(), saved.getCompanyNumber()));
-            publishAndUpdateEventState(saved, eventCorrelationId);
+                    persistedWithdrawal.getWithdrawalId(), persistedWithdrawal.getCompanyNumber()));
+            publishAndUpdateEventState(
+                    persistedWithdrawal,
+                    () -> withdrawalKafkaProducer.publishWithdrawalEvent(persistedWithdrawal),
+                    withdrawalRepository::save,
+                    WithdrawalDocument::getWithdrawalId,
+                    "withdrawal",
+                    "withdrawalId");
 
-            return withdrawalMapper.toWithdrawAllObjectionsResponse(saved);
+            return withdrawalMapper.toWithdrawAllObjectionsResponse(persistedWithdrawal);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);
         }
-    }
-
-    private void publishAndUpdateEventState(WithdrawalDocument saved, String eventCorrelationId) {
-        try {
-            withdrawalKafkaProducer.publishWithdrawalEvent(saved);
-            setEventTrackingState(saved, eventCorrelationId, EventStatus.PUBLISHED, null);
-            saveEventState(saved, "after publish");
-            LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s", saved.getWithdrawalId()));
-        } catch (KafkaPublishException ex) {
-            setEventTrackingState(saved, eventCorrelationId, EventStatus.FAILED, ex.getMessage());
-            saveEventState(saved, "after publish failure");
-            throw ex;
-        }
-    }
-
-    private void saveEventState(WithdrawalDocument saved, String context) {
-        try {
-            withdrawalRepository.save(saved);
-        } catch (DataAccessException dae) {
-            LOGGER.error(format(
-                    "Failed to update withdrawal event tracking state %s: withdrawalId=%s",
-                    context, saved.getWithdrawalId()), dae);
-        }
-    }
-
-    private static void setEventTrackingState(
-            WithdrawalDocument document,
-            String eventCorrelationId,
-            EventStatus eventStatus,
-            String failureReason) {
-        document.setEventCorrelationId(eventCorrelationId);
-        document.setEventStatus(eventStatus.name());
-        document.setEventStatusChangedAt(Instant.now());
-        document.setEventFailureReason(failureReason);
     }
 }

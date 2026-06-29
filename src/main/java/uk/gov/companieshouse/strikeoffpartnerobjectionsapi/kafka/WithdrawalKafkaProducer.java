@@ -19,14 +19,13 @@ public class WithdrawalKafkaProducer extends AbstractKafkaProducer {
         this.kafkaProducerEventFactory = kafkaProducerEventFactory;
     }
 
-    public void publishWithdrawalEvent(WithdrawalDocument withdrawalDocument) {
+    public StrikeOffPartnerObjections publishWithdrawalEvent(WithdrawalDocument withdrawalDocument) {
         var withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(
                 withdrawalDocument.getWithdrawalId(),
                 withdrawalDocument.getPartnerOrganisation(),
-                EventType.WITHDRAWAL,
-                withdrawalDocument.getEventCorrelationId()
+                EventType.WITHDRAWAL
         );
 
-        sendMessage(withdrawalRecord);
+        return sendMessage(withdrawalRecord);
     }
 }
