@@ -37,7 +37,7 @@ public abstract class PartnerRequestDocument {
     private String kind;
 
     @Field("event_status")
-    private String eventStatus;
+    private EventStatus eventStatus;
 
     @Field("event_status_changed_at")
     private Instant eventStatusChangedAt;
@@ -129,11 +129,11 @@ public abstract class PartnerRequestDocument {
         this.kind = kind;
     }
 
-    public String getEventStatus() {
+    public EventStatus getEventStatus() {
         return eventStatus;
     }
 
-    public void setEventStatus(String eventStatus) {
+    public void setEventStatus(EventStatus eventStatus) {
         this.eventStatus = eventStatus;
     }
 

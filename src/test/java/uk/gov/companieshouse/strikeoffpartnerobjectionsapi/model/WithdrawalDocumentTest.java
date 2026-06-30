@@ -90,7 +90,7 @@ class WithdrawalDocumentTest {
 
     @Test
     void testSetAndGetEventStatus() {
-        String status = "PENDING";
+        EventStatus status = EventStatus.PENDING;
         withdrawalDocument.setEventStatus(status);
         assertEquals(status, withdrawalDocument.getEventStatus());
     }
@@ -150,7 +150,7 @@ class WithdrawalDocumentTest {
         String workstream = "WORKSTREAM-A";
         String status = "PENDING";
         Instant now = Instant.now();
-        String eventStatus = "PENDING";
+        EventStatus eventStatus = EventStatus.PENDING;
         String eventCorrelationId = "corr-id-456";
         String eventFailureReason = "Kafka publish failed";
         String etag = "etag-123";

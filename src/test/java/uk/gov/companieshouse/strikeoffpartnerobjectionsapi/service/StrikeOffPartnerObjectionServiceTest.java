@@ -85,7 +85,7 @@ class StrikeOffPartnerObjectionServiceTest {
         verify(objectionRepository).insert(mappedDocument);
         ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
         verify(objectionRepository).save(savedCaptor.capture());
-        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED.name());
+        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED);
         assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
         verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
         verify(objectionKafkaProducer).publishObjectionEvent(savedDocument);
@@ -111,7 +111,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
         ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
         verify(objectionRepository).save(savedCaptor.capture());
-        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED.name());
+        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED);
         assertThat(savedCaptor.getValue().getEventFailureReason()).contains("publish failed");
         assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
     }

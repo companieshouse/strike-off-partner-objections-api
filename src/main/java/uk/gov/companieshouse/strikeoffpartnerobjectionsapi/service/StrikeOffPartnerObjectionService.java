@@ -6,13 +6,14 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 import static java.lang.String.format;
@@ -20,7 +21,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
-public class StrikeOffPartnerObjectionService extends AbstractEventTrackingService {
+public class StrikeOffPartnerObjectionService {
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
@@ -52,25 +53,44 @@ public class StrikeOffPartnerObjectionService extends AbstractEventTrackingServi
                 PARTNER_ORGANISATION,
                 objectionId
         );
-        setEventTrackingState(document, null, EventStatus.PENDING, null);
+        EventTracker.markPending(document);
 
         try {
             ObjectionDocument persistedObjection = objectionRepository.insert(document);
             LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s",
                     persistedObjection.getObjectionId(), persistedObjection.getCompanyNumber()));
-            publishAndUpdateEventState(
-                    persistedObjection,
-                    () -> objectionKafkaProducer.publishObjectionEvent(persistedObjection),
-                    objectionRepository::save,
-                    ObjectionDocument::getObjectionId,
-                    "objection",
-                    "objectionId");
+
+            publishAndSaveObjection(persistedObjection);
 
             return objectionResponseMapper.toObjectionApiResponse(persistedObjection);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
         }
     }
+
+    private void publishAndSaveObjection(ObjectionDocument persistedObjection) {
+        try {
+            StrikeOffPartnerObjections publishedEvent = objectionKafkaProducer.publishObjectionEvent(persistedObjection);
+            EventTracker.markPublished(persistedObjection, publishedEvent.getEventId());
+            LOGGER.info(format("Objection event published successfully: objectionId=%s",
+                    persistedObjection.getObjectionId()));
+        } catch (KafkaPublishException ex) {
+            EventTracker.markFailed(persistedObjection, ex.getEventId(), ex.getMessage());
+            throw ex;
+        } finally {
+            saveObjectionEventStatus(persistedObjection);
+        }
+    }
+
+    private void saveObjectionEventStatus(ObjectionDocument persistedObjection) {
+        try {
+            objectionRepository.save(persistedObjection);
+        } catch (DataAccessException saveEx) {
+            LOGGER.error(format("Failed to update objection event status: objectionId=%s",
+                    persistedObjection.getObjectionId()), saveEx);
+        }
+    }
+
 
 
     public BaseObjectionResponse getObjection(final String companyNumber,

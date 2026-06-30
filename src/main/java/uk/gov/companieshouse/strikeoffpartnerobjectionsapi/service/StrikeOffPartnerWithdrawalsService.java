@@ -7,10 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
+import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -18,7 +19,7 @@ import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Service
-public class StrikeOffPartnerWithdrawalsService extends AbstractEventTrackingService {
+public class StrikeOffPartnerWithdrawalsService {
 
     //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
     private static final String PARTNER_ORGANISATION = "hmrc";
@@ -71,23 +72,41 @@ public class StrikeOffPartnerWithdrawalsService extends AbstractEventTrackingSer
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, PARTNER_ORGANISATION, withdrawalId, etag);
-        setEventTrackingState(document, null, EventStatus.PENDING, null);
+        EventTracker.markPending(document);
 
         try {
             WithdrawalDocument persistedWithdrawal = withdrawalRepository.insert(document);
             LOGGER.info(format("Withdrawal created successfully: withdrawalId=%s, companyNumber=%s",
                     persistedWithdrawal.getWithdrawalId(), persistedWithdrawal.getCompanyNumber()));
-            publishAndUpdateEventState(
-                    persistedWithdrawal,
-                    () -> withdrawalKafkaProducer.publishWithdrawalEvent(persistedWithdrawal),
-                    withdrawalRepository::save,
-                    WithdrawalDocument::getWithdrawalId,
-                    "withdrawal",
-                    "withdrawalId");
+
+            publishAndSaveWithdrawal(persistedWithdrawal);
 
             return withdrawalMapper.toWithdrawAllObjectionsResponse(persistedWithdrawal);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);
+        }
+    }
+
+    private void publishAndSaveWithdrawal(WithdrawalDocument persistedWithdrawal) {
+        try {
+            StrikeOffPartnerObjections publishedEvent = withdrawalKafkaProducer.publishWithdrawalEvent(persistedWithdrawal);
+            EventTracker.markPublished(persistedWithdrawal, publishedEvent.getEventId());
+            LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s",
+                    persistedWithdrawal.getWithdrawalId()));
+        } catch (KafkaPublishException ex) {
+            EventTracker.markFailed(persistedWithdrawal, ex.getEventId(), ex.getMessage());
+            throw ex;
+        } finally {
+            saveWithdrawalEventStatus(persistedWithdrawal);
+        }
+    }
+
+    private void saveWithdrawalEventStatus(WithdrawalDocument persistedWithdrawal) {
+        try {
+            withdrawalRepository.save(persistedWithdrawal);
+        } catch (DataAccessException saveEx) {
+            LOGGER.error(format("Failed to update withdrawal event status: withdrawalId=%s",
+                    persistedWithdrawal.getWithdrawalId()), saveEx);
         }
     }
 }

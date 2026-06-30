@@ -200,10 +200,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(mappedDocument);
-        ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-        verify(withdrawalRepository).save(saveCaptor.capture());
-        assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED.name());
-        assertThat(saveCaptor.getValue().getEventCorrelationId()).isNotBlank();
+         ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+         verify(withdrawalRepository).save(saveCaptor.capture());
+         assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED);
+         assertThat(saveCaptor.getValue().getEventCorrelationId()).isNotBlank();
     }
 
     @Test
@@ -223,10 +223,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
                 .isSameAs(kafkaException);
 
-        ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-        verify(withdrawalRepository).save(saveCaptor.capture());
-        assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED.name());
-        assertThat(saveCaptor.getValue().getEventFailureReason()).contains("publish failed");
+         ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+         verify(withdrawalRepository).save(saveCaptor.capture());
+         assertThat(saveCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED);
+         assertThat(saveCaptor.getValue().getEventFailureReason()).contains("publish failed");
         assertThat(saveCaptor.getValue().getEventCorrelationId()).isNotBlank();
     }
 

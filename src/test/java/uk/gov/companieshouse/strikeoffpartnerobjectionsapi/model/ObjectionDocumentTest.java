@@ -118,7 +118,7 @@ class ObjectionDocumentTest {
 
     @Test
     void testSetAndGetEventStatus() {
-        String status = "PENDING";
+        EventStatus status = EventStatus.PENDING;
         objectionDocument.setEventStatus(status);
         assertEquals(status, objectionDocument.getEventStatus());
     }
@@ -181,7 +181,7 @@ class ObjectionDocumentTest {
         Instant now = Instant.now();
         Instant futureTime = Instant.now().plusSeconds(86400);
         String failureReason = "Test failure";
-        String eventStatus = "PENDING";
+        EventStatus eventStatus = EventStatus.PENDING;
         String eventCorrelationId = "corr-id-123";
         String eventFailureReason = "Kafka publish failed";
         String etag = "etag-123";
