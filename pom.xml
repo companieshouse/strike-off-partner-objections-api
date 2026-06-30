@@ -27,7 +27,6 @@
         <!-- Override vulnerable Tomcat version -->
         <tomcat.version>11.0.22</tomcat.version>
         <private-api-sdk-java.version>7.0.1</private-api-sdk-java.version>
-        <api-sdk-manager-java-library.version>3.0.19</api-sdk-manager-java-library.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <api-security-java.version>2.0.27</api-security-java.version>
 
@@ -164,6 +163,11 @@
             <version>${org.mapstruct.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>uk.gov.companieshouse</groupId>
             <artifactId>api-security-java</artifactId>
             <version>${api-security-java.version}</version>
@@ -201,6 +205,10 @@
 							<artifactId>mapstruct-processor</artifactId>
 							<version>${org.mapstruct.version}</version>
 						</path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>

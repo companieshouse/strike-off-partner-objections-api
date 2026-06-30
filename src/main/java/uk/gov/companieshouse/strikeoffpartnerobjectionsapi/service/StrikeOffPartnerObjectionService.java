@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
-import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
@@ -45,7 +44,7 @@ public class StrikeOffPartnerObjectionService {
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
-        CompanyProfileApi companyProfile = companyProfileService.getCompanyProfile(companyNumber);
+        companyProfileService.getCompanyProfile(companyNumber);
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
