@@ -16,7 +16,7 @@ class MongoConfigurationTest {
     private MongoTemplate mongoTemplate;
 
     @Test
-    void mongoTemplateBeanIsCreated() {
+    void mongoTemplateBean_whenContextLoads_isCreated() {
         assertNotNull(mongoTemplate);
     }
 }

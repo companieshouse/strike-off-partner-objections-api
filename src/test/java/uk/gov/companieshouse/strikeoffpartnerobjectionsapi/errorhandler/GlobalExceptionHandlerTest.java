@@ -34,7 +34,7 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
-    void handleValidationExceptionsReturnsMissingRequiredWhenNoFieldErrors() {
+    void handleValidationExceptions_whenNoFieldErrors_returnsMissingRequired() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         when(ex.getBindingResult()).thenReturn(bindingResult);
@@ -49,7 +49,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleValidationExceptionsMapsDistinctErrorsInPriorityOrder() {
+    void handleValidationExceptions_whenDistinctErrorsExist_mapsInPriorityOrder() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         when(ex.getBindingResult()).thenReturn(bindingResult);
@@ -74,7 +74,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsMissingRequiredWhenBodyIsMissing() {
+    void handleUnreadableMessage_whenBodyIsMissing_returnsMissingRequired() {
         HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
                 "Required request body is missing", new MockHttpInputMessage(new byte[0]));
 
@@ -86,8 +86,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsMissingWorkstreamForBlankWorkstreamValue() {
-        InvalidFormatException cause = invalidFormat("partner_objection_workstream", "");
+    void handleUnreadableMessage_whenWorkstreamValueIsBlank_returnsMissingWorkstream() {
+        InvalidFormatException cause = workstreamInvalidFormat("");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -97,8 +97,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsInvalidWorkstreamForNonBlankWorkstreamValue() {
-        InvalidFormatException cause = invalidFormat("partner_objection_workstream", "other");
+    void handleUnreadableMessage_whenWorkstreamValueIsNonBlankInvalid_returnsInvalidWorkstream() {
+        InvalidFormatException cause = workstreamInvalidFormat("other");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -108,8 +108,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsInvalidReasonFromJsonMappingPath() {
-        JsonMappingException cause = jsonMapping("partner_objection_reason");
+    void handleUnreadableMessage_whenReasonIsInvalidInJsonMappingPath_returnsInvalidReason() {
+        JsonMappingException cause = reasonJsonMapping();
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -120,7 +120,7 @@ class GlobalExceptionHandlerTest {
 
     @ParameterizedTest
     @MethodSource("unreadableMessageFallbackCases")
-    void handleUnreadableMessageUsesExpectedFallbackErrorCode(String message, String expectedErrorCode) {
+    void handleUnreadableMessage_whenUsingFallbackCases_usesExpectedErrorCode(String message, String expectedErrorCode) {
         HttpMessageNotReadableException ex = unreadable(message, new RuntimeException("root"));
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -130,7 +130,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleResponseStatusExceptionUsesFallbackMessageWhenReasonIsBlank() {
+    void handleResponseStatusException_whenReasonIsBlank_usesFallbackMessage() {
         ResponseStatusException ex = new ResponseStatusException(HttpStatus.BAD_REQUEST, "   ");
 
         ResponseEntity<ApiError> response = handler.handleResponseStatusException(ex);
@@ -142,7 +142,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleErrorResponseExceptionReturnsDefaultMessage() {
+    void handleErrorResponseException_whenInvoked_returnsDefaultMessage() {
         ErrorResponseException ex = new ErrorResponseException(
                 HttpStatus.TOO_MANY_REQUESTS,
                 ProblemDetail.forStatus(HttpStatus.TOO_MANY_REQUESTS),
@@ -157,7 +157,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleSocketTimeoutExceptionReturnsGatewayTimeout() {
+    void handleSocketTimeoutException_whenInvoked_returnsGatewayTimeout() {
         ResponseEntity<ApiError> response = handler.handleSocketTimeoutException(new SocketTimeoutException("timeout"));
         ApiError body = requireBody(response);
 
@@ -167,7 +167,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleIOExceptionReturnsServiceUnavailable() {
+    void handleIOException_whenInvoked_returnsServiceUnavailable() {
         ResponseEntity<ApiError> response = handler.handleIOException(new IOException("connection failed"));
         ApiError body = requireBody(response);
 
@@ -177,7 +177,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnexpectedExceptionReturnsInternalServerError() {
+    void handleUnexpectedException_whenInvoked_returnsInternalServerError() {
         ResponseEntity<ApiError> response = handler.handleUnexpectedException();
         ApiError body = requireBody(response);
 
@@ -194,15 +194,15 @@ class GlobalExceptionHandlerTest {
         return new HttpMessageNotReadableException(message, cause, new MockHttpInputMessage(new byte[0]));
     }
 
-    private InvalidFormatException invalidFormat(String field, Object value) {
+    private InvalidFormatException workstreamInvalidFormat(Object value) {
         InvalidFormatException exception = InvalidFormatException.from(null, "bad format", value, String.class);
-        exception.prependPath(new Object(), field);
+        exception.prependPath(new Object(), "partner_objection_workstream");
         return exception;
     }
 
-    private JsonMappingException jsonMapping(String field) {
+    private JsonMappingException reasonJsonMapping() {
         JsonMappingException exception = JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "bad mapping");
-        exception.prependPath(new Object(), field);
+        exception.prependPath(new Object(), "partner_objection_reason");
         return exception;
     }
 

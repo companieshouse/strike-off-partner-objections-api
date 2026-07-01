@@ -74,7 +74,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     // ===== GET Withdrawal Tests =====
 
     @Test
-    void getAllWithdrawals_returnsOkAndDelegatesToService_whenWithdrawalFound() {
+    void getAllWithdrawals_whenWithdrawalIdIsValid_returnsOkAndDelegatesToService() {
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
         response.setWithdrawalId("withdrawal-123");
 
@@ -93,7 +93,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
-    void withdrawAllObjections_returnsCreatedAndDelegatesToService_whenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_returnsCreatedAndDelegatesToService() {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
         request.setSubmissionCompanyName("ACME LTD");
         request.setPartnerCaseReference("CASE-001");
@@ -115,7 +115,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsBadRequestErrorResponse_whenRequiredFieldsAreMissing() throws Exception {
+    void withdrawAllObjections_whenRequiredFieldsAreMissing_returnsBadRequestErrorResponse() throws Exception {
         mockMvc().perform(post(WITHDRAWALS_PATH)
                         .contentType(APPLICATION_JSON)
                         .content("""
@@ -130,7 +130,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsMissingRequiredParameter_whenBodyIsMissing() throws Exception {
+    void withdrawAllObjections_whenBodyIsMissing_returnsMissingRequiredParameter() throws Exception {
         mockMvc().perform(post(WITHDRAWALS_PATH).contentType(APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
@@ -139,7 +139,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsMissingRequiredParameter_whenJsonIsMalformed() throws Exception {
+    void withdrawAllObjections_whenJsonIsMalformed_returnsMissingRequiredParameter() throws Exception {
         mockMvc().perform(post(WITHDRAWALS_PATH)
                         .contentType(APPLICATION_JSON)
                         .content("{\"partner_contact_email\":\"valid@email.com\","))
@@ -151,7 +151,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @ParameterizedTest
     @MethodSource("missingOrBlankEmailCases")
-    void withdrawAllObjections_returnsMissingRequiredParameter_whenEmailIsMissingOrBlank(
+    void withdrawAllObjections_whenEmailIsMissingOrBlank_returnsMissingRequiredParameter(
             Consumer<ObjectNode> requestMutator) throws Exception {
         ObjectNode request = baseValidRequest();
         requestMutator.accept(request);
@@ -161,7 +161,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @ParameterizedTest
     @MethodSource("invalidEmailCases")
-    void withdrawAllObjections_returnsEmailIncorrectFormat_whenEmailIsInvalid(String invalidEmail) throws Exception {
+    void withdrawAllObjections_whenEmailIsInvalid_returnsEmailIncorrectFormat(String invalidEmail) throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", invalidEmail);
 
@@ -169,14 +169,14 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsEmailIncorrectFormatAndMaxLength_whenEmailExceeds255() throws Exception {
+    void withdrawAllObjections_whenEmailExceeds255_returnsEmailIncorrectFormatAndMaxLength() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "a".repeat(247) + "@test.com");
         assertBadRequestWithoutServiceCall(request, EMAIL_INCORRECT_FORMAT + ", " + EMAIL_MAX_LENGTH);
     }
 
     @Test
-    void withdrawAllObjections_returnsMaxLengthExceeded_whenCaseReferenceExceeds64() throws Exception {
+    void withdrawAllObjections_whenCaseReferenceExceeds64_returnsMaxLengthExceeded() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(65));
 
@@ -184,7 +184,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsMaxLengthExceeded_whenCompanyNameExceeds160() throws Exception {
+    void withdrawAllObjections_whenCompanyNameExceeds160_returnsMaxLengthExceeded() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(161));
 
@@ -192,7 +192,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsCreated_whenEmailIsAt255CharBoundary() throws Exception {
+    void withdrawAllObjections_whenEmailIsAt255CharBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "a".repeat(64) + "@"
                 + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(62));
@@ -205,7 +205,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsCreated_whenCaseReferenceIsAt64CharBoundary() throws Exception {
+    void withdrawAllObjections_whenCaseReferenceIsAt64CharBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(64));
 
@@ -217,7 +217,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsCreated_whenCompanyNameIsAt160CharBoundary() throws Exception {
+    void withdrawAllObjections_whenCompanyNameIsAt160CharBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(160));
 
@@ -230,7 +230,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @ParameterizedTest
     @MethodSource("wrongTypeCases")
-    void withdrawAllObjections_returnsMissingRequiredParameter_whenFieldTypeIsInvalid(
+    void withdrawAllObjections_whenFieldTypeIsInvalid_returnsMissingRequiredParameter(
             String fieldName,
             JsonNode wrongTypeValue) throws Exception {
         ObjectNode request = baseValidRequest();
@@ -241,7 +241,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @ParameterizedTest
     @MethodSource("workstreamCases")
-    void withdrawAllObjections_returnsExpectedWorkstreamErrorCode(
+    void withdrawAllObjections_whenWorkstreamIsInvalid_returnsExpectedErrorCode(
             Consumer<ObjectNode> requestMutator,
             String expectedErrorCode) throws Exception {
         ObjectNode request = baseValidRequest();
@@ -251,7 +251,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_callsService_whenRequestIsValid() throws Exception {
+    void withdrawAllObjections_whenRequestIsValid_callsService() throws Exception {
         WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
@@ -268,7 +268,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_trimsWhitespaceFields_beforeCallingService() throws Exception {
+    void withdrawAllObjections_whenRequestContainsWhitespace_trimsWhitespaceFieldsBeforeCallingService() throws Exception {
         WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
         serviceResponse.setWithdrawalId("withdrawal-123");
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
@@ -295,7 +295,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsInternalServerErrorResponse_whenServiceThrowsRuntimeException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsRuntimeException_returnsInternalServerErrorResponse() throws Exception {
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
                 any()))
                 .thenThrow(new RuntimeException("Downstream unavailable"));
@@ -309,7 +309,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsConflictErrorResponse_whenServiceThrowsConflictResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsConflictResponseStatusException_returnsConflictErrorResponse() throws Exception {
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
                 any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate withdrawal request"));
@@ -323,34 +323,34 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsUnauthorizedErrorResponse_whenServiceThrowsUnauthorizedResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsUnauthorizedResponseStatusException_returnsUnauthorizedErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.UNAUTHORIZED, "Unauthorized access", "unauthorized");
     }
 
     @Test
-    void withdrawAllObjections_returnsForbiddenErrorResponse_whenServiceThrowsForbiddenResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsForbiddenResponseStatusException_returnsForbiddenErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.FORBIDDEN, "Forbidden action", "forbidden");
     }
 
     @Test
-    void withdrawAllObjections_returnsBadGatewayErrorResponse_whenServiceThrowsBadGatewayResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsBadGatewayResponseStatusException_returnsBadGatewayErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.BAD_GATEWAY, "Upstream bad gateway", "bad_gateway");
     }
 
     @Test
-    void withdrawAllObjections_returnsServiceUnavailableErrorResponse_whenServiceThrowsServiceUnavailableResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsServiceUnavailableResponseStatusException_returnsServiceUnavailableErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.SERVICE_UNAVAILABLE,
                 "Dependency unavailable",
                 "service_unavailable");
     }
 
     @Test
-    void withdrawAllObjections_returnsGatewayTimeoutErrorResponse_whenServiceThrowsGatewayTimeoutResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsGatewayTimeoutResponseStatusException_returnsGatewayTimeoutErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.GATEWAY_TIMEOUT, "Upstream timeout", "gateway_timeout");
     }
 
     @Test
-    void withdrawAllObjections_returnsInternalServerErrorResponse_whenServiceThrowsInternalServerErrorResponseStatusException() throws Exception {
+    void withdrawAllObjections_whenServiceThrowsInternalServerErrorResponseStatusException_returnsInternalServerErrorResponse() throws Exception {
         assertResponseStatusExceptionResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Unexpected downstream failure",
                 "internal_server_error");

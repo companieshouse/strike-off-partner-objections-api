@@ -84,7 +84,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void validRequestReturnsCreated() throws Exception {
+    void createObjection_whenRequestIsValid_returnsCreated() throws Exception {
         postCreateObjection(baseValidRequest())
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.objection_id").value("objection-123"))
@@ -94,7 +94,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionCallsServiceWithCompanyNumberAndObjectionId() throws Exception {
+    void getObjection_whenRequestIsValid_callsServiceWithCompanyNumberAndObjectionId() throws Exception {
         performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
 
@@ -102,7 +102,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionFound_Returns200AndContainsCorrectAttributes() throws Exception {
+    void getObjection_whenObjectionIsFound_returns200AndContainsCorrectAttributes() throws Exception {
         when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenReturn(defaultCreatedResponse());
 
@@ -136,7 +136,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionNotFound_Returns404() throws Exception {
+    void getObjection_whenObjectionIsNotFound_returns404() throws Exception {
         when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
 
@@ -147,7 +147,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void getObjectionWithIncorrectCompanyNumber_Returns404() throws Exception {
+    void getObjection_whenCompanyNumberIsIncorrect_returns404() throws Exception {
         when(strikeOffPartnerObjectionService.getObjection("123", OBJECTION_ID))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
         when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
@@ -164,7 +164,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void missingBodyReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenBodyIsMissing_returnsMissingRequiredParameter() throws Exception {
         postCreateObjectionWithoutBody()
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
@@ -173,7 +173,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("missingOrBlankEmailCases")
-    void missingOrBlankEmailReturnsMissingRequiredParameter(Consumer<ObjectNode> requestMutator) throws Exception {
+    void createObjection_whenEmailIsMissingOrBlank_returnsMissingRequiredParameter(Consumer<ObjectNode> requestMutator) throws Exception {
         ObjectNode request = baseValidRequest();
         requestMutator.accept(request);
 
@@ -182,7 +182,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("invalidEmailCases")
-    void invalidEmailCasesReturnExpectedErrorCode(String email, String expectedErrorCode) throws Exception {
+    void createObjection_whenEmailIsInvalid_returnsExpectedErrorCode(String email, String expectedErrorCode) throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", email);
 
@@ -190,7 +190,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void emailMaxBoundaryValidReturnsCreated() throws Exception {
+    void createObjection_whenEmailIsAtMaxBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "a".repeat(64) + "@"
                 + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(62));
@@ -202,7 +202,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void caseReferenceTooLongReturnsInvalidLength() throws Exception {
+    void createObjection_whenCaseReferenceIsTooLong_returnsInvalidLength() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(65));
 
@@ -210,7 +210,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void caseReferenceBoundaryValidReturnsCreated() throws Exception {
+    void createObjection_whenCaseReferenceIsAtBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(64));
 
@@ -221,7 +221,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void companyNameTooLongReturnsInvalidLength() throws Exception {
+    void createObjection_whenCompanyNameIsTooLong_returnsInvalidLength() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(161));
 
@@ -229,7 +229,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void companyNameBoundaryValidReturnsCreated() throws Exception {
+    void createObjection_whenCompanyNameIsAtBoundary_returnsCreated() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(160));
 
@@ -241,7 +241,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("invalidReasonCases")
-    void invalidReasonCasesReturnInvalidReason(Consumer<ObjectNode> requestMutator) throws Exception {
+    void createObjection_whenReasonIsInvalid_returnsExpectedErrorCode(Consumer<ObjectNode> requestMutator) throws Exception {
         ObjectNode request = baseValidRequest();
         requestMutator.accept(request);
 
@@ -255,7 +255,7 @@ class StrikeOffObjectionPartnerControllerTest {
             "compliance-and-financial-issue-outstanding",
             "other"
     })
-    void validReasonValuesReturnCreated(String reason) throws Exception {
+    void createObjection_whenReasonIsValid_returnsCreated(String reason) throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_objection_reason", reason);
 
@@ -267,7 +267,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("workstreamCases")
-    void workstreamCasesReturnExpectedErrorCode(Consumer<ObjectNode> requestMutator,
+    void createObjection_whenWorkstreamIsInvalid_returnsExpectedErrorCode(Consumer<ObjectNode> requestMutator,
                                                 String expectedErrorCode) throws Exception {
         ObjectNode request = baseValidRequest();
         requestMutator.accept(request);
@@ -276,7 +276,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void multipleInvalidFieldsReturnsMultipleErrors() throws Exception {
+    void createObjection_whenMultipleFieldsAreInvalid_returnsMultipleErrors() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "");
         request.put("partner_case_reference", "");
@@ -289,7 +289,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void validationFailureHasNoSideEffects() throws Exception {
+    void createObjection_whenValidationFails_hasNoSideEffects() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "bad");
 
@@ -297,7 +297,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void validationSuccessTriggersService() throws Exception {
+    void createObjection_whenValidationSucceeds_triggersService() throws Exception {
         postCreateObjection(baseValidRequest())
                 .andExpect(status().isCreated());
 
@@ -305,7 +305,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void blankCaseReferenceReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenCaseReferenceIsBlank_returnsMissingRequiredParameter() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "");
 
@@ -313,7 +313,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void nullCaseReferenceReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenCaseReferenceIsNull_returnsMissingRequiredParameter() throws Exception {
         ObjectNode request = baseValidRequest();
         request.putNull("partner_case_reference");
 
@@ -321,7 +321,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void blankCompanyNameReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenCompanyNameIsBlank_returnsMissingRequiredParameter() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "");
 
@@ -329,7 +329,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void nullCompanyNameReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenCompanyNameIsNull_returnsMissingRequiredParameter() throws Exception {
         ObjectNode request = baseValidRequest();
         request.putNull("submission_company_name");
 
@@ -338,7 +338,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("wrongTypeCases")
-    void wrongTypeCasesReturnMissingRequiredParameter(String fieldName, JsonNode wrongTypeValue) throws Exception {
+    void createObjection_whenFieldTypeIsWrong_returnsMissingRequiredParameter(String fieldName, JsonNode wrongTypeValue) throws Exception {
         ObjectNode request = baseValidRequest();
         request.set(fieldName, wrongTypeValue);
 
@@ -346,7 +346,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void malformedJsonReturnsMissingRequiredParameter() throws Exception {
+    void createObjection_whenJsonIsMalformed_returnsMissingRequiredParameter() throws Exception {
         mockMvc.perform(post(CREATE_OBJECTION_URL)
                         .contentType(APPLICATION_JSON)
                         .content("{\"partner_contact_email\":\"valid@email.com\","))
@@ -357,7 +357,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void whitespaceEmailIsTrimmedAndAccepted() throws Exception {
+    void createObjection_whenEmailHasWhitespace_trimsAndAcceptsValue() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", " test@test.com ");
 
@@ -370,7 +370,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void whitespaceCaseReferenceIsTrimmedAndAccepted() throws Exception {
+    void createObjection_whenCaseReferenceHasWhitespace_trimsAndAcceptsValue() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", " CASE123 ");
 
@@ -383,7 +383,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void whitespaceCompanyNameIsTrimmedAndAccepted() throws Exception {
+    void createObjection_whenCompanyNameHasWhitespace_trimsAndAcceptsValue() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", " Valid Company Ltd ");
 
@@ -396,7 +396,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void createObjectionWhenServiceThrowsExceptionReturns500() throws Exception {
+    void createObjection_whenServiceThrowsException_returns500() throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new RuntimeException("Internal service error"));
 
@@ -407,7 +407,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void createObjectionWhenServiceThrowsResponseStatusExceptionPreservesStatusAndReason() throws Exception {
+    void createObjection_whenServiceThrowsResponseStatusException_preservesStatusAndReason() throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate objection"));
 
@@ -418,7 +418,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void createObjectionWhenResponseStatusExceptionHasNoReasonUsesFallbackMessage() throws Exception {
+    void createObjection_whenResponseStatusExceptionHasNoReason_usesFallbackMessage() throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
@@ -429,7 +429,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void createObjectionWhenServiceThrowsErrorResponseExceptionPreservesStatus() throws Exception {
+    void createObjection_whenServiceThrowsErrorResponseException_preservesStatus() throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new ErrorResponseException(
                         HttpStatus.FORBIDDEN,
@@ -443,7 +443,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
-    void createObjectionWhenResponseStatusCodeIsNonStandardUsesGenericErrorCode() throws Exception {
+    void createObjection_whenResponseStatusCodeIsNonStandard_usesGenericErrorCode() throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new ResponseStatusException(HttpStatusCode.valueOf(499)));
 
@@ -455,7 +455,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @MethodSource("gatewayErrorCases")
-    void createObjectionWhenServiceThrowsGatewayErrorReturnsCorrectStatus(
+    void createObjection_whenServiceThrowsGatewayError_returnsCorrectStatus(
             HttpStatus status, String expectedErrorCode) throws Exception {
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenThrow(new ResponseStatusException(status, status.getReasonPhrase()));

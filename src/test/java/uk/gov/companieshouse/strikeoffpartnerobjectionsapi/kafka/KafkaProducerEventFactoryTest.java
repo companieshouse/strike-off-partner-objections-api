@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class KafkaProducerEventFactoryTest {
 
     @Test
-    void shouldCreateProducerRecord() {
+    void createProducerRecord_whenInputIsValid_createsProducerRecord() {
         // given
         String topic = "test-topic";
         String documentId = "12345";

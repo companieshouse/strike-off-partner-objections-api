@@ -48,7 +48,7 @@ class ObjectionKafkaProducerTest {
     }
 
     @Test
-    void publishObjectionEventSuccess() {
+    void publishObjectionEvent_whenRequestIsValid_succeeds() {
         var document = buildDocument();
         var objectionEvent = getProducerRecord(document);
 
@@ -71,7 +71,7 @@ class ObjectionKafkaProducerTest {
 
 
     @Test
-    void publishObjectionEventWhenKafkaSendIsInterruptedThrowsKafkaPublishException() {
+    void publishObjectionEvent_whenKafkaSendIsInterrupted_throwsKafkaPublishException() {
         var document = buildDocument();
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(
@@ -88,7 +88,7 @@ class ObjectionKafkaProducerTest {
 
 
     @Test
-    void shouldThrowKafkaPublishExceptionWhenKafkaSendFails() {
+    void publishObjectionEvent_whenKafkaSendFails_throwsKafkaPublishException() {
         var document = buildDocument();
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(

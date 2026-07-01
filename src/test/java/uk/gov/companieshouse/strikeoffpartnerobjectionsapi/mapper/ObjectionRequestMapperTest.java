@@ -20,7 +20,7 @@ class ObjectionRequestMapperTest {
     private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Test
-    void toObjectionDocumentMapsRequestFieldsCorrectly() {
+    void toObjectionDocument_whenRequestFieldsAreProvided_mapsRequestFieldsCorrectly() {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setSubmissionCompanyName("Acme Ltd");
         request.setPartnerCaseReference("CASE-001");
@@ -41,7 +41,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentSetsProcessingStatusToObjectionSubmitted() {
+    void toObjectionDocument_whenDocumentIsCreated_setsProcessingStatusToObjectionSubmitted() {
         ObjectionDocument doc = mapper.toObjectionDocument(
                 new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
@@ -50,7 +50,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentSetsKind() {
+    void toObjectionDocument_whenDocumentIsCreated_setsKind() {
         ObjectionDocument doc = mapper.toObjectionDocument(
                 new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
@@ -58,7 +58,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentBuildsLinksCorrectly() {
+    void toObjectionDocument_whenCompanyAndObjectionIdsAreProvided_buildsLinksCorrectly() {
         ObjectionDocument doc = mapper.toObjectionDocument(
                 new CreateObjectionRequest(), COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 
@@ -70,7 +70,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentMapsWorkstreamAndReasonAsString() {
+    void toObjectionDocument_whenWorkstreamAndReasonAreProvided_mapsWorkstreamAndReasonAsString() {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
@@ -83,7 +83,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentWhenNullRequestReturnsNull() {
+    void toObjectionDocument_whenAllParametersAreNull_returnsNull() {
         ObjectionDocument doc = mapper.toObjectionDocument(
                 null, null, null, null);
 
@@ -91,7 +91,7 @@ class ObjectionRequestMapperTest {
     }
 
     @Test
-    void toObjectionDocumentWhenRequestIsNullButMetadataProvidedStillBuildsDocument() {
+    void toObjectionDocument_whenRequestIsNullAndMetadataIsProvided_stillBuildsDocument() {
         ObjectionDocument doc = mapper.toObjectionDocument(
                 null, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
 

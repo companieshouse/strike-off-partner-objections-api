@@ -68,7 +68,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     // ===== GET Withdrawal Tests =====
 
     @Test
-    void getWithdrawal_delegatesToRepositoryToFindByCompanyNumberAndWithdrawalId_whenRetrieving() {
+    void getWithdrawal_whenRetrieving_delegatesToRepositoryToFindByCompanyNumberAndWithdrawalId() {
         WithdrawalDocument document = buildSavedDocument();
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
 
@@ -83,7 +83,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_mapsDocumentToResponse_whenWithdrawalFound() {
+    void getWithdrawal_whenWithdrawalIsFound_mapsDocumentToResponse() {
         WithdrawalDocument document = buildSavedDocument();
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
 
@@ -98,7 +98,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_returnsResponseFromMapper_whenWithdrawalFound() {
+    void getWithdrawal_whenWithdrawalIsFound_returnsResponseFromMapper() {
         WithdrawalDocument document = buildSavedDocument();
         WithdrawAllObjectionsResponse expectedResponse = new WithdrawAllObjectionsResponse();
         expectedResponse.setWithdrawalId(WITHDRAWAL_ID);
@@ -116,7 +116,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_throwsNotFoundException_whenWithdrawalNotFound() {
+    void getWithdrawal_whenWithdrawalIsNotFound_throwsNotFoundException() {
         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
                 .thenReturn(Optional.empty());
 
@@ -129,7 +129,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
+    void getWithdrawal_whenCompanyNumberDoesNotMatch_throwsNotFoundException() {
         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
                 .thenReturn(Optional.empty());
 
@@ -140,7 +140,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_throwsWithdrawalPersistenceException_whenRepositoryThrowsDataAccessException() {
+    void getWithdrawal_whenRepositoryThrowsDataAccessException_throwsWithdrawalPersistenceException() {
         String companyNumber = "12345678";
         String withdrawalId = "withdrawal-123";
         DataAccessException dataAccessException = new DataAccessResourceFailureException("DB down");
@@ -162,7 +162,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
-    void withdrawAllObjections_delegatesToMapperToCreateDocument_whenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_delegatesToMapperToCreateDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
@@ -183,7 +183,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_persistsDocumentReturnedByMapper_whenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_persistsDocumentReturnedByMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
 
@@ -207,7 +207,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_marksEventAsFailedAndRethrows_whenKafkaPublishFails() {
+    void withdrawAllObjections_whenKafkaPublishFails_marksEventAsFailedAndRethrows() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
@@ -278,7 +278,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_returnsResponseFromMapper_whenDocumentIsPersisted() {
+    void withdrawAllObjections_whenDocumentIsPersisted_returnsResponseFromMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
         WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
@@ -299,7 +299,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_generatesUniqueWithdrawalId_onEachCall() {
+    void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueWithdrawalId() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
 
@@ -327,7 +327,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_generatesUniqueEtag_onEachCall() {
+    void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueEtag() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
 
@@ -355,7 +355,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_throwsWithdrawalPersistenceException_whenRepositoryInsertFails() {
+    void withdrawAllObjections_whenRepositoryInsertFails_throwsWithdrawalPersistenceException() {
         WithdrawAllObjectionsRequest request = buildRequest();
         DataAccessResourceFailureException cause =
                 new DataAccessResourceFailureException("mongo insert failed");
