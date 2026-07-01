@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "7ba52483-c974-4040-b113-e3725b8b7ab6",
-    "name": "Strike Off Partner Objections API-4",
+    "name": "Strike Off Partner Objections API",
     "description": "Collection for local testing of healthcheck, create objection, withdrawals, and validation scenarios.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "55605692",

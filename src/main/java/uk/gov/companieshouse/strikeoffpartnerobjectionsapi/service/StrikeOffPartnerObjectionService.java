@@ -45,6 +45,7 @@ public class StrikeOffPartnerObjectionService {
                                                  final CreateObjectionRequest createObjectionRequest) {
 
         companyProfileService.getCompanyProfile(companyNumber);
+        // Validate company exists / is accessible before creating objection
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",

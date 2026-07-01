@@ -30,7 +30,9 @@ public class ApplicationConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         if (authenticationInterceptor != null) {
-            registry.addInterceptor(authenticationInterceptor).addPathPatterns("/**");
+            registry.addInterceptor(authenticationInterceptor)
+                    .addPathPatterns("/**")
+                    .excludePathPatterns("/healthcheck");
         }
     }
 }

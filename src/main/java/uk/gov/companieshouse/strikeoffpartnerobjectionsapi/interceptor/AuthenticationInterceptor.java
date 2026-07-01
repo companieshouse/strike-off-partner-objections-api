@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -32,12 +33,6 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String identityType = request.getHeader(ERIC_IDENTITY_TYPE_HEADER);
         String identityHeader = request.getHeader(ERIC_IDENTITY_HEADER);
 
-        if (identityType == null || identityType.isBlank()) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing ERIC-Identity-Type header");
-            sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
-            return false;
-        }
-
         if (!ERIC_IDENTITY_TYPE_KEY.equals(identityType)) {
             LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
             sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
@@ -60,7 +55,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         response.setContentType("application/json");
         try {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", 403);
+            errorResponse.put("status", HttpStatus.FORBIDDEN);
             errorResponse.put("error", "Forbidden");
             errorResponse.put("message", message);
             errorResponse.put("requestId", requestId);

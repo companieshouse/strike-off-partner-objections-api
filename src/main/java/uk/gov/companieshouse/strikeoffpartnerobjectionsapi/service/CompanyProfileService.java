@@ -14,14 +14,14 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class CompanyProfileService {
 
     private static final UriTemplate GET_COMPANY_URI = new UriTemplate("/company/{companyNumber}");
-    private ApiClientService apiClientService;
+    private final ApiClientService apiClientService;
     
     public CompanyProfileService(ApiClientService apiClientService) {
         this.apiClientService = apiClientService;
     }
 
     public CompanyProfileApi getCompanyProfile(String companyNumber) {
-        LOGGER.debug("Get company profile for " + companyNumber);
+        LOGGER.debug(String.format("Get company profile for %s", companyNumber));
 
         String uri = GET_COMPANY_URI.expand(companyNumber).toString();
 
