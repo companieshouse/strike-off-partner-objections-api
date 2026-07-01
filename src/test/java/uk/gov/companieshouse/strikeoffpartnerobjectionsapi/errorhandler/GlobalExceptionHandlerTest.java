@@ -87,7 +87,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUnreadableMessage_whenWorkstreamValueIsBlank_returnsMissingWorkstream() {
-        InvalidFormatException cause = invalidFormat("partner_objection_workstream", "");
+        InvalidFormatException cause = workstreamInvalidFormat("");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -98,7 +98,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUnreadableMessage_whenWorkstreamValueIsNonBlankInvalid_returnsInvalidWorkstream() {
-        InvalidFormatException cause = invalidFormat("partner_objection_workstream", "other");
+        InvalidFormatException cause = workstreamInvalidFormat("other");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -109,7 +109,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleUnreadableMessage_whenReasonIsInvalidInJsonMappingPath_returnsInvalidReason() {
-        JsonMappingException cause = jsonMapping("partner_objection_reason");
+        JsonMappingException cause = reasonJsonMapping();
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -194,15 +194,15 @@ class GlobalExceptionHandlerTest {
         return new HttpMessageNotReadableException(message, cause, new MockHttpInputMessage(new byte[0]));
     }
 
-    private InvalidFormatException invalidFormat(String field, Object value) {
+    private InvalidFormatException workstreamInvalidFormat(Object value) {
         InvalidFormatException exception = InvalidFormatException.from(null, "bad format", value, String.class);
-        exception.prependPath(new Object(), field);
+        exception.prependPath(new Object(), "partner_objection_workstream");
         return exception;
     }
 
-    private JsonMappingException jsonMapping(String field) {
+    private JsonMappingException reasonJsonMapping() {
         JsonMappingException exception = JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "bad mapping");
-        exception.prependPath(new Object(), field);
+        exception.prependPath(new Object(), "partner_objection_reason");
         return exception;
     }
 
