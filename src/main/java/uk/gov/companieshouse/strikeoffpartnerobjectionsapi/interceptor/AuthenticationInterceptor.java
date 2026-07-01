@@ -12,14 +12,14 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
+
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
 @ConditionalOnProperty(name = "interceptor.authentication.enabled", havingValue = "true", matchIfMissing = true)
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
-    private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
-    private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String ERIC_IDENTITY_TYPE_KEY = "key";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
@@ -30,8 +30,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
-        String identityType = request.getHeader(ERIC_IDENTITY_TYPE_HEADER);
-        String identityHeader = request.getHeader(ERIC_IDENTITY_HEADER);
+        String identityType = AuthorisationUtil.getAuthorisedIdentityType(request);
+        String identityHeader = AuthorisationUtil.getAuthorisedIdentity(request);
 
         if (!ERIC_IDENTITY_TYPE_KEY.equals(identityType)) {
             LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
