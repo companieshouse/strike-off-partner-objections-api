@@ -19,13 +19,13 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
         this.kafkaProducerEventFactory = kafkaProducerEventFactory;
     }
 
-    public void publishObjectionEvent(ObjectionDocument objectionDocument) {
+    public StrikeOffPartnerObjections publishObjectionEvent(ObjectionDocument objectionDocument) {
         var objectionRecord = kafkaProducerEventFactory.createProducerRecord(
                 objectionDocument.getObjectionId(),
                 objectionDocument.getPartnerOrganisation(),
                 EventType.OBJECTION
         );
 
-        sendMessage(objectionRecord);
+        return sendMessage(objectionRecord);
     }
 }

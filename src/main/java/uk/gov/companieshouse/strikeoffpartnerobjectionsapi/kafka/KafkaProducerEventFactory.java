@@ -19,13 +19,16 @@ public class KafkaProducerEventFactory {
         this.topic = topic;
     }
 
-    public ProducerRecord<String, StrikeOffPartnerObjections> createProducerRecord(String documentId, String partnerOrganization, EventType type ) {
+    public ProducerRecord<String, StrikeOffPartnerObjections> createProducerRecord(
+            String documentId,
+            String partnerOrganisation,
+            EventType type) {
         StrikeOffPartnerObjections message = StrikeOffPartnerObjections.newBuilder()
                 .setEventId(UUID.randomUUID().toString())
                 .setEventTime(Instant.now().toString())
                 .setSource("strike-off-partner-objections-api")
                 .setEventType(type)
-                .setPartnerOrganisation(partnerOrganization)
+                .setPartnerOrganisation(partnerOrganisation)
                 .setStrikeOffEventId(documentId)  // withdrawalId maps to strike_off_event__id
                 .build();
         return new ProducerRecord<>(topic, documentId, message);

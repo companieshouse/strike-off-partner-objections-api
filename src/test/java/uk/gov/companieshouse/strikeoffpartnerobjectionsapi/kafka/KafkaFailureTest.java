@@ -39,6 +39,7 @@ class KafkaFailureTest {
         document.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         document.setWithdrawalId(UUID.randomUUID().toString());
         document.setEtag(UUID.randomUUID().toString());
+        document.setEventCorrelationId(UUID.randomUUID().toString());
         return document;
     }
 }

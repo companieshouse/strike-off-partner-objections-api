@@ -89,6 +89,34 @@ class WithdrawalDocumentTest {
     }
 
     @Test
+    void testSetAndGetEventStatus() {
+        EventStatus status = EventStatus.PENDING;
+        withdrawalDocument.setEventStatus(status);
+        assertEquals(status, withdrawalDocument.getEventStatus());
+    }
+
+    @Test
+    void testSetAndGetEventStatusChangedAt() {
+        Instant now = Instant.now();
+        withdrawalDocument.setEventStatusChangedAt(now);
+        assertEquals(now, withdrawalDocument.getEventStatusChangedAt());
+    }
+
+    @Test
+    void testSetAndGetEventCorrelationId() {
+        String eventCorrelationId = "corr-id-456";
+        withdrawalDocument.setEventCorrelationId(eventCorrelationId);
+        assertEquals(eventCorrelationId, withdrawalDocument.getEventCorrelationId());
+    }
+
+    @Test
+    void testSetAndGetEventFailureReason() {
+        String eventFailureReason = "Kafka publish failed";
+        withdrawalDocument.setEventFailureReason(eventFailureReason);
+        assertEquals(eventFailureReason, withdrawalDocument.getEventFailureReason());
+    }
+
+    @Test
     void testSetAndGetEtag() {
         String etag = "etag-123";
         withdrawalDocument.setEtag(etag);
@@ -122,6 +150,9 @@ class WithdrawalDocumentTest {
         String workstream = "WORKSTREAM-A";
         String status = "PENDING";
         Instant now = Instant.now();
+        EventStatus eventStatus = EventStatus.PENDING;
+        String eventCorrelationId = "corr-id-456";
+        String eventFailureReason = "Kafka publish failed";
         String etag = "etag-123";
         PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/withdrawals/123");
@@ -137,6 +168,10 @@ class WithdrawalDocumentTest {
         withdrawalDocument.setPartnerObjectionWorkstream(workstream);
         withdrawalDocument.setProcessingStatus(status);
         withdrawalDocument.setCreatedAt(now);
+        withdrawalDocument.setEventStatus(eventStatus);
+        withdrawalDocument.setEventStatusChangedAt(now);
+        withdrawalDocument.setEventCorrelationId(eventCorrelationId);
+        withdrawalDocument.setEventFailureReason(eventFailureReason);
         withdrawalDocument.setEtag(etag);
         withdrawalDocument.setLinks(links);
         withdrawalDocument.setKind(kind);
@@ -151,6 +186,10 @@ class WithdrawalDocumentTest {
         assertEquals(workstream, withdrawalDocument.getPartnerObjectionWorkstream());
         assertEquals(status, withdrawalDocument.getProcessingStatus());
         assertEquals(now, withdrawalDocument.getCreatedAt());
+        assertEquals(eventStatus, withdrawalDocument.getEventStatus());
+        assertEquals(now, withdrawalDocument.getEventStatusChangedAt());
+        assertEquals(eventCorrelationId, withdrawalDocument.getEventCorrelationId());
+        assertEquals(eventFailureReason, withdrawalDocument.getEventFailureReason());
         assertEquals(etag, withdrawalDocument.getEtag());
         assertEquals(links, withdrawalDocument.getLinks());
         assertEquals(kind, withdrawalDocument.getKind());
@@ -168,6 +207,10 @@ class WithdrawalDocumentTest {
         assertNull(withdrawalDocument.getPartnerObjectionWorkstream());
         assertNull(withdrawalDocument.getProcessingStatus());
         assertNull(withdrawalDocument.getCreatedAt());
+        assertNull(withdrawalDocument.getEventStatus());
+        assertNull(withdrawalDocument.getEventStatusChangedAt());
+        assertNull(withdrawalDocument.getEventCorrelationId());
+        assertNull(withdrawalDocument.getEventFailureReason());
         assertNull(withdrawalDocument.getEtag());
         assertNull(withdrawalDocument.getLinks());
         assertNull(withdrawalDocument.getKind());

@@ -1,7 +1,14 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception;
 
 public class KafkaPublishException extends RuntimeException {
-    public KafkaPublishException(String message, Throwable cause) {
+    private final String eventId;
+
+    public KafkaPublishException(String message, String eventId, Throwable cause) {
         super(message, cause);
+        this.eventId = eventId;
+    }
+
+    public String getEventId() {
+        return eventId;
     }
 }

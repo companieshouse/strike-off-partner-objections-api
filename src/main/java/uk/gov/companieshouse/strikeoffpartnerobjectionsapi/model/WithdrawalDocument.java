@@ -43,6 +43,5 @@ public class WithdrawalDocument extends PartnerRequestDocument {
         this.processingStatus = processingStatus;
     }
 
-
 }
 

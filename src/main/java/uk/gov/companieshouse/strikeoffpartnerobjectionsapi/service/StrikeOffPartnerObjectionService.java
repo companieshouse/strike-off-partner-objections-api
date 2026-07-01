@@ -6,8 +6,10 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -19,14 +21,14 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
-public class StrikeOffObjectionPartnerService {
+public class StrikeOffPartnerObjectionService {
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
 
-    public StrikeOffObjectionPartnerService(
+    public StrikeOffPartnerObjectionService(
             ObjectionRepository objectionRepository,
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
@@ -51,17 +53,45 @@ public class StrikeOffObjectionPartnerService {
                 PARTNER_ORGANISATION,
                 objectionId
         );
-        try {
-            ObjectionDocument saved = objectionRepository.insert(document);
-            LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s", saved.getObjectionId(), saved.getCompanyNumber()));
-            objectionKafkaProducer.publishObjectionEvent(saved);
-            LOGGER.info(format("OBJECTION event published successfully: objectionId=%s", saved.getObjectionId()));
+        EventTracker.markPending(document);
 
-            return objectionResponseMapper.toObjectionApiResponse(saved);
+        try {
+            ObjectionDocument persistedObjection = objectionRepository.insert(document);
+            LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s",
+                    persistedObjection.getObjectionId(), persistedObjection.getCompanyNumber()));
+
+            publishAndSaveObjection(persistedObjection);
+
+            return objectionResponseMapper.toObjectionApiResponse(persistedObjection);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
         }
     }
+
+    private void publishAndSaveObjection(ObjectionDocument persistedObjection) {
+        try {
+            StrikeOffPartnerObjections publishedEvent = objectionKafkaProducer.publishObjectionEvent(persistedObjection);
+            EventTracker.markPublished(persistedObjection, publishedEvent.getEventId());
+            LOGGER.info(format("Objection event published successfully: objectionId=%s",
+                    persistedObjection.getObjectionId()));
+        } catch (KafkaPublishException ex) {
+            EventTracker.markFailed(persistedObjection, ex.getEventId(), ex.getMessage());
+            throw ex;
+        } finally {
+            saveObjectionEventStatus(persistedObjection);
+        }
+    }
+
+    private void saveObjectionEventStatus(ObjectionDocument persistedObjection) {
+        try {
+            objectionRepository.save(persistedObjection);
+        } catch (DataAccessException saveEx) {
+            LOGGER.error(format("Failed to update objection event status: objectionId=%s",
+                    persistedObjection.getObjectionId()), saveEx);
+        }
+    }
+
+
 
     public BaseObjectionResponse getObjection(final String companyNumber,
                                                  final String objectionId) throws ObjectionNotFoundException {
@@ -75,3 +105,4 @@ public class StrikeOffObjectionPartnerService {
         return objectionResponseMapper.toObjectionApiResponse(document);
     }
 }
+

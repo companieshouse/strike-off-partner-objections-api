@@ -12,18 +12,18 @@ import java.util.concurrent.TimeoutException;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
-public class AbstractKafkaProducer {
+public abstract class AbstractKafkaProducer {
     protected final KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate;
     protected final long timeoutMilliseconds;
 
-    public AbstractKafkaProducer(
+    protected AbstractKafkaProducer(
             KafkaTemplate<String, StrikeOffPartnerObjections> kafkaTemplate,
             long timeoutMilliseconds) {
         this.kafkaTemplate = kafkaTemplate;
         this.timeoutMilliseconds = timeoutMilliseconds;
     }
 
-    protected void sendMessage(ProducerRecord<String, StrikeOffPartnerObjections> producerRecord) {
+    protected StrikeOffPartnerObjections sendMessage(ProducerRecord<String, StrikeOffPartnerObjections> producerRecord) {
         var message = producerRecord.value();
         var topic = producerRecord.topic();
         var documentId = producerRecord.key();
@@ -34,17 +34,20 @@ public class AbstractKafkaProducer {
         try {
             kafkaTemplate.send(producerRecord)
                     .get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
-            LOGGER.info(String.format("Successfully sent: %s eventId: %s", message.getEventType(), documentId));
+            LOGGER.info(String.format("Successfully sent: %s eventId: %s", message.getEventType(), message.getEventId()));
+            return message;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new KafkaPublishException(
-                    "Interrupted while sending Kafka message for " + message.getEventType() + ": " + documentId, ex);
+                    "Interrupted while sending Kafka message for " + message.getEventType() + ": " + documentId,
+                    message.getEventId(), ex);
         } catch (ExecutionException | TimeoutException | KafkaException ex) {
             if (ex.getCause() instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             throw new KafkaPublishException(
-                    "Failed to send Kafka message for " + message.getEventType() + ": " + documentId, ex);
+                    "Failed to send Kafka message for " + message.getEventType() + ": " + documentId,
+                    message.getEventId(), ex);
         }
     }
 }

@@ -32,7 +32,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Autowired
-    private StrikeOffObjectionPartnerService strikeOffObjectionPartnerService;
+    private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
     @Autowired
     private ObjectionRepository objectionRepository;
@@ -49,7 +49,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         CreateObjectionRequest request = buildValidRequest();
 
         Instant before = Instant.now();
-        BaseObjectionResponse response = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
+        BaseObjectionResponse response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
         Instant after = Instant.now();
 
         List<ObjectionDocument> savedDocs = objectionRepository.findAll();
@@ -65,9 +65,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void getObjectionFetchesDocumentInMongo() {
         CreateObjectionRequest request = buildValidRequest();
 
-        BaseObjectionResponse created = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
 
-        BaseObjectionResponse fetched = strikeOffObjectionPartnerService.getObjection(
+        BaseObjectionResponse fetched = strikeOffPartnerObjectionService.getObjection(
                 COMPANY_NUMBER,
                 created.getObjectionId());
 
@@ -86,7 +86,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjectionPublishesObjectionEventToKafkaTopicWhenRequestIsValid() {
         CreateObjectionRequest request = buildValidRequest();
 
-        var response = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getObjectionId()));
 
@@ -105,8 +105,8 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjectionPublishesOneKafkaEventPerCall() {
         var request = buildValidRequest();
 
-        var response1 = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
-        var response2 = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
+        var response1 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        var response2 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response1.getObjectionId(), response2.getObjectionId()));
 
@@ -122,7 +122,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjectionKafkaEventContainsObjectionIdMatchingPersistedDocument() {
         var request = buildValidRequest();
 
-        var response = strikeOffObjectionPartnerService.createObjection(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getObjectionId()));
 
