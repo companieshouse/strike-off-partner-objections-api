@@ -19,112 +19,112 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testSetAndGetId() {
+    void setId_whenValueIsProvided_returnsSameValue() {
         String id = "507f1f77bcf86cd799439011";
         withdrawalDocument.setId(id);
         assertEquals(id, withdrawalDocument.getId());
     }
 
     @Test
-    void testSetAndGetCompanyNumber() {
+    void setCompanyNumber_whenValueIsProvided_returnsSameValue() {
         String companyNumber = "00000000";
         withdrawalDocument.setCompanyNumber(companyNumber);
         assertEquals(companyNumber, withdrawalDocument.getCompanyNumber());
     }
 
     @Test
-    void testSetAndGetSubmissionCompanyName() {
+    void setSubmissionCompanyName_whenValueIsProvided_returnsSameValue() {
         String submissionCompanyName = "Test Company Ltd";
         withdrawalDocument.setSubmissionCompanyName(submissionCompanyName);
         assertEquals(submissionCompanyName, withdrawalDocument.getSubmissionCompanyName());
     }
 
     @Test
-    void testSetAndGetWithdrawalId() {
+    void setWithdrawalId_whenValueIsProvided_returnsSameValue() {
         String withdrawalId = "withdrawal-123";
         withdrawalDocument.setWithdrawalId(withdrawalId);
         assertEquals(withdrawalId, withdrawalDocument.getWithdrawalId());
     }
 
     @Test
-    void testSetAndGetPartnerOrganisation() {
+    void setPartnerOrganisation_whenValueIsProvided_returnsSameValue() {
         String partnerOrganisation = "Partner Org";
         withdrawalDocument.setPartnerOrganisation(partnerOrganisation);
         assertEquals(partnerOrganisation, withdrawalDocument.getPartnerOrganisation());
     }
 
     @Test
-    void testSetAndGetPartnerContactEmail() {
+    void setPartnerContactEmail_whenValueIsProvided_returnsSameValue() {
         String email = "contact@example.com";
         withdrawalDocument.setPartnerContactEmail(email);
         assertEquals(email, withdrawalDocument.getPartnerContactEmail());
     }
 
     @Test
-    void testSetAndGetPartnerCaseReference() {
+    void setPartnerCaseReference_whenValueIsProvided_returnsSameValue() {
         String partnerCaseReference = "CASE-001";
         withdrawalDocument.setPartnerCaseReference(partnerCaseReference);
         assertEquals(partnerCaseReference, withdrawalDocument.getPartnerCaseReference());
     }
 
     @Test
-    void testSetAndGetPartnerObjectionWorkstream() {
+    void setPartnerObjectionWorkstream_whenValueIsProvided_returnsSameValue() {
         String workstream = "WORKSTREAM-A";
         withdrawalDocument.setPartnerObjectionWorkstream(workstream);
         assertEquals(workstream, withdrawalDocument.getPartnerObjectionWorkstream());
     }
 
     @Test
-    void testSetAndGetProcessingStatus() {
+    void setProcessingStatus_whenValueIsProvided_returnsSameValue() {
         String status = "PENDING";
         withdrawalDocument.setProcessingStatus(status);
         assertEquals(status, withdrawalDocument.getProcessingStatus());
     }
 
     @Test
-    void testSetAndGetCreatedAt() {
+    void setCreatedAt_whenValueIsProvided_returnsSameValue() {
         Instant now = Instant.now();
         withdrawalDocument.setCreatedAt(now);
         assertEquals(now, withdrawalDocument.getCreatedAt());
     }
 
     @Test
-    void testSetAndGetEventStatus() {
+    void setEventStatus_whenValueIsProvided_returnsSameValue() {
         EventStatus status = EventStatus.PENDING;
         withdrawalDocument.setEventStatus(status);
         assertEquals(status, withdrawalDocument.getEventStatus());
     }
 
     @Test
-    void testSetAndGetEventStatusChangedAt() {
+    void setEventStatusChangedAt_whenValueIsProvided_returnsSameValue() {
         Instant now = Instant.now();
         withdrawalDocument.setEventStatusChangedAt(now);
         assertEquals(now, withdrawalDocument.getEventStatusChangedAt());
     }
 
     @Test
-    void testSetAndGetEventCorrelationId() {
+    void setEventCorrelationId_whenValueIsProvided_returnsSameValue() {
         String eventCorrelationId = "corr-id-456";
         withdrawalDocument.setEventCorrelationId(eventCorrelationId);
         assertEquals(eventCorrelationId, withdrawalDocument.getEventCorrelationId());
     }
 
     @Test
-    void testSetAndGetEventFailureReason() {
+    void setEventFailureReason_whenValueIsProvided_returnsSameValue() {
         String eventFailureReason = "Kafka publish failed";
         withdrawalDocument.setEventFailureReason(eventFailureReason);
         assertEquals(eventFailureReason, withdrawalDocument.getEventFailureReason());
     }
 
     @Test
-    void testSetAndGetEtag() {
+    void setEtag_whenValueIsProvided_returnsSameValue() {
         String etag = "etag-123";
         withdrawalDocument.setEtag(etag);
         assertEquals(etag, withdrawalDocument.getEtag());
     }
 
     @Test
-    void testSetAndGetLinks() {
+    void setLinks_whenValueIsProvided_returnsSameValue() {
         PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/withdrawals/123");
         withdrawalDocument.setLinks(links);
@@ -132,14 +132,14 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testSetAndGetKind() {
+    void setKind_whenValueIsProvided_returnsSameValue() {
         String kind = "withdrawal";
         withdrawalDocument.setKind(kind);
         assertEquals(kind, withdrawalDocument.getKind());
     }
 
     @Test
-    void testSetAllFieldsAndRetrieve() {
+    void setAllFields_whenValuesAreProvided_returnsAllValues() {
         String id = "507f1f77bcf86cd799439011";
         String companyNumber = "00000000";
         String submissionCompanyName = "Test Company Ltd";
@@ -196,7 +196,7 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testInitialValuesAreNull() {
+    void getAllFields_whenValuesAreNotSet_returnsNulls() {
         assertNull(withdrawalDocument.getId());
         assertNull(withdrawalDocument.getCompanyNumber());
         assertNull(withdrawalDocument.getSubmissionCompanyName());
@@ -217,14 +217,14 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testSetToNull() {
+    void setId_whenSetToNull_returnsNull() {
         withdrawalDocument.setId("some-id");
         withdrawalDocument.setId(null);
         assertNull(withdrawalDocument.getId());
     }
 
     @Test
-    void testUpdateExistingValue() {
+    void setCompanyNumber_whenUpdated_returnsLatestValue() {
         withdrawalDocument.setCompanyNumber("00000000");
         assertEquals("00000000", withdrawalDocument.getCompanyNumber());
 
@@ -233,7 +233,7 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testEmptyStringValues() {
+    void setCompanyNumberAndPartnerOrganisation_whenValuesAreEmptyStrings_returnsEmptyStrings() {
         withdrawalDocument.setCompanyNumber("");
         withdrawalDocument.setPartnerOrganisation("");
 
@@ -242,13 +242,13 @@ class WithdrawalDocumentTest {
     }
 
     @Test
-    void testLinksObjectCanBeNull() {
+    void setLinks_whenValueIsNull_returnsNull() {
         withdrawalDocument.setLinks(null);
         assertNull(withdrawalDocument.getLinks());
     }
 
     @Test
-    void testMultipleInstantsCanBeDifferent() {
+    void setCreatedAt_whenSetMultipleTimes_returnsLatestValue() {
         Instant time1 = Instant.now();
         Instant time2 = Instant.now().plusSeconds(60);
 

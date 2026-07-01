@@ -48,7 +48,7 @@ class WithdrawalKafkaProducerTest {
     }
 
     @Test
-    void publishWithdrawalEventSuccess() {
+    void publishWithdrawalEvent_whenRequestIsValid_succeeds() {
         WithdrawalDocument document = buildDocument();
         when(kafkaTemplate.send(
                 ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
@@ -82,7 +82,7 @@ class WithdrawalKafkaProducerTest {
     }
 
     @Test
-    void publishWithdrawalEventWhenKafkaFailsThrowsKafkaPublishException() {
+    void publishWithdrawalEvent_whenKafkaFails_throwsKafkaPublishException() {
         WithdrawalDocument document = buildDocument();
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(
@@ -100,7 +100,7 @@ class WithdrawalKafkaProducerTest {
     }
 
     @Test
-    void publishWithdrawalEventWhenKafkaFailsThrowsInterruptedException() {
+    void publishWithdrawalEvent_whenKafkaFailsWithInterruptedException_throwsKafkaPublishException() {
         WithdrawalDocument document = buildDocument();
         when(kafkaTemplate.send(ArgumentMatchers.<ProducerRecord<String, StrikeOffPartnerObjections>>any()))
                 .thenReturn(CompletableFuture.failedFuture(

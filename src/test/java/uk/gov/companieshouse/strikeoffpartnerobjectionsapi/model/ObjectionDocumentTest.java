@@ -19,140 +19,140 @@ class ObjectionDocumentTest {
     }
 
     @Test
-    void testSetAndGetId() {
+    void setId_whenValueIsProvided_returnsSameValue() {
         String id = "507f1f77bcf86cd799439011";
         objectionDocument.setId(id);
         assertEquals(id, objectionDocument.getId());
     }
 
     @Test
-    void testSetAndGetCompanyNumber() {
+    void setCompanyNumber_whenValueIsProvided_returnsSameValue() {
         String companyNumber = "00000000";
         objectionDocument.setCompanyNumber(companyNumber);
         assertEquals(companyNumber, objectionDocument.getCompanyNumber());
     }
 
     @Test
-    void testSetAndGetPartnerOrganisation() {
+    void setPartnerOrganisation_whenValueIsProvided_returnsSameValue() {
         String partnerOrganisation = "Partner Org";
         objectionDocument.setPartnerOrganisation(partnerOrganisation);
         assertEquals(partnerOrganisation, objectionDocument.getPartnerOrganisation());
     }
 
     @Test
-    void testSetAndGetSubmissionCompanyName() {
+    void setSubmissionCompanyName_whenValueIsProvided_returnsSameValue() {
         String submissionCompanyName = "Test Company Ltd";
         objectionDocument.setSubmissionCompanyName(submissionCompanyName);
         assertEquals(submissionCompanyName, objectionDocument.getSubmissionCompanyName());
     }
 
     @Test
-    void testSetAndGetPartnerCaseReference() {
+    void setPartnerCaseReference_whenValueIsProvided_returnsSameValue() {
         String partnerCaseReference = "CASE-001";
         objectionDocument.setPartnerCaseReference(partnerCaseReference);
         assertEquals(partnerCaseReference, objectionDocument.getPartnerCaseReference());
     }
 
     @Test
-    void testSetAndGetPartnerObjectionWorkstream() {
+    void setPartnerObjectionWorkstream_whenValueIsProvided_returnsSameValue() {
         String workstream = "WORKSTREAM-A";
         objectionDocument.setPartnerObjectionWorkstream(workstream);
         assertEquals(workstream, objectionDocument.getPartnerObjectionWorkstream());
     }
 
     @Test
-    void testSetAndGetPartnerObjectionReason() {
+    void setPartnerObjectionReason_whenValueIsProvided_returnsSameValue() {
         String reason = "Test Reason";
         objectionDocument.setPartnerObjectionReason(reason);
         assertEquals(reason, objectionDocument.getPartnerObjectionReason());
     }
 
     @Test
-    void testSetAndGetPartnerContactEmail() {
+    void setPartnerContactEmail_whenValueIsProvided_returnsSameValue() {
         String email = "contact@example.com";
         objectionDocument.setPartnerContactEmail(email);
         assertEquals(email, objectionDocument.getPartnerContactEmail());
     }
 
     @Test
-    void testSetAndGetObjectionId() {
+    void setObjectionId_whenValueIsProvided_returnsSameValue() {
         String objectionId = "objection-123";
         objectionDocument.setObjectionId(objectionId);
         assertEquals(objectionId, objectionDocument.getObjectionId());
     }
 
     @Test
-    void testSetAndGetProcessingStatus() {
+    void setProcessingStatus_whenValueIsProvided_returnsSameValue() {
         String status = "PENDING";
         objectionDocument.setProcessingStatus(status);
         assertEquals(status, objectionDocument.getProcessingStatus());
     }
 
     @Test
-    void testSetAndGetCreatedAt() {
+    void setCreatedAt_whenValueIsProvided_returnsSameValue() {
         Instant now = Instant.now();
         objectionDocument.setCreatedAt(now);
         assertEquals(now, objectionDocument.getCreatedAt());
     }
 
     @Test
-    void testSetAndGetProcessingStatusChangedAt() {
+    void setProcessingStatusChangedAt_whenValueIsProvided_returnsSameValue() {
         Instant now = Instant.now();
         objectionDocument.setProcessingStatusChangedAt(now);
         assertEquals(now, objectionDocument.getProcessingStatusChangedAt());
     }
 
     @Test
-    void testSetAndGetInitialExpirationOn() {
+    void setInitialExpirationOn_whenValueIsProvided_returnsSameValue() {
         Instant futureTime = Instant.now().plusSeconds(86400);
         objectionDocument.setInitialExpirationOn(futureTime);
         assertEquals(futureTime, objectionDocument.getInitialExpirationOn());
     }
 
     @Test
-    void testSetAndGetFailureReason() {
+    void setFailureReason_whenValueIsProvided_returnsSameValue() {
         String failureReason = "Test failure";
         objectionDocument.setFailureReason(failureReason);
         assertEquals(failureReason, objectionDocument.getFailureReason());
     }
 
     @Test
-    void testSetAndGetEventStatus() {
+    void setEventStatus_whenValueIsProvided_returnsSameValue() {
         EventStatus status = EventStatus.PENDING;
         objectionDocument.setEventStatus(status);
         assertEquals(status, objectionDocument.getEventStatus());
     }
 
     @Test
-    void testSetAndGetEventStatusChangedAt() {
+    void setEventStatusChangedAt_whenValueIsProvided_returnsSameValue() {
         Instant now = Instant.now();
         objectionDocument.setEventStatusChangedAt(now);
         assertEquals(now, objectionDocument.getEventStatusChangedAt());
     }
 
     @Test
-    void testSetAndGetEventCorrelationId() {
+    void setEventCorrelationId_whenValueIsProvided_returnsSameValue() {
         String eventCorrelationId = "corr-id-123";
         objectionDocument.setEventCorrelationId(eventCorrelationId);
         assertEquals(eventCorrelationId, objectionDocument.getEventCorrelationId());
     }
 
     @Test
-    void testSetAndGetEventFailureReason() {
+    void setEventFailureReason_whenValueIsProvided_returnsSameValue() {
         String eventFailureReason = "Kafka publish failed";
         objectionDocument.setEventFailureReason(eventFailureReason);
         assertEquals(eventFailureReason, objectionDocument.getEventFailureReason());
     }
 
     @Test
-    void testSetAndGetEtag() {
+    void setEtag_whenValueIsProvided_returnsSameValue() {
         String etag = "etag-123";
         objectionDocument.setEtag(etag);
         assertEquals(etag, objectionDocument.getEtag());
     }
 
     @Test
-    void testSetAndGetLinks() {
+    void setLinks_whenValueIsProvided_returnsSameValue() {
         PartnerLinks links = new PartnerLinks();
         links.setSelf("http://example.com/objections/123");
         objectionDocument.setLinks(links);
@@ -160,14 +160,14 @@ class ObjectionDocumentTest {
     }
 
     @Test
-    void testSetAndGetKind() {
+    void setKind_whenValueIsProvided_returnsSameValue() {
         String kind = "objection";
         objectionDocument.setKind(kind);
         assertEquals(kind, objectionDocument.getKind());
     }
 
     @Test
-    void testSetAllFieldsAndRetrieve() {
+    void setAllFields_whenValuesAreProvided_returnsAllValues() {
         String id = "507f1f77bcf86cd799439011";
         String companyNumber = "00000000";
         String partnerOrganisation = "Partner Org";
@@ -235,7 +235,7 @@ class ObjectionDocumentTest {
     }
 
     @Test
-    void testInitialValuesAreNull() {
+    void getAllFields_whenValuesAreNotSet_returnsNulls() {
         assertNull(objectionDocument.getId());
         assertNull(objectionDocument.getCompanyNumber());
         assertNull(objectionDocument.getPartnerOrganisation());
@@ -260,14 +260,14 @@ class ObjectionDocumentTest {
     }
 
     @Test
-    void testSetToNull() {
+    void setId_whenSetToNull_returnsNull() {
         objectionDocument.setId("some-id");
         objectionDocument.setId(null);
         assertNull(objectionDocument.getId());
     }
 
     @Test
-    void testUpdateExistingValue() {
+    void setCompanyNumber_whenUpdated_returnsLatestValue() {
         objectionDocument.setCompanyNumber("00000000");
         assertEquals("00000000", objectionDocument.getCompanyNumber());
 
@@ -276,7 +276,7 @@ class ObjectionDocumentTest {
     }
 
     @Test
-    void testEmptyStringValues() {
+    void setCompanyNumberAndPartnerOrganisation_whenValuesAreEmptyStrings_returnsEmptyStrings() {
         objectionDocument.setCompanyNumber("");
         objectionDocument.setPartnerOrganisation("");
 

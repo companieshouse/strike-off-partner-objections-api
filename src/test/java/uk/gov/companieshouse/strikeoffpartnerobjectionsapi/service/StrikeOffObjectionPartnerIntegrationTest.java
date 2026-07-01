@@ -45,7 +45,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void createObjectionPersistsDocumentInMongo() {
+    void createObjection_whenRequestIsValid_persistsDocumentInMongo() {
         CreateObjectionRequest request = buildValidRequest();
 
         Instant before = Instant.now();
@@ -62,7 +62,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void getObjectionFetchesDocumentInMongo() {
+    void getObjection_whenRequestIsValid_fetchesDocumentInMongo() {
         CreateObjectionRequest request = buildValidRequest();
 
         BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
@@ -83,7 +83,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void createObjectionPublishesObjectionEventToKafkaTopicWhenRequestIsValid() {
+    void createObjection_whenRequestIsValid_publishesObjectionEventToKafkaTopic() {
         CreateObjectionRequest request = buildValidRequest();
 
         var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
@@ -102,7 +102,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void createObjectionPublishesOneKafkaEventPerCall() {
+    void createObjection_whenCalledMultipleTimes_publishesOneKafkaEventPerCall() {
         var request = buildValidRequest();
 
         var response1 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
@@ -119,7 +119,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void createObjectionKafkaEventContainsObjectionIdMatchingPersistedDocument() {
+    void createObjection_whenSuccessful_kafkaEventContainsObjectionIdMatchingPersistedDocument() {
         var request = buildValidRequest();
 
         var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);

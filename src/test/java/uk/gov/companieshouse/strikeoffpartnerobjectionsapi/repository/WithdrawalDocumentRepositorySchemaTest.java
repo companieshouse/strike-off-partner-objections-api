@@ -16,14 +16,14 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocum
 class WithdrawalDocumentRepositorySchemaTest {
 
     @Test
-    void withdrawalDocument_usesExpectedCollectionName_whenAnnotated() {
+    void withdrawalDocument_whenAnnotated_usesExpectedCollectionName() {
         Document documentAnnotation = WithdrawalDocument.class.getAnnotation(Document.class);
         assertNotNull(documentAnnotation);
         assertEquals("withdrawals", documentAnnotation.collection());
     }
 
     @Test
-    void withdrawalDocument_hasExpectedFieldMappings_whenAnnotated() throws Exception {
+    void withdrawalDocument_whenAnnotated_hasExpectedFieldMappings() throws Exception {
         assertEquals("company_number", getFieldName("companyNumber"));
         assertEquals("submission_company_name", getFieldName("submissionCompanyName"));
         assertEquals("withdrawal_id", getFieldName("withdrawalId"));
@@ -36,7 +36,7 @@ class WithdrawalDocumentRepositorySchemaTest {
     }
 
     @Test
-    void withdrawalId_hasUniqueIndex_whenAnnotated() throws Exception {
+    void withdrawalId_whenAnnotated_hasUniqueIndex() throws Exception {
         Field field = findField("withdrawalId");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "withdrawalId should have @Indexed annotation");
@@ -44,14 +44,14 @@ class WithdrawalDocumentRepositorySchemaTest {
     }
 
     @Test
-    void companyNumber_hasIndex_whenAnnotated() throws Exception {
+    void companyNumber_whenAnnotated_hasIndex() throws Exception {
         Field field = findField("companyNumber");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "companyNumber should have @Indexed annotation");
     }
 
     @Test
-    void processingStatus_hasIndex_whenAnnotated() throws Exception {
+    void processingStatus_whenAnnotated_hasIndex() throws Exception {
         Field field = findField("processingStatus");
         Indexed indexed = field.getAnnotation(Indexed.class);
         assertNotNull(indexed, "processingStatus should have @Indexed annotation");

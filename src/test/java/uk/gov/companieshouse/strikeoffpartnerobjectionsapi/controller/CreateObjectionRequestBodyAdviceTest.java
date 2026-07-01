@@ -22,7 +22,7 @@ class CreateObjectionRequestBodyAdviceTest {
     private final CreateObjectionRequestBodyAdvice advice = new CreateObjectionRequestBodyAdvice();
 
     @Test
-    void supportsReturnsTrueForCreateObjectionRequest() {
+    void supports_whenParameterTypeIsCreateObjectionRequest_returnsTrue() {
         MethodParameter parameter = mock(MethodParameter.class);
         doReturn(CreateObjectionRequest.class).when(parameter).getParameterType();
 
@@ -33,7 +33,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void supportsReturnsTrueForWithdrawAllObjectionsRequest() {
+    void supports_whenParameterTypeIsWithdrawAllObjectionsRequest_returnsTrue() {
         MethodParameter parameter = mock(MethodParameter.class);
         doReturn(WithdrawAllObjectionsRequest.class).when(parameter).getParameterType();
 
@@ -44,7 +44,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void supportsReturnsFalseForOtherTypes() {
+    void supports_whenParameterTypeIsOtherType_returnsFalse() {
         MethodParameter parameter = mock(MethodParameter.class);
         doReturn(String.class).when(parameter).getParameterType();
 
@@ -55,7 +55,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void afterBodyReadTrimsSupportedFields() {
+    void afterBodyRead_whenBodyIsCreateObjectionRequest_trimsSupportedFields() {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setPartnerContactEmail(" owner@example.com ");
         request.setPartnerCaseReference(" CASE-123 ");
@@ -75,7 +75,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void afterBodyReadLeavesNullValuesAsNull() {
+    void afterBodyRead_whenCreateObjectionRequestContainsNullValues_leavesNullValuesAsNull() {
         CreateObjectionRequest request = new CreateObjectionRequest();
 
         advice.afterBodyRead(
@@ -91,7 +91,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void afterBodyReadTrimsSupportedWithdrawalFields() {
+    void afterBodyRead_whenBodyIsWithdrawAllObjectionsRequest_trimsSupportedFields() {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
         request.setPartnerContactEmail(" owner@example.com ");
         request.setPartnerCaseReference(" CASE-123 ");
@@ -111,7 +111,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void afterBodyReadLeavesNullWithdrawalValuesAsNull() {
+    void afterBodyRead_whenWithdrawAllObjectionsRequestContainsNullValues_leavesNullValuesAsNull() {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
 
         advice.afterBodyRead(
@@ -127,7 +127,7 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
-    void afterBodyReadReturnsNonCreateRequestBodyUnchanged() {
+    void afterBodyRead_whenBodyIsNonCreateRequest_returnsUnchanged() {
         String body = "raw-body";
 
         Object result = advice.afterBodyRead(

@@ -34,7 +34,7 @@ class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
-    void handleValidationExceptionsReturnsMissingRequiredWhenNoFieldErrors() {
+    void handleValidationExceptions_whenNoFieldErrors_returnsMissingRequired() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         when(ex.getBindingResult()).thenReturn(bindingResult);
@@ -49,7 +49,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleValidationExceptionsMapsDistinctErrorsInPriorityOrder() {
+    void handleValidationExceptions_whenDistinctErrorsExist_mapsInPriorityOrder() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         when(ex.getBindingResult()).thenReturn(bindingResult);
@@ -74,7 +74,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsMissingRequiredWhenBodyIsMissing() {
+    void handleUnreadableMessage_whenBodyIsMissing_returnsMissingRequired() {
         HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
                 "Required request body is missing", new MockHttpInputMessage(new byte[0]));
 
@@ -86,7 +86,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsMissingWorkstreamForBlankWorkstreamValue() {
+    void handleUnreadableMessage_whenWorkstreamValueIsBlank_returnsMissingWorkstream() {
         InvalidFormatException cause = invalidFormat("partner_objection_workstream", "");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
@@ -97,7 +97,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsInvalidWorkstreamForNonBlankWorkstreamValue() {
+    void handleUnreadableMessage_whenWorkstreamValueIsNonBlankInvalid_returnsInvalidWorkstream() {
         InvalidFormatException cause = invalidFormat("partner_objection_workstream", "other");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
@@ -108,7 +108,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnreadableMessageReturnsInvalidReasonFromJsonMappingPath() {
+    void handleUnreadableMessage_whenReasonIsInvalidInJsonMappingPath_returnsInvalidReason() {
         JsonMappingException cause = jsonMapping("partner_objection_reason");
         HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
 
@@ -120,7 +120,7 @@ class GlobalExceptionHandlerTest {
 
     @ParameterizedTest
     @MethodSource("unreadableMessageFallbackCases")
-    void handleUnreadableMessageUsesExpectedFallbackErrorCode(String message, String expectedErrorCode) {
+    void handleUnreadableMessage_whenUsingFallbackCases_usesExpectedErrorCode(String message, String expectedErrorCode) {
         HttpMessageNotReadableException ex = unreadable(message, new RuntimeException("root"));
 
         ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
@@ -130,7 +130,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleResponseStatusExceptionUsesFallbackMessageWhenReasonIsBlank() {
+    void handleResponseStatusException_whenReasonIsBlank_usesFallbackMessage() {
         ResponseStatusException ex = new ResponseStatusException(HttpStatus.BAD_REQUEST, "   ");
 
         ResponseEntity<ApiError> response = handler.handleResponseStatusException(ex);
@@ -142,7 +142,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleErrorResponseExceptionReturnsDefaultMessage() {
+    void handleErrorResponseException_whenInvoked_returnsDefaultMessage() {
         ErrorResponseException ex = new ErrorResponseException(
                 HttpStatus.TOO_MANY_REQUESTS,
                 ProblemDetail.forStatus(HttpStatus.TOO_MANY_REQUESTS),
@@ -157,7 +157,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleSocketTimeoutExceptionReturnsGatewayTimeout() {
+    void handleSocketTimeoutException_whenInvoked_returnsGatewayTimeout() {
         ResponseEntity<ApiError> response = handler.handleSocketTimeoutException(new SocketTimeoutException("timeout"));
         ApiError body = requireBody(response);
 
@@ -167,7 +167,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleIOExceptionReturnsServiceUnavailable() {
+    void handleIOException_whenInvoked_returnsServiceUnavailable() {
         ResponseEntity<ApiError> response = handler.handleIOException(new IOException("connection failed"));
         ApiError body = requireBody(response);
 
@@ -177,7 +177,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUnexpectedExceptionReturnsInternalServerError() {
+    void handleUnexpectedException_whenInvoked_returnsInternalServerError() {
         ResponseEntity<ApiError> response = handler.handleUnexpectedException();
         ApiError body = requireBody(response);
 

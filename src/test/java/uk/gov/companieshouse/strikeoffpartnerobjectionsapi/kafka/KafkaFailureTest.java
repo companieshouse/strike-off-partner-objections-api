@@ -25,7 +25,7 @@ class KafkaFailureTest {
     private WithdrawalKafkaProducer withdrawalKafkaProducer;
 
     @Test
-    void shouldThrowKafkaPublishExceptionWhenKafkaUnavailable() {
+    void publishWithdrawalEvent_whenKafkaUnavailable_throwsKafkaPublishException() {
         WithdrawalDocument document = buildDocument();
         assertThatThrownBy(() ->
                 withdrawalKafkaProducer.publishWithdrawalEvent(document))

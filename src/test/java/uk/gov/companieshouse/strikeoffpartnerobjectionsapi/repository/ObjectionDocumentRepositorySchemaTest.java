@@ -14,7 +14,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocume
 class ObjectionDocumentRepositorySchemaTest {
 
 	@Test
-	void objectionDocumentUsesExpectedCollectionAndFieldMappings() throws Exception {
+	void objectionDocument_whenAnnotated_usesExpectedCollectionAndFieldMappings() throws Exception {
 		Document documentAnnotation = ObjectionDocument.class.getAnnotation(Document.class);
 		assertNotNull(documentAnnotation);
 		assertEquals("objections", documentAnnotation.collection());

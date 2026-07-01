@@ -51,7 +51,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     // ===== GET Withdrawal Tests =====
 
     @Test
-    void getWithdrawal_retrievesWithdrawalFromMongo_whenWithdrawalFound() {
+    void getWithdrawal_whenWithdrawalIsFound_retrievesWithdrawalFromMongo() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -65,7 +65,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void getWithdrawal_returnsMappedResponseWithAllFields_whenRetrieved() {
+    void getWithdrawal_whenRetrieved_returnsMappedResponseWithAllFields() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -92,7 +92,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void getWithdrawal_throwsNotFoundException_whenWithdrawalDoesNotExist() {
+    void getWithdrawal_whenWithdrawalDoesNotExist_throwsNotFoundException() {
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, "non-existent-id"))
                 .isInstanceOf(ResponseStatusException.class)
@@ -100,7 +100,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void getWithdrawal_throwsNotFoundException_whenCompanyNumberDoesNotMatch() {
+    void getWithdrawal_whenCompanyNumberDoesNotMatch_throwsNotFoundException() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -114,7 +114,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void getWithdrawal_retrievesCorrectWithdrawalAcrossMultiple_whenMultipleExist() {
+    void getWithdrawal_whenMultipleWithdrawalsExist_retrievesCorrectWithdrawal() {
         // Create first withdrawal for company A
         WithdrawAllObjectionsRequest request1 = buildRequest();
         WithdrawAllObjectionsResponse createResponse1 =
@@ -137,7 +137,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
-    void withdrawAllObjections_persistsDocumentInMongo_whenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_persistsDocumentInMongo() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
@@ -185,7 +185,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void withdrawalDocument_canBeRetrievedByWithdrawalId_afterWithdrawalIsPersisted() {
+    void findByWithdrawalId_whenWithdrawalIsPersisted_returnsWithdrawalDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -199,7 +199,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void withdrawalDocument_canBeRetrievedByCompanyNumberAndWithdrawalId_afterWithdrawalIsPersisted() {
+    void findByCompanyNumberAndWithdrawalId_whenWithdrawalIsPersisted_returnsWithdrawalDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse response =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -214,7 +214,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
 
     @Test
-    void withdrawAllObjections_persistsWithUniqueWithdrawalId_onEachCall() {
+    void withdrawAllObjections_whenCalledMultipleTimes_persistsWithUniqueWithdrawalId() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -229,7 +229,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void withdrawAllObjections_returnsMappedResponseFromPersistedDocument_whenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_returnsMappedResponseFromPersistedDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         WithdrawAllObjectionsResponse response =
@@ -253,7 +253,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
 
     @Test
-    void withdrawAllObjectionsPublishesWithdrawalEventToKafkaTopicWhenRequestIsValid() {
+    void withdrawAllObjections_whenRequestIsValid_publishesWithdrawalEventToKafkaTopic() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -272,7 +272,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void withdrawAllObjectionsPublishesOneKafkaEventPerCall() {
+    void withdrawAllObjections_whenCalledMultipleTimes_publishesOneKafkaEventPerCall() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         var response1 = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
@@ -289,7 +289,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void withdrawAllObjectionsKafkaEventContainsWithdrawalIdMatchingPersistedDocument() {
+    void withdrawAllObjections_whenSuccessful_kafkaEventContainsWithdrawalIdMatchingPersistedDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);

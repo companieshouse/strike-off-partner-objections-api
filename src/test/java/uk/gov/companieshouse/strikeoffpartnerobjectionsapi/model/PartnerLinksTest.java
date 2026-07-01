@@ -18,19 +18,19 @@ class PartnerLinksTest {
     }
 
     @Test
-    void setAndGetSelf() {
+    void setSelf_whenValueIsProvided_returnsSameValue() {
         links.setSelf("http://example.com/resource/123");
         assertEquals("http://example.com/resource/123", links.getSelf());
     }
 
     @Test
-    void setAndGetCompanyProfile() {
+    void setCompanyProfile_whenValueIsProvided_returnsSameValue() {
         links.setCompanyProfile("http://example.com/company/456");
         assertEquals("http://example.com/company/456", links.getCompanyProfile());
     }
 
     @Test
-    void setAndGetMultipleFields() {
+    void setSelfAndCompanyProfile_whenValuesAreProvided_returnsBothValues() {
         links.setSelf("http://example.com/resource/123");
         links.setCompanyProfile("http://example.com/company/456");
 
@@ -39,27 +39,27 @@ class PartnerLinksTest {
     }
 
     @Test
-    void getWithoutSettingReturnsNulls() {
+    void getSelfAndCompanyProfile_whenValuesAreNotSet_returnsNulls() {
         assertNull(links.getSelf());
         assertNull(links.getCompanyProfile());
     }
 
     @Test
-    void setSelfToNull() {
+    void setSelf_whenSetToNull_returnsNull() {
         links.setSelf("http://example.com/resource/123");
         links.setSelf(null);
         assertNull(links.getSelf());
     }
 
     @Test
-    void setCompanyProfileToNull() {
+    void setCompanyProfile_whenSetToNull_returnsNull() {
         links.setCompanyProfile("http://example.com/company/456");
         links.setCompanyProfile(null);
         assertNull(links.getCompanyProfile());
     }
 
     @Test
-    void setSelfMultipleTimesUsesLatestValue() {
+    void setSelf_whenSetMultipleTimes_returnsLatestValue() {
         links.setSelf("http://example.com/resource/123");
         assertEquals("http://example.com/resource/123", links.getSelf());
 
@@ -68,7 +68,7 @@ class PartnerLinksTest {
     }
 
     @Test
-    void setCompanyProfileMultipleTimesUsesLatestValue() {
+    void setCompanyProfile_whenSetMultipleTimes_returnsLatestValue() {
         links.setCompanyProfile("http://example.com/company/123");
         assertEquals("http://example.com/company/123", links.getCompanyProfile());
 
@@ -77,7 +77,7 @@ class PartnerLinksTest {
     }
 
     @Test
-    void emptyStringValuesAreAllowed() {
+    void setSelfAndCompanyProfile_whenValuesAreEmptyStrings_returnsEmptyStrings() {
         links.setSelf("");
         links.setCompanyProfile("");
 

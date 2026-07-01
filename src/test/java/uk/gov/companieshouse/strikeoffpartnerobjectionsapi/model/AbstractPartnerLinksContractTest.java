@@ -22,20 +22,20 @@ abstract class AbstractPartnerLinksContractTest<T extends PartnerLinks> {
     }
 
     @Test
-    void setAndGetSelf() {
+    void setSelf_whenValueIsProvided_returnsSameValue() {
         links.setSelf(firstSelfUrl());
         assertEquals(firstSelfUrl(), links.getSelf());
     }
 
     @Test
-    void setAndGetCompanyProfile() {
+    void setCompanyProfile_whenValueIsProvided_returnsSameValue() {
         String companyProfileUrl = "http://example.com/company/456";
         links.setCompanyProfile(companyProfileUrl);
         assertEquals(companyProfileUrl, links.getCompanyProfile());
     }
 
     @Test
-    void setAndGetMultipleFields() {
+    void setSelfAndCompanyProfile_whenValuesAreProvided_returnsBothValues() {
         String companyProfileUrl = "http://example.com/company/456";
 
         links.setSelf(firstSelfUrl());
@@ -46,27 +46,27 @@ abstract class AbstractPartnerLinksContractTest<T extends PartnerLinks> {
     }
 
     @Test
-    void getWithoutSettingReturnsNulls() {
+    void getSelfAndCompanyProfile_whenValuesAreNotSet_returnsNulls() {
         assertNull(links.getSelf());
         assertNull(links.getCompanyProfile());
     }
 
     @Test
-    void setSelfToNull() {
+    void setSelf_whenSetToNull_returnsNull() {
         links.setSelf(firstSelfUrl());
         links.setSelf(null);
         assertNull(links.getSelf());
     }
 
     @Test
-    void setCompanyProfileToNull() {
+    void setCompanyProfile_whenSetToNull_returnsNull() {
         links.setCompanyProfile("http://example.com/company/456");
         links.setCompanyProfile(null);
         assertNull(links.getCompanyProfile());
     }
 
     @Test
-    void setSelfMultipleTimesUsesLatestValue() {
+    void setSelf_whenSetMultipleTimes_returnsLatestValue() {
         links.setSelf(firstSelfUrl());
         assertEquals(firstSelfUrl(), links.getSelf());
 
@@ -75,7 +75,7 @@ abstract class AbstractPartnerLinksContractTest<T extends PartnerLinks> {
     }
 
     @Test
-    void setCompanyProfileMultipleTimesUsesLatestValue() {
+    void setCompanyProfile_whenSetMultipleTimes_returnsLatestValue() {
         String firstCompanyProfileUrl = "http://example.com/company/123";
         String secondCompanyProfileUrl = "http://example.com/company/456";
 
@@ -87,7 +87,7 @@ abstract class AbstractPartnerLinksContractTest<T extends PartnerLinks> {
     }
 
     @Test
-    void emptyStringValuesAreAllowed() {
+    void setSelfAndCompanyProfile_whenValuesAreEmptyStrings_returnsEmptyStrings() {
         links.setSelf("");
         links.setCompanyProfile("");
 

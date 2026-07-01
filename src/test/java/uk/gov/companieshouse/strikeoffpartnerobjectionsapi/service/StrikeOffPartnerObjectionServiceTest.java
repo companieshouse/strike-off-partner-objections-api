@@ -62,7 +62,7 @@ class StrikeOffPartnerObjectionServiceTest {
         );
     }
     @Test
-    void createObjectionSuccessReturnsMappedResponse() {
+    void createObjection_whenRequestIsValid_returnsMappedResponse() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -92,7 +92,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjectionWhenKafkaPublishFailsMarksEventAsFailedAndRethrows() {
+    void createObjection_whenKafkaPublishFails_marksEventAsFailedAndRethrows() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -117,7 +117,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjectionWhenRepositoryInsertFailsThrowsException() {
+    void createObjection_whenRepositoryInsertFails_throwsException() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         String companyNumber = "12345";
         ObjectionDocument mappedDocument = new ObjectionDocument();
@@ -142,7 +142,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjectionGeneratesUniqueObjectionId() {
+    void createObjection_whenCalledMultipleTimes_generatesUniqueObjectionId() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         String companyNumber = "12345";
 
@@ -165,7 +165,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjectionWhenSaveAfterPublishFailsStillReturnsSuccessResponse() {
+    void createObjection_whenSaveAfterPublishFails_stillReturnsSuccessResponse() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -189,7 +189,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjectionWhenKafkaFailsAndSaveAfterFailureThrowsStillRethrowsOriginalKafkaException() {
+    void createObjection_whenKafkaFailsAndSaveAfterFailureThrows_stillRethrowsOriginalKafkaException() {
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -213,7 +213,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void getObjection_WhenExists_ReturnsObjection() {
+    void getObjection_whenObjectionExists_returnsObjection() {
         String companyNumber = "12345";
         String objectionId = "objection-1";
         ObjectionDocument document = new ObjectionDocument();
@@ -230,7 +230,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void getObjection_WhenDoesntExist_ThrowsObjectionNotFoundExceptionWithMessage() {
+    void getObjection_whenObjectionDoesNotExist_throwsObjectionNotFoundExceptionWithMessage() {
         when(objectionRepository.findByCompanyNumberAndObjectionId("1", "2")).thenReturn(null);
         ObjectionNotFoundException ex = assertThrows(
                 ObjectionNotFoundException.class,

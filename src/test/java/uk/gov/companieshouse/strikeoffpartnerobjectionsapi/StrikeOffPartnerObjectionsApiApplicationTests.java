@@ -33,18 +33,18 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
     }
 
     @Test
-    void contextLoads() {
+    void contextLoads_whenApplicationStarts_loadsContext() {
         Assertions.assertNotNull(applicationContext);
     }
 
     @Test
-    void healthcheckEndpointReturnsStatusField() throws Exception {
+    void healthcheckEndpoint_whenCalled_returnsStatusField() throws Exception {
         mockMvc.perform(get("/strike-off-partner-objections-api/healthcheck"))
                 .andExpect(jsonPath("$.status").exists());
     }
 
     @Test
-    void defaultActuatorHealthPathIsNotExposed() throws Exception {
+    void defaultActuatorHealthPath_whenCalled_isNotExposed() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isNotFound());
     }

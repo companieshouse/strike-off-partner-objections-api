@@ -28,7 +28,7 @@ class ObjectionResponseMapperTest {
     private static final Instant EXPIRATION_ON = Instant.parse("2026-11-11T10:00:00Z");
 
     @Test
-    void toObjectionApiResponseMapsAllFields() {
+    void toObjectionApiResponse_whenDocumentIsPopulated_mapsAllFields() {
         ObjectionDocument document = buildDocument();
 
         BaseObjectionResponse response = mapper.toObjectionApiResponse(document);
@@ -44,7 +44,7 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void toObjectionApiResponseMapsLinks() {
+    void toObjectionApiResponse_whenLinksArePresent_mapsLinks() {
         ObjectionDocument document = new ObjectionDocument();
         PartnerLinks links = new PartnerLinks();
         links.setSelf("/company/01234567/strike-off-partner-objections/obj-123");
@@ -59,7 +59,7 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void toObjectionApiResponseWhenLinksNullReturnsNullLinks() {
+    void toObjectionApiResponse_whenLinksAreNull_returnsNullLinks() {
         ObjectionDocument document = new ObjectionDocument();
         document.setLinks(null);
 
@@ -69,7 +69,7 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void toObjectionApiResponseWhenNullInstantsReturnsNullDateFields() {
+    void toObjectionApiResponse_whenInstantsAreNull_returnsNullDateFields() {
         ObjectionDocument document = new ObjectionDocument();
 
         BaseObjectionResponse response = mapper.toObjectionApiResponse(document);
@@ -80,7 +80,7 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void toObjectionApiResponseWhenNullEnumsReturnsNullEnumFields() {
+    void toObjectionApiResponse_whenEnumsAreNull_returnsNullEnumFields() {
         ObjectionDocument document = new ObjectionDocument();
 
         BaseObjectionResponse response = mapper.toObjectionApiResponse(document);
@@ -92,14 +92,14 @@ class ObjectionResponseMapperTest {
     }
 
     @Test
-    void toObjectionApiResponseWhenNullDocumentReturnsNull() {
+    void toObjectionApiResponse_whenDocumentIsNull_returnsNull() {
         BaseObjectionResponse response = mapper.toObjectionApiResponse(null);
 
         assertThat(response).isNull();
     }
 
     @Test
-    void processingStatusChangedAtIsConvertedToUtcOffsetDateTime() {
+    void toObjectionApiResponse_whenProcessingStatusChangedAtIsPresent_convertsItToUtcOffsetDateTime() {
         ObjectionDocument document = new ObjectionDocument();
         document.setProcessingStatusChangedAt(CREATED_AT);
 
