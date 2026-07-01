@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "7ba52483-c974-4040-b113-e3725b8b7ab6",
-    "name": "Strike Off Partner Objections API",
+    "name": "Strike Off Partner Objections API-4",
     "description": "Collection for local testing of healthcheck, create objection, withdrawals, and validation scenarios.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "55605692",
@@ -20,6 +20,13 @@
                 "exec": [
                   "pm.test(\"returns 201 for valid create objection\", function () {",
                   "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"stores objection_id for follow-up GET\", function () {",
+                  "  var body = pm.response.json();",
+                  "  var objectionId = body.objection_id || body.objectionId;",
+                  "  pm.expect(objectionId).to.exist;",
+                  "  pm.collectionVariables.set(\"objection_id\", objectionId);",
+                  "  pm.collectionVariables.set(\"objectionId\", objectionId);",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -39,25 +46,22 @@
               {
                 "key": "X-Request-Id",
                 "value": "test-request-001",
-                "type": "text",
-                "disabled": true
+                "type": "text"
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               },
               {
                 "key": "ERIC-Identity-Type",
-                "value": "key",
-                "type": "text",
-                "disabled": true
+                "value": "{{ericIdentityType}}",
+                "type": "text"
               },
               {
                 "key": "ERIC-Identity",
-                "value": "test-api-key",
-                "type": "text",
-                "disabled": true
+                "value": "{{ericIdentity}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -120,12 +124,11 @@
               {
                 "key": "X-Request-Id",
                 "value": "test-request-auth-001",
-                "type": "text",
-                "disabled": true
+                "type": "text"
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -192,7 +195,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               },
               {
@@ -211,9 +214,9 @@
               }
             },
             "url": {
-              "raw": "{{localhost}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "raw": "{{localhostUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
               "host": [
-                "{{localhost}}"
+                "{{localhostUrl}}"
               ],
               "path": [
                 "company",
@@ -260,14 +263,18 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               },
               {
                 "key": "ERIC-Identity-Type",
-                "value": "key",
-                "type": "text",
-                "disabled": true
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-auth-003",
+                "type": "text"
               }
             ],
             "body": {
@@ -328,7 +335,17 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-001",
                 "type": "text"
               }
             ],
@@ -391,7 +408,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -449,7 +466,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -507,7 +524,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -565,7 +582,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -624,7 +641,7 @@
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "{{contentTypeJson}}",
                 "type": "text"
               }
             ],
@@ -718,7 +735,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections/{{objectionId}}",
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}",
           "host": [
             "{{baseUrl}}"
           ],
@@ -726,7 +743,7 @@
             "company",
             "{{companyNumber}}",
             "strike-off-partner-objections",
-            "{{objectionId}}"
+            "{{objection_id}}"
           ]
         }
       },
@@ -734,6 +751,28 @@
     },
     {
       "name": "Create Withdrawals",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"returns 201 for valid create withdrawal\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "pm.test(\"stores withdrawal_id for follow-up GET\", function () {",
+              "  var body = pm.response.json();",
+              "  var withdrawalId = body.withdrawal_id || body.withdrawalId;",
+              "  pm.expect(withdrawalId).to.exist;",
+              "  pm.collectionVariables.set(\"withdrawal_id\", withdrawalId);",
+              "  pm.collectionVariables.set(\"withdrawalId\", withdrawalId);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
       "request": {
         "auth": {
           "type": "basic",
@@ -754,7 +793,7 @@
           },
           {
             "key": "Content-Type",
-            "value": "application/json",
+            "value": "{{contentTypeJson}}",
             "type": "text"
           }
         ],
@@ -794,7 +833,7 @@
               "pm.test(\"response contains expected identifiers\", function () {",
               "  var body = pm.response.json();",
               "  pm.expect(body.company_number).to.eql(pm.variables.get(\"companyNumber\"));",
-              "  pm.expect(body.withdrawal_id).to.eql(pm.variables.get(\"withdrawalId\"));",
+              "  pm.expect(body.withdrawal_id).to.eql(pm.collectionVariables.get(\"withdrawal_id\"));",
               "});"
             ],
             "type": "text/javascript",
@@ -828,7 +867,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawalId}}",
+          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}",
           "host": [
             "{{baseUrl}}"
           ],
@@ -836,7 +875,7 @@
             "company",
             "{{companyNumber}}",
             "strike-off-partner-objections-withdrawals",
-            "{{withdrawalId}}"
+            "{{withdrawal_id}}"
           ]
         }
       },
@@ -895,7 +934,15 @@
       "value": "objection-123"
     },
     {
+      "key": "objection_id",
+      "value": "replace-with-created-objection-id"
+    },
+    {
       "key": "withdrawalId",
+      "value": "replace-with-created-withdrawal-id"
+    },
+    {
+      "key": "withdrawal_id",
       "value": "replace-with-created-withdrawal-id"
     },
     {
@@ -905,6 +952,18 @@
     {
       "key": "auth_token",
       "value": ""
+    },
+    {
+      "key": "contentTypeJson",
+      "value": "application/json"
+    },
+    {
+      "key": "ericIdentityType",
+      "value": "key"
+    },
+    {
+      "key": "ericIdentity",
+      "value": "test-api-key"
     }
   ]
 }
