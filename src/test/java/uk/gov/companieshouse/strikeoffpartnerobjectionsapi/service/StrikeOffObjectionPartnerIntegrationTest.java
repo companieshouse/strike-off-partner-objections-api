@@ -19,6 +19,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionR
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -143,6 +144,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     }
 
     private static void assertSavedDocument(ObjectionDocument saved, Instant before, Instant after) {
+        Instant beforeAtMillisPrecision = before.truncatedTo(ChronoUnit.MILLIS);
         assertThat(saved.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(saved.getPartnerOrganisation()).isEqualTo("hmrc");
         assertThat(saved.getSubmissionCompanyName()).isEqualTo("Acme Limited");
@@ -158,7 +160,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         assertThat(saved.getLinks().getCompanyProfile()).isEqualTo("/company/01234567");
         assertThat(saved.getLinks().getSelf()).startsWith("/company/01234567/strike-off-partner-objections/");
         assertThat(saved.getCreatedAt()).isNotNull();
-        assertThat(saved.getCreatedAt()).isAfterOrEqualTo(before);
+        assertThat(saved.getCreatedAt()).isAfterOrEqualTo(beforeAtMillisPrecision);
         assertThat(saved.getCreatedAt()).isBeforeOrEqualTo(after);
     }
 
