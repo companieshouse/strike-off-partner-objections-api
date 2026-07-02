@@ -64,7 +64,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void validApiKeyAllowsRequest() {
+    void preHandle_whenValidApiKey_allowsRequest() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
@@ -75,7 +75,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void invalidApiKeyReturns401() {
+    void preHandle_whenInvalidApiKey_returns401() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
@@ -87,7 +87,7 @@ class AuthenticationInterceptorTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "invalid"})
-    void invalidIdentityTypeReturns403(String invalidType) {
+    void preHandle_whenInvalidIdentityType_returns403(String invalidType) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(invalidType);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
@@ -98,7 +98,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void missingIdentityTypeReturns403() {
+    void preHandle_whenMissingIdentityType_returns403() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(null);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
@@ -109,7 +109,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void successfulRequestSetsAllowRequestAttribute() {
+    void preHandle_whenSuccessfulRequest_setsAllowRequestAttribute() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);

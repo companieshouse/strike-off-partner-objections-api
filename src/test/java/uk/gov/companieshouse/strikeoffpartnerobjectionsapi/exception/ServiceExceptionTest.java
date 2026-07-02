@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class ServiceExceptionTest {
 
     @Test
-    void constructorSetsMessageAndCause() {
+    void constructor_whenInvoked_setsMessageAndCause() {
         RuntimeException cause = new RuntimeException("root cause");
 
         ServiceException exception = new ServiceException("service failure", cause);
@@ -21,7 +21,7 @@ class ServiceExceptionTest {
     }
 
     @Test
-    void serviceExceptionIsRuntimeException() {
+    void serviceException_whenCreated_isRuntimeException() {
         ServiceException exception = new ServiceException("service failure", new RuntimeException("cause"));
 
         assertTrue(exception instanceof RuntimeException);

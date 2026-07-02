@@ -19,7 +19,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.Authentic
 class ApplicationConfigTest {
 
     @Test
-    void internalApiClientBeanCanBeCreated() {
+    void internalApiClient_whenInvoked_createsBean() {
         ApplicationConfig config = new ApplicationConfig(null);
 
         try {
@@ -31,7 +31,7 @@ class ApplicationConfigTest {
     }
 
     @Test
-    void addInterceptorsRegistersAuthenticationInterceptorForAllPaths() {
+    void addInterceptors_whenInvoked_registersAuthenticationInterceptorForAllPaths() {
         AuthenticationInterceptor interceptor = Mockito.mock(AuthenticationInterceptor.class);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
         InterceptorRegistration registration = Mockito.mock(InterceptorRegistration.class);
@@ -47,7 +47,7 @@ class ApplicationConfigTest {
     }
 
     @Test
-    void addInterceptorsDoesNothingWhenAuthenticationInterceptorIsNull() {
+    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNothing() {
         ApplicationConfig config = new ApplicationConfig(null);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
 

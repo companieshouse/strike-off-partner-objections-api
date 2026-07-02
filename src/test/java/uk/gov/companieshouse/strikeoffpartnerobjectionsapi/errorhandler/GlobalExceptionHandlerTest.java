@@ -181,7 +181,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleServiceExceptionReturnsUpstreamStatusAndComposedMessage() {
+    void handleServiceException_whenValidUpstreamException_returnsUpstreamStatusAndComposedMessage() {
         ApiErrorResponseException upstream = apiErrorResponseException(404, "Not Found");
         ServiceException ex = new ServiceException("Error retrieving company profile", upstream);
 
@@ -194,7 +194,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleServiceExceptionUsesDefaultMessageWhenUpstreamMessageAndServiceMessageAreBlank() {
+    void handleServiceException_whenUpstreamMessageAndServiceMessageAreBlank_usesDefaultMessage() {
         ApiErrorResponseException upstream = apiErrorResponseException(429, "   ");
         ServiceException ex = new ServiceException("   ", upstream);
 
@@ -207,7 +207,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleServiceExceptionReturnsInternalServerErrorWhenUpstreamStatusCannotBeResolved() {
+    void handleServiceException_whenUpstreamStatusCannotBeResolved_returnsInternalServerError() {
         ApiErrorResponseException upstream = apiErrorResponseException(599, "upstream error");
         ServiceException ex = new ServiceException("service failure", upstream);
 
@@ -220,7 +220,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleServiceExceptionReturnsInternalServerErrorWhenCauseIsNotApiErrorResponseException() {
+    void handleServiceException_whenCauseIsNotApiErrorResponseException_returnsInternalServerError() {
         ServiceException ex = new ServiceException("service failure", new RuntimeException("boom"));
 
         ResponseEntity<ApiError> response = handler.handleServiceException(ex);

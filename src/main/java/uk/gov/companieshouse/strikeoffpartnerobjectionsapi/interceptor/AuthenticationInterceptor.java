@@ -20,20 +20,21 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @ConditionalOnProperty(name = "interceptor.authentication.enabled", havingValue = "true", matchIfMissing = true)
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
-    private static final String ERIC_IDENTITY_TYPE_KEY = "key";
-    private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
-    private static final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
-    private static final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
-    private static final String IDENTITY_TYPE_SUFFIX = ", identityType=";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        final String X_REQUEST_ID_HEADER = "X-Request-Id";
+        final String KEY = "key";
+        final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
+        final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
+        final String IDENTITY_TYPE_SUFFIX = ", identityType=";
+
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
         String identityType = AuthorisationUtil.getAuthorisedIdentityType(request);
         String identityHeader = AuthorisationUtil.getAuthorisedIdentity(request);
 
-        if (!ERIC_IDENTITY_TYPE_KEY.equals(identityType)) {
+        if (!KEY.equals(identityType)) {
             LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
             sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
             return false;
