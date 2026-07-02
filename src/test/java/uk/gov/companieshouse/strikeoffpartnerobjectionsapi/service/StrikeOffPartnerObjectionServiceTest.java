@@ -282,8 +282,9 @@ class StrikeOffPartnerObjectionServiceTest {
         CompanyProfileApi companyProfile = validCompanyProfile();
         companyProfile.setCompanyName("Different Co Ltd");
         stubCompanyProfile(companyProfile);
+        CreateObjectionRequest request = validCreateObjectionRequest();
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", validCreateObjectionRequest()))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
                 .isInstanceOf(CompanyValidationException.class)
                 .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
                 .isEqualTo(StrikeOffPartnerObjectionService.SUBMISSION_COMPANY_NAME_MISMATCH);
@@ -296,8 +297,9 @@ class StrikeOffPartnerObjectionServiceTest {
         CompanyProfileApi companyProfile = validCompanyProfile();
         companyProfile.setType("charitable-incorporated-organisation");
         stubCompanyProfile(companyProfile);
+        CreateObjectionRequest request = validCreateObjectionRequest();
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", validCreateObjectionRequest()))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
                 .isInstanceOf(CompanyValidationException.class)
                 .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
                 .isEqualTo(StrikeOffPartnerObjectionService.INVALID_COMPANY_TYPE);
@@ -310,8 +312,9 @@ class StrikeOffPartnerObjectionServiceTest {
         CompanyProfileApi companyProfile = validCompanyProfile();
         companyProfile.setCompanyStatusDetail("active");
         stubCompanyProfile(companyProfile);
+        CreateObjectionRequest request = validCreateObjectionRequest();
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", validCreateObjectionRequest()))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
                 .isInstanceOf(CompanyValidationException.class)
                 .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
                 .isEqualTo(StrikeOffPartnerObjectionService.INVALID_COMPANY_STATUS);
