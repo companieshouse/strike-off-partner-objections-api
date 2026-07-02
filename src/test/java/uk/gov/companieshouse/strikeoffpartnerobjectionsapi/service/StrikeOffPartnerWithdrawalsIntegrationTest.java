@@ -45,10 +45,16 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         withdrawalRepository.deleteAll();
         // Drain any leftover messages from previous tests
         testConsumer.poll(Duration.ofMillis(100));
+
+        // Default stubs used by tests that are not explicitly exercising validation failures.
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
+        when(internalApiClient.company().get("/company/" + SECOND_COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
     }
 
     // ===== Company Validation Tests =====
@@ -408,4 +414,3 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         return companyProfile;
     }
 }
-
