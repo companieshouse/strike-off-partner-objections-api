@@ -8,14 +8,12 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @TestConfiguration
-@Import(TestApiClientConfiguration.class)
 public class TestKafkaConfiguration {
     @Bean
     KafkaConsumer<String, byte[]> testConsumer(

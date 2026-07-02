@@ -3,12 +3,15 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 import consumer.deserialization.AvroDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.mockito.Answers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
+import uk.gov.companieshouse.api.InternalApiClient;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 
 import java.time.Duration;
@@ -23,6 +26,9 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTes
 public abstract class BaseTestIntegration extends MongoDbIntegration {
     protected static final KafkaContainer kafkaContainer =
             new KafkaContainer(DockerImageName.parse("apache/kafka:" + KAFKA_VERSION));
+
+    @MockitoBean(answers = Answers.RETURNS_DEEP_STUBS)
+    protected InternalApiClient internalApiClient;
 
 
     @Autowired
