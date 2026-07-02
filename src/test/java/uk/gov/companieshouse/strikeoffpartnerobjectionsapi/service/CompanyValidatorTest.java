@@ -131,7 +131,7 @@ class CompanyValidatorTest {
 
     @Test
     void validateCompany_whenCompanyProfileServiceThrowsServiceException_propagatesException() {
-        ApiErrorResponseException apiError = apiErrorResponseException(502, "Bad Gateway");
+        ApiErrorResponseException apiError = apiErrorResponseException();
         ServiceException serviceException = new ServiceException("Error retrieving company profile", apiError);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenThrow(serviceException);
@@ -143,12 +143,11 @@ class CompanyValidatorTest {
         assertEquals("Error retrieving company profile", thrown.getMessage());
     }
 
-    private ApiErrorResponseException apiErrorResponseException(int statusCode, String statusMessage) {
+    private ApiErrorResponseException apiErrorResponseException() {
         HttpResponseException.Builder builder = new HttpResponseException.Builder(
-                statusCode,
-                statusMessage,
+                502,
+                "Bad Gateway",
                 new HttpHeaders());
         return new ApiErrorResponseException(builder);
     }
 }
-

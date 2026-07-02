@@ -1,5 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception;
 
+import java.io.Serial;
+
 /**
  * The class {@code CompanyValidationException} is a form of {@code RuntimeException}
  * that is thrown when company validation fails (e.g., company not found, name mismatch, invalid status).
@@ -7,6 +9,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception;
  */
 public class CompanyValidationException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 4756738290476930286L;
 
     private final String errorCode;
@@ -22,20 +25,7 @@ public class CompanyValidationException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    /**
-     * Constructs a new {@code CompanyValidationException} with a custom message, error code, and cause.
-     *
-     * @param message a custom message
-     * @param errorCode the error code
-     * @param cause the cause
-     */
-    public CompanyValidationException(String message, String errorCode, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
-    }
-
     public String getErrorCode() {
         return errorCode;
     }
 }
-
