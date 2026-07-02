@@ -30,6 +30,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @Tag("unit-test")
@@ -87,6 +88,17 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("MISSING_REQUIRED_PARAMETER", body.getErrorCode());
+    }
+
+    @Test
+    void handleCompanyValidationException_whenInvoked_returnsBadRequestWithValidationErrorCode() {
+        ResponseEntity<ApiError> response =
+                handler.handleCompanyValidationException(new CompanyValidationException("INVALID_COMPANY_TYPE"));
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("INVALID_COMPANY_TYPE", body.getErrorCode());
+        assertEquals("Invalid Message", body.getMessage());
     }
 
     @Test

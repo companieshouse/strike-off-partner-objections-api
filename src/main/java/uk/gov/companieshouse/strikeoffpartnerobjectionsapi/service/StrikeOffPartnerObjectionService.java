@@ -1,15 +1,21 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import uk.gov.companieshouse.api.error.ApiErrorResponseException;
+import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -22,6 +28,13 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 
 @Service
 public class StrikeOffPartnerObjectionService {
+
+    static final String COMPANY_NUMBER_NOT_EXIST = "COMPANY_NUMBER_NOT_EXIST";
+    static final String SUBMISSION_COMPANY_NAME_MISMATCH = "SUBMISSION_COMPANY_NAME_MISMATCH";
+    static final String INVALID_COMPANY_TYPE = "INVALID_COMPANY_TYPE";
+    static final String INVALID_COMPANY_STATUS = "INVALID_COMPANY_STATUS";
+    private static final String ACTIVE_PROPOSAL_TO_STRIKE_OFF = "active-proposal-to-strike-off";
+    private static final Set<String> ELIGIBLE_COMPANY_TYPES = Set.of("ltd", "plc");
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
@@ -44,7 +57,8 @@ public class StrikeOffPartnerObjectionService {
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
-        companyProfileService.getCompanyProfile(companyNumber);
+        validateCompany(createObjectionRequest, companyNumber);
+
         // Validate company exists / is accessible before creating objection
         final String objectionId = UUID.randomUUID().toString();
 
@@ -70,6 +84,52 @@ public class StrikeOffPartnerObjectionService {
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist objection", ex);
         }
+    }
+
+    public void validateCompany(CreateObjectionRequest createObjectionRequest, String companyNumber) {
+        CompanyProfileApi company = getCompanyProfileOrThrow(companyNumber);
+
+        validateOrThrow(company != null, COMPANY_NUMBER_NOT_EXIST);
+        validateOrThrow(isCompanyTypeEligible(company.getType()), INVALID_COMPANY_TYPE);
+        validateOrThrow(hasActiveStrikeOffProposal(company), INVALID_COMPANY_STATUS);
+        validateOrThrow(companyNameMatches(createObjectionRequest.getSubmissionCompanyName(), company.getCompanyName()),
+                SUBMISSION_COMPANY_NAME_MISMATCH);
+    }
+
+    private void validateOrThrow(boolean condition, String errorCode) {
+        if (!condition) {
+            throw new CompanyValidationException(errorCode);
+        }
+    }
+
+    private CompanyProfileApi getCompanyProfileOrThrow(String companyNumber) {
+        try {
+            return companyProfileService.getCompanyProfile(companyNumber);
+        } catch (ServiceException ex) {
+            if (isCompanyNotFound(ex)) {
+                throw new CompanyValidationException(COMPANY_NUMBER_NOT_EXIST);
+            }
+            throw ex;
+        }
+    }
+
+    private boolean isCompanyNotFound(ServiceException ex) {
+        return ex.getCause() instanceof ApiErrorResponseException apiError
+                && apiError.getStatusCode() == 404;
+    }
+
+    private boolean isCompanyTypeEligible(String companyType) {
+        return companyType != null && ELIGIBLE_COMPANY_TYPES.contains(companyType.toLowerCase(Locale.ROOT));
+    }
+
+    private boolean hasActiveStrikeOffProposal(CompanyProfileApi company) {
+        return ACTIVE_PROPOSAL_TO_STRIKE_OFF.equalsIgnoreCase(company.getCompanyStatusDetail());
+    }
+
+    private boolean companyNameMatches(String submissionCompanyName, String profileCompanyName) {
+        return submissionCompanyName != null
+                && profileCompanyName != null
+                && submissionCompanyName.trim().equalsIgnoreCase(profileCompanyName.trim());
     }
 
     private void publishAndSaveObjection(ObjectionDocument persistedObjection) {
