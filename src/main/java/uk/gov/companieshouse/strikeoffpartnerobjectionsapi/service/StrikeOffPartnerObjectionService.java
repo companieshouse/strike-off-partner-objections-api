@@ -41,11 +41,18 @@ public class StrikeOffPartnerObjectionService {
         this.companyProfileService = companyProfileService;
         this.objectionKafkaProducer = objectionKafkaProducer;
     }
+
+    public boolean validateRequest(String companyNumber) {
+        //validation logic as parts of TRACS-64
+        companyProfileService.getCompanyProfile(companyNumber);
+        return true;
+    }
+
+
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
-        companyProfileService.getCompanyProfile(companyNumber);
-        // Validate company exists / is accessible before creating objection
+        validateRequest(companyNumber);
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",

@@ -26,7 +26,6 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         final String X_REQUEST_ID_HEADER = "X-Request-Id";
         final String KEY = "key";
-        final String ALLOW_REQUEST_ATTRIBUTE = "ALLOW_REQUEST";
         final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
         final String IDENTITY_TYPE_SUFFIX = ", identityType=";
 
@@ -46,8 +45,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        LOGGER.info("Authentication successful: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType);
-        request.setAttribute(ALLOW_REQUEST_ATTRIBUTE, true);
+        LOGGER.info("Authentication credentials validated: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", passing request through");
         return true;
     }
 
@@ -71,7 +69,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         response.setContentType("application/json");
         try {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", 401);
+            errorResponse.put("status", HttpStatus.UNAUTHORIZED);
             errorResponse.put("error", "Unauthorized");
             errorResponse.put("message", "Invalid API key");
             errorResponse.put("requestId", requestId);
