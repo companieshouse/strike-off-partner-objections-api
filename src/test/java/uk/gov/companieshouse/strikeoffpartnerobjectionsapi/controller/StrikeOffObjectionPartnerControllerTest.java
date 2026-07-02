@@ -50,6 +50,7 @@ import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerObjectionService;
 
 @Tag("unit-test")
@@ -80,8 +81,12 @@ class StrikeOffObjectionPartnerControllerTest {
     @MockitoBean
     private InternalApiClient internalApiClient;
 
+    @MockitoBean
+    private AuthenticationInterceptor authenticationInterceptor;
+
     @BeforeEach
     void setUp() {
+        when(authenticationInterceptor.preHandle(any(), any(), any())).thenReturn(true);
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenReturn(defaultCreatedResponse());
         clearInvocations(strikeOffPartnerObjectionService);

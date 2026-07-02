@@ -3,7 +3,6 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -17,7 +16,6 @@ import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
-@ConditionalOnProperty(name = "interceptor.authentication.enabled", havingValue = "true", matchIfMissing = true)
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
