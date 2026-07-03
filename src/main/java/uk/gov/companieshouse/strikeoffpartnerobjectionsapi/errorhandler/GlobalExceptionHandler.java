@@ -91,11 +91,6 @@ public class GlobalExceptionHandler {
         return badRequest(mapUnreadableMessage(ex));
     }
 
-    @ExceptionHandler(CompanyValidationException.class)
-    public ResponseEntity<ApiError> handleCompanyValidationException(CompanyValidationException ex) {
-        return badRequest(ex.getErrorCode());
-    }
-
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatusException(ResponseStatusException ex) {
         HttpStatusCode statusCode = ex.getStatusCode();
