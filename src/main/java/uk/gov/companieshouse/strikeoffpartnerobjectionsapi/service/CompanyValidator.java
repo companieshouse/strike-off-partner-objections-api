@@ -33,11 +33,10 @@ public class CompanyValidator {
      *
      * @param companyNumber the company number from the request path
      * @param submissionCompanyName the company name from the request body
-     * @return true when all validation checks pass
      * @throws CompanyValidationException if any validation check fails
      * @throws ServiceException if the Company Profile API call fails
      */
-    public boolean validateCompany(String companyNumber, String submissionCompanyName) {
+    public void validateCompany(String companyNumber, String submissionCompanyName) {
         LOGGER.info(format("Validating company: companyNumber=%s, submissionCompanyName=%s",
                 companyNumber, submissionCompanyName));
 
@@ -68,7 +67,6 @@ public class CompanyValidator {
         }
 
         LOGGER.info(format("Company validation passed: companyNumber=%s", companyNumber));
-        return true;
     }
 
     /**

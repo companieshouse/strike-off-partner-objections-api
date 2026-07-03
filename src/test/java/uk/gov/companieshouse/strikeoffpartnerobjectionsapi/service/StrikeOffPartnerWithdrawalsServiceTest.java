@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -171,8 +172,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         CompanyValidationException validationException =
             new CompanyValidationException("Company not found", "COMPANY_NUMBER_NOT_EXIST");
 
-        when(companyValidator.validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName()))
-                .thenThrow(validationException);
+        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
