@@ -750,136 +750,357 @@
       "response": []
     },
     {
-      "name": "Create Withdrawals",
-      "event": [
+      "name": "Withdrawals",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"returns 201 for valid create withdrawal\", function () {",
-              "  pm.response.to.have.status(201);",
-              "});",
-              "pm.test(\"stores withdrawal_id for follow-up GET\", function () {",
-              "  var body = pm.response.json();",
-              "  var withdrawalId = body.withdrawal_id || body.withdrawalId;",
-              "  pm.expect(withdrawalId).to.exist;",
-              "  pm.collectionVariables.set(\"withdrawal_id\", withdrawalId);",
-              "  pm.collectionVariables.set(\"withdrawalId\", withdrawalId);",
-              "});"
-            ],
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "auth": {
-          "type": "basic",
-          "basic": [
+          "name": "201 - Create Withdrawal (Happy Path)",
+          "event": [
             {
-              "key": "username",
-              "value": "{{auth_token}}",
-              "type": "string"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 201 for valid create withdrawal\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"stores withdrawal_id for follow-up GET\", function () {",
+                  "  var body = pm.response.json();",
+                  "  var withdrawalId = body.withdrawal_id || body.withdrawalId;",
+                  "  pm.expect(withdrawalId).to.exist;",
+                  "  pm.collectionVariables.set(\"withdrawal_id\", withdrawalId);",
+                  "  pm.collectionVariables.set(\"withdrawalId\", withdrawalId);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
             }
-          ]
-        },
-        "method": "POST",
-        "header": [
-          {
-            "key": "Host",
-            "value": "{{hostHeader}}",
-            "type": "text"
-          },
-          {
-            "key": "Content-Type",
-            "value": "{{contentTypeJson}}",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
-          "host": [
-            "{{baseUrl}}"
           ],
-          "path": [
-            "company",
-            "{{companyNumber}}",
-            "strike-off-partner-objections-withdrawals"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Get Withdrawal",
-      "event": [
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections-withdrawals"
+              ]
+            }
+          },
+          "response": []
+        },
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"returns 200 for valid get withdrawal\", function () {",
-              "  pm.response.to.have.status(200);",
-              "});",
-              "pm.test(\"response contains expected identifiers\", function () {",
-              "  var body = pm.response.json();",
-              "  pm.expect(body.company_number).to.eql(pm.variables.get(\"companyNumber\"));",
-              "  pm.expect(body.withdrawal_id).to.eql(pm.collectionVariables.get(\"withdrawal_id\"));",
-              "});"
-            ],
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "auth": {
-          "type": "basic",
-          "basic": [
+          "name": "400 - Company Not Found",
+          "event": [
             {
-              "key": "username",
-              "value": "{{auth_token}}",
-              "type": "string"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is COMPANY_NUMBER_NOT_EXIST\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"COMPANY_NUMBER_NOT_EXIST\");",
+                  "});",
+                  "pm.test(\"error message indicates company not found\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.message).to.include(\"Company not found\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
             }
-          ]
-        },
-        "method": "GET",
-        "header": [
-          {
-            "key": "Host",
-            "value": "{{hostHeader}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Request-Id",
-            "value": "test-request-002",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}",
-          "host": [
-            "{{baseUrl}}"
           ],
-          "path": [
-            "company",
-            "{{companyNumber}}",
-            "strike-off-partner-objections-withdrawals",
-            "{{withdrawal_id}}"
-          ]
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/99999999/strike-off-partner-objections-withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "99999999",
+                "strike-off-partner-objections-withdrawals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Company Name Mismatch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is SUBMISSION_COMPANY_NAME_MISMATCH\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"SUBMISSION_COMPANY_NAME_MISMATCH\");",
+                  "});",
+                  "pm.test(\"error message indicates company name mismatch\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.message).to.include(\"Company name mismatch\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"WRONG COMPANY NAME\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections-withdrawals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Invalid Company Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400 Bad Request\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_COMPANY_STATUS\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_COMPANY_STATUS\");",
+                  "});",
+                  "pm.test(\"error message indicates company does not have active proposal\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.message).to.include(\"active proposal to strike off\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections-withdrawals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "200 - Get Withdrawal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 200 for valid get withdrawal\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"response contains expected identifiers\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.company_number).to.eql(pm.variables.get(\"companyNumber\"));",
+                  "  pm.expect(body.withdrawal_id).to.eql(pm.collectionVariables.get(\"withdrawal_id\"));",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-002",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections-withdrawals",
+                "{{withdrawal_id}}"
+              ]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
     }
   ],
   "auth": {

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @RestControllerAdvice
@@ -108,6 +109,7 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(toErrorCode(statusCode), DEFAULT_RESPONSE_STATUS_MESSAGE));
     }
 
+    @SuppressWarnings("unused")
     @ExceptionHandler(SocketTimeoutException.class)
     public ResponseEntity<ApiError> handleSocketTimeoutException(SocketTimeoutException ex) {
         return new ResponseEntity<>(
@@ -115,6 +117,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.GATEWAY_TIMEOUT);
     }
 
+    @SuppressWarnings("unused")
     @ExceptionHandler(IOException.class)
     public ResponseEntity<ApiError> handleIOException(IOException ex) {
         return new ResponseEntity<>(
@@ -142,6 +145,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 new ApiError(INTERNAL_SERVER_ERROR_CODE, INTERNAL_SERVER_ERROR_MESSAGE),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @SuppressWarnings("unused")
+    @ExceptionHandler(CompanyValidationException.class)
+    public ResponseEntity<ApiError> handleCompanyValidationException(CompanyValidationException ex) {
+        return badRequest(ex.getErrorCode());
     }
 
     @ExceptionHandler(RuntimeException.class)

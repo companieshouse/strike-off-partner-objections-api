@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,7 @@ import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObject
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
@@ -57,12 +59,15 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private WithdrawalKafkaProducer withdrawalKafkaProducer;
 
+    @Mock
+    private CompanyValidator companyValidator;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
     void setUp() {
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer, companyValidator);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -157,6 +162,47 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId);
         verifyNoInteractions(withdrawalMapper);
+    }
+
+    // ===== Company Validation Tests =====
+
+    @Test
+    void withdrawAllObjections_whenCompanyValidationFails_throwsCompanyValidationException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        CompanyValidationException validationException =
+            new CompanyValidationException("Company not found", "COMPANY_NUMBER_NOT_EXIST");
+
+        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isSameAs(validationException);
+
+        verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
+    }
+
+
+    @Test
+    void withdrawAllObjections_whenCompanyValidationPasses_continuesWithPersistence() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawalDocument mappedDocument = buildSavedDocument();
+        WithdrawalDocument savedDocument = buildSavedDocument();
+
+        when(withdrawalMapper.toWithdrawalDocument(
+                eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
+                .thenReturn(mappedDocument);
+        when(withdrawalRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument))
+                .thenReturn(getPublishedEvent("event-id-validation-1"));
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
+                .thenReturn(new WithdrawAllObjectionsResponse());
+
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(withdrawalRepository).insert(mappedDocument);
+        verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
     }
 
     // ===== POST Withdrawal Tests (Existing Tests) =====

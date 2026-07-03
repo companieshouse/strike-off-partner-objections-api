@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
@@ -25,6 +26,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Tag("integration-test")
@@ -42,11 +44,36 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         withdrawalRepository.deleteAll();
         // Drain any leftover messages from previous tests
         testConsumer.poll(Duration.ofMillis(100));
+
+        // Default stubs used by tests that are not explicitly exercising validation failures.
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
+        when(internalApiClient.company().get("/company/" + SECOND_COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
     }
+
+    // ===== Company Validation Tests =====
+
+    @Test
+    void withdrawAllObjections_whenCompanyProfileReturnsValidCompany_acceptsWithdrawal() throws Exception {
+        CompanyProfileApi validCompany = buildValidCompanyProfile();
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(validCompany);
+
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        WithdrawAllObjectionsResponse response =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getWithdrawalId()).isNotBlank();
+        assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+    }
+
 
     // ===== GET Withdrawal Tests =====
 
@@ -310,5 +337,11 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         return request;
     }
-}
 
+    private CompanyProfileApi buildValidCompanyProfile() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName("Acme Limited");
+        companyProfile.setCompanyStatus("dissolution-proposal-active");
+        return companyProfile;
+    }
+}
