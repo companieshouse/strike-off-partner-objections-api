@@ -42,6 +42,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.api.InternalApiClient;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponseLinks;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
@@ -49,6 +50,7 @@ import uk.gov.companieshouse.api.objections.model.FailureReason;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerObjectionService;
 
 @Tag("unit-test")
@@ -76,8 +78,15 @@ class StrikeOffObjectionPartnerControllerTest {
     @MockitoBean
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
+    @MockitoBean
+    private InternalApiClient internalApiClient;
+
+    @MockitoBean
+    private AuthenticationInterceptor authenticationInterceptor;
+
     @BeforeEach
     void setUp() {
+        when(authenticationInterceptor.preHandle(any(), any(), any())).thenReturn(true);
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
                 .thenReturn(defaultCreatedResponse());
         clearInvocations(strikeOffPartnerObjectionService);
@@ -349,6 +358,9 @@ class StrikeOffObjectionPartnerControllerTest {
     void createObjection_whenJsonIsMalformed_returnsMissingRequiredParameter() throws Exception {
         mockMvc.perform(post(CREATE_OBJECTION_URL)
                         .contentType(APPLICATION_JSON)
+                        .header("X-Request-Id", "test-request-id")
+                        .header("ERIC-Identity-Type", "key")
+                        .header("CHS_API_KEY", "test-api-key")
                         .content("{\"partner_contact_email\":\"valid@email.com\","))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
@@ -478,16 +490,30 @@ class StrikeOffObjectionPartnerControllerTest {
     private ResultActions postCreateObjection(JsonNode payload) throws Exception {
         return mockMvc.perform(post(CREATE_OBJECTION_URL)
                 .contentType(APPLICATION_JSON)
+                .header("X-Request-Id", "test-request-id")
+                .header("ERIC-Identity-Type", "key")
+                .header("CHS_API_KEY", "test-api-key")
                 .content(objectMapper.writeValueAsString(payload)));
     }
 
     private ResultActions postCreateObjectionWithoutBody() throws Exception {
-        return mockMvc.perform(post(CREATE_OBJECTION_URL).contentType(APPLICATION_JSON));
+        return mockMvc.perform(post(CREATE_OBJECTION_URL)
+                .contentType(APPLICATION_JSON)
+                .header("X-Request-Id", "test-request-id")
+                .header("ERIC-Identity-Type", "key")
+                .header("CHS_API_KEY", "test-api-key"));
     }
 
     private ResultActions performGetObjection(String companyNumber) throws Exception {
-        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, OBJECTION_ID))
-                .contentType(APPLICATION_JSON));
+        return performGetObjection(companyNumber, OBJECTION_ID);
+    }
+
+    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+                .contentType(APPLICATION_JSON)
+                .header("X-Request-Id", "test-request-id")
+                .header("ERIC-Identity-Type", "key")
+                .header("CHS_API_KEY", "test-api-key"));
     }
 
     private static Stream<Arguments> invalidEmailCases() {

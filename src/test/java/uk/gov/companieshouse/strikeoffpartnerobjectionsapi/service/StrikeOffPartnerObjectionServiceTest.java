@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -20,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
+import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
@@ -48,6 +51,9 @@ class StrikeOffPartnerObjectionServiceTest {
     private ObjectionResponseMapper objectionResponseMapper;
 
     @Mock
+    private CompanyProfileService companyProfileService;
+    
+    @Mock
     private ObjectionKafkaProducer objectionKafkaProducer;
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
@@ -57,12 +63,14 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRepository,
                 objectionRequestMapper,
                 objectionResponseMapper,
+                companyProfileService,
                 objectionKafkaProducer
 
         );
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
+        stubCompanyProfile();
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -118,6 +126,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenRepositoryInsertFails_throwsException() {
+        stubCompanyProfile();
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         String companyNumber = "12345";
         ObjectionDocument mappedDocument = new ObjectionDocument();
@@ -143,6 +152,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenCalledMultipleTimes_generatesUniqueObjectionId() {
+        stubCompanyProfile();
         CreateObjectionRequest requestDto = new CreateObjectionRequest();
         String companyNumber = "12345";
 
@@ -251,5 +261,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 .setPartnerOrganisation("hmrc")
                 .setStrikeOffEventId(UUID.randomUUID().toString())
                 .build();
+    }
+
+    private void stubCompanyProfile() {
+        when(companyProfileService.getCompanyProfile(anyString())).thenReturn(new CompanyProfileApi());
     }
 }

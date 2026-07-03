@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.KafkaException;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import uk.gov.companieshouse.api.InternalApiClient;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 
@@ -20,6 +22,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 @Tag("unit-test")
 class KafkaFailureTest {
     private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
+
+    @MockitoBean
+    private InternalApiClient internalApiClient;
 
     @Autowired
     private WithdrawalKafkaProducer withdrawalKafkaProducer;

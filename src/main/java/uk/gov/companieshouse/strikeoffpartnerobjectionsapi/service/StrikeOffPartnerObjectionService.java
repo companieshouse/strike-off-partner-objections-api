@@ -26,22 +26,33 @@ public class StrikeOffPartnerObjectionService {
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
+    private final CompanyProfileService companyProfileService;
     private final ObjectionKafkaProducer objectionKafkaProducer;
 
     public StrikeOffPartnerObjectionService(
             ObjectionRepository objectionRepository,
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
+            CompanyProfileService companyProfileService,
             ObjectionKafkaProducer objectionKafkaProducer) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
+        this.companyProfileService = companyProfileService;
         this.objectionKafkaProducer = objectionKafkaProducer;
     }
+
+    public boolean validateRequest(String companyNumber) {
+        //validation logic as parts of TRACS-64
+        companyProfileService.getCompanyProfile(companyNumber);
+        return true;
+    }
+
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
+        validateRequest(companyNumber);
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",

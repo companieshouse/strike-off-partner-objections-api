@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpResponseException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.List;
@@ -26,7 +28,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @Tag("unit-test")
 class GlobalExceptionHandlerTest {
@@ -177,6 +181,57 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleServiceException_whenValidUpstreamException_returnsUpstreamStatusAndComposedMessage() {
+        ApiErrorResponseException upstream = apiErrorResponseException(404, "Not Found");
+        ServiceException ex = new ServiceException("Error retrieving company profile", upstream);
+
+        ResponseEntity<ApiError> response = handler.handleServiceException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("not_found", body.getErrorCode());
+        assertEquals("Error retrieving company profile: Not Found", body.getMessage());
+    }
+
+    @Test
+    void handleServiceException_whenUpstreamMessageAndServiceMessageAreBlank_usesDefaultMessage() {
+        ApiErrorResponseException upstream = apiErrorResponseException(429, "   ");
+        ServiceException ex = new ServiceException("   ", upstream);
+
+        ResponseEntity<ApiError> response = handler.handleServiceException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
+        assertEquals("too_many_requests", body.getErrorCode());
+        assertEquals("Request failed", body.getMessage());
+    }
+
+    @Test
+    void handleServiceException_whenUpstreamStatusCannotBeResolved_returnsInternalServerError() {
+        ApiErrorResponseException upstream = apiErrorResponseException(599, "upstream error");
+        ServiceException ex = new ServiceException("service failure", upstream);
+
+        ResponseEntity<ApiError> response = handler.handleServiceException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("internal_server_error", body.getErrorCode());
+        assertEquals("Internal Server Error", body.getMessage());
+    }
+
+    @Test
+    void handleServiceException_whenCauseIsNotApiErrorResponseException_returnsInternalServerError() {
+        ServiceException ex = new ServiceException("service failure", new RuntimeException("boom"));
+
+        ResponseEntity<ApiError> response = handler.handleServiceException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("internal_server_error", body.getErrorCode());
+        assertEquals("Internal Server Error", body.getMessage());
+    }
+
+    @Test
     void handleUnexpectedException_whenInvoked_returnsInternalServerError() {
         ResponseEntity<ApiError> response = handler.handleUnexpectedException();
         ApiError body = requireBody(response);
@@ -204,6 +259,14 @@ class GlobalExceptionHandlerTest {
         JsonMappingException exception = JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "bad mapping");
         exception.prependPath(new Object(), "partner_objection_reason");
         return exception;
+    }
+
+    private ApiErrorResponseException apiErrorResponseException(int statusCode, String statusMessage) {
+        HttpResponseException.Builder builder = new HttpResponseException.Builder(
+                statusCode,
+                statusMessage,
+                new HttpHeaders());
+        return new ApiErrorResponseException(builder);
     }
 
     private static Stream<Arguments> unreadableMessageFallbackCases() {

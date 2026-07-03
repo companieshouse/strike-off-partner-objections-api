@@ -33,6 +33,4 @@ public class TestKafkaConfiguration {
         consumer.subscribe(List.of(topic));
         return consumer;
     }
-
-
 }
