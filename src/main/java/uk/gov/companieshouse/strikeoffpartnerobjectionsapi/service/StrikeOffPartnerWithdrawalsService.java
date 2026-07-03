@@ -27,14 +27,17 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
+    private final CompanyValidator companyValidator;
 
     public StrikeOffPartnerWithdrawalsService(
             WithdrawalRepository withdrawalRepository,
             WithdrawalMapper withdrawalMapper,
-            WithdrawalKafkaProducer withdrawalKafkaProducer) {
+            WithdrawalKafkaProducer withdrawalKafkaProducer,
+            CompanyValidator companyValidator) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
+        this.companyValidator = companyValidator;
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
@@ -69,6 +72,9 @@ public class StrikeOffPartnerWithdrawalsService {
 
         LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
+
+        // Validate company before persistence and publishing
+        companyValidator.validateCompany(companyNumber, request.getSubmissionCompanyName());
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, PARTNER_ORGANISATION, withdrawalId, etag);

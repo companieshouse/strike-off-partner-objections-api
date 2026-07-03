@@ -1,10 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import uk.gov.companieshouse.api.InternalApiClient;
@@ -21,8 +19,6 @@ public class ApplicationConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    @Primary
-    @ConditionalOnProperty(name = "api.client.enabled", havingValue = "true", matchIfMissing = true)
     public InternalApiClient internalApiClient() {
         return ApiSdkManager.getPrivateSDK();
     }

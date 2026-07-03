@@ -7,12 +7,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.TestApiClientConfiguration;
+import uk.gov.companieshouse.api.InternalApiClient;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,8 +25,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         webEnvironment = SpringBootTest.WebEnvironment.MOCK
 )
 @AutoConfigureMockMvc
-@Import(TestApiClientConfiguration.class)
 class StrikeOffPartnerObjectionsApiApplicationTests {
+
+    @MockitoBean
+    private InternalApiClient internalApiClient;
+
+    @MockitoBean
+    private AuthenticationInterceptor authenticationInterceptor;
 
     @Autowired
     private WebApplicationContext applicationContext;
@@ -32,6 +40,7 @@ class StrikeOffPartnerObjectionsApiApplicationTests {
 
     @BeforeEach
     void setUp() {
+        when(authenticationInterceptor.preHandle(any(), any(), any())).thenReturn(true);
         this.mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
     }
 

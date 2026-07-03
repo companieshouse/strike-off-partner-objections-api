@@ -114,6 +114,7 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(toErrorCode(statusCode), DEFAULT_RESPONSE_STATUS_MESSAGE));
     }
 
+    @SuppressWarnings("unused")
     @ExceptionHandler(SocketTimeoutException.class)
     public ResponseEntity<ApiError> handleSocketTimeoutException(SocketTimeoutException ex) {
         return new ResponseEntity<>(
@@ -121,6 +122,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.GATEWAY_TIMEOUT);
     }
 
+    @SuppressWarnings("unused")
     @ExceptionHandler(IOException.class)
     public ResponseEntity<ApiError> handleIOException(IOException ex) {
         return new ResponseEntity<>(
@@ -148,6 +150,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 new ApiError(INTERNAL_SERVER_ERROR_CODE, INTERNAL_SERVER_ERROR_MESSAGE),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @SuppressWarnings("unused")
+    @ExceptionHandler(CompanyValidationException.class)
+    public ResponseEntity<ApiError> handleCompanyValidationException(CompanyValidationException ex) {
+        return badRequest(ex.getErrorCode());
     }
 
     @ExceptionHandler(RuntimeException.class)
