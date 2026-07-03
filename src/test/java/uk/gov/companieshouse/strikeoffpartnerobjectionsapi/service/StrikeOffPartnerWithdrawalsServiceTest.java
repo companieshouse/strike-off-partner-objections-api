@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -172,7 +171,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         CompanyValidationException validationException =
             new CompanyValidationException("Company not found", "COMPANY_NUMBER_NOT_EXIST");
 
-        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        when(companyValidator.validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName()))
+                .thenThrow(validationException);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
@@ -188,7 +188,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         CompanyValidationException validationException =
             new CompanyValidationException("Company name mismatch", "SUBMISSION_COMPANY_NAME_MISMATCH");
 
-        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        when(companyValidator.validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName()))
+                .thenThrow(validationException);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
@@ -203,7 +204,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         CompanyValidationException validationException =
             new CompanyValidationException("Company does not have active proposal to strike off", "INVALID_COMPANY_STATUS");
 
-        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        when(companyValidator.validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName()))
+                .thenThrow(validationException);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
