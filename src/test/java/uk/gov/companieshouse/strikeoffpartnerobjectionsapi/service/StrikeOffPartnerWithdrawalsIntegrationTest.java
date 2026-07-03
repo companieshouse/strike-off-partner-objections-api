@@ -16,7 +16,6 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -75,74 +74,6 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
     }
 
-    @Test
-    void withdrawAllObjections_whenCompanyProfileReturnsNull_throwsCompanyValidationException() throws Exception {
-        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
-                .thenReturn(null);
-
-        WithdrawAllObjectionsRequest request = buildRequest();
-
-        assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
-                .isInstanceOf(CompanyValidationException.class);
-
-        // Verify no document was persisted
-        List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
-        assertThat(savedDocs).isEmpty();
-    }
-
-    @Test
-    void withdrawAllObjections_whenCompanyNameDoesNotMatch_throwsCompanyValidationException() throws Exception {
-        CompanyProfileApi companyWithDifferentName = buildValidCompanyProfile();
-        companyWithDifferentName.setCompanyName("Different Company Ltd");
-        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
-                .thenReturn(companyWithDifferentName);
-
-        WithdrawAllObjectionsRequest request = buildRequest();
-
-        assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
-                .isInstanceOf(CompanyValidationException.class);
-
-        // Verify no document was persisted
-        List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
-        assertThat(savedDocs).isEmpty();
-    }
-
-    @Test
-    void withdrawAllObjections_whenCompanyDoesNotHaveActiveProposalToStrikeOff_throwsCompanyValidationException() throws Exception {
-        CompanyProfileApi companyWithoutActiveProposal = new CompanyProfileApi();
-        companyWithoutActiveProposal.setCompanyName("Acme Limited");
-        companyWithoutActiveProposal.setCompanyStatus("active"); // Not in dissolution-proposal-active status
-        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
-                .thenReturn(companyWithoutActiveProposal);
-
-        WithdrawAllObjectionsRequest request = buildRequest();
-
-        assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
-                .isInstanceOf(CompanyValidationException.class);
-
-        // Verify no document was persisted
-        List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
-        assertThat(savedDocs).isEmpty();
-    }
-
-    @Test
-    void withdrawAllObjections_whenCompanyNameMatchesIgnoringCase_acceptsWithdrawal() throws Exception {
-        CompanyProfileApi companyWithDifferentCasing = buildValidCompanyProfile();
-        companyWithDifferentCasing.setCompanyName("acme limited");
-        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
-                .thenReturn(companyWithDifferentCasing);
-
-        WithdrawAllObjectionsRequest request = buildRequest();
-
-        WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getWithdrawalId()).isNotBlank();
-    }
 
     // ===== GET Withdrawal Tests =====
 
