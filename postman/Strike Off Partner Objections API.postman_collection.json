@@ -23,10 +23,9 @@
                   "});",
                   "pm.test(\"stores objection_id for follow-up GET\", function () {",
                   "  var body = pm.response.json();",
-                  "  var objectionId = body.objection_id || body.objectionId;",
-                  "  pm.expect(objectionId).to.exist;",
-                  "  pm.collectionVariables.set(\"objection_id\", objectionId);",
-                  "  pm.collectionVariables.set(\"objectionId\", objectionId);",
+                  "  var objection_id = body.objection_id || body.objectionId;",
+                  "  pm.expect(objection_id).to.exist;",
+                  "  pm.collectionVariables.set(\"objection_id\", objection_id);",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -66,7 +65,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -667,6 +666,238 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "400 - Company Number Does Not Exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is COMPANY_NUMBER_NOT_EXIST\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"COMPANY_NUMBER_NOT_EXIST\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{nonExistentCompanyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{nonExistentCompanyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Submission Company Name Mismatch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is SUBMISSION_COMPANY_NAME_MISMATCH\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"SUBMISSION_COMPANY_NAME_MISMATCH\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{mismatchedSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Invalid Company Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_COMPANY_TYPE\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_COMPANY_TYPE\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{invalidTypeSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{invalidTypeCompanyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{invalidTypeCompanyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Invalid Company Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_COMPANY_STATUS\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_COMPANY_STATUS\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{inactiveProposalCompanyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -761,10 +992,9 @@
               "});",
               "pm.test(\"stores withdrawal_id for follow-up GET\", function () {",
               "  var body = pm.response.json();",
-              "  var withdrawalId = body.withdrawal_id || body.withdrawalId;",
-              "  pm.expect(withdrawalId).to.exist;",
-              "  pm.collectionVariables.set(\"withdrawal_id\", withdrawalId);",
-              "  pm.collectionVariables.set(\"withdrawalId\", withdrawalId);",
+              "  var withdrawal_id = body.withdrawal_id || body.withdrawalId;",
+              "  pm.expect(withdrawal_id).to.exist;",
+              "  pm.collectionVariables.set(\"withdrawal_id\", withdrawal_id);",
               "});"
             ],
             "type": "text/javascript",
@@ -930,16 +1160,36 @@
       "value": "12345678"
     },
     {
-      "key": "objectionId",
-      "value": "objection-123"
+      "key": "nonExistentCompanyNumber",
+      "value": "00000000"
+    },
+    {
+      "key": "invalidTypeCompanyNumber",
+      "value": "12345679"
+    },
+    {
+      "key": "inactiveProposalCompanyNumber",
+      "value": "12345680"
+    },
+    {
+      "key": "validSubmissionCompanyName",
+      "value": "ACME LTD"
+    },
+    {
+      "key": "mismatchedSubmissionCompanyName",
+      "value": "THIS NAME SHOULD NOT MATCH"
+    },
+    {
+      "key": "invalidTypeSubmissionCompanyName",
+      "value": "INVALID TYPE COMPANY LTD"
+    },
+    {
+      "key": "inactiveProposalSubmissionCompanyName",
+      "value": "INVALID STATUS COMPANY LTD"
     },
     {
       "key": "objection_id",
-      "value": "replace-with-created-objection-id"
-    },
-    {
-      "key": "withdrawalId",
-      "value": "replace-with-created-withdrawal-id"
+      "value": "objection-123"
     },
     {
       "key": "withdrawal_id",
@@ -951,7 +1201,7 @@
     },
     {
       "key": "auth_token",
-      "value": ""
+      "value": "87a4d3e6-b448-421c-b000-8208e2ee3c92"
     },
     {
       "key": "contentTypeJson",
