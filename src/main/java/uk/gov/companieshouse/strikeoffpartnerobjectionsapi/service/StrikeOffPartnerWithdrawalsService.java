@@ -73,7 +73,9 @@ public class StrikeOffPartnerWithdrawalsService {
         LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
 
-        // Validate company before persistence and publishing
+        // Validate company before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a CompanyValidationException on failure to stop processing.
         companyValidator.validateCompany(companyNumber, request.getSubmissionCompanyName());
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(

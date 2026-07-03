@@ -2,7 +2,6 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -84,7 +83,7 @@ class CompanyValidatorTest {
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
-        assertTrue(companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+        companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME);
     }
 
     @Test
@@ -125,7 +124,7 @@ class CompanyValidatorTest {
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
-        assertTrue(companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+        companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME);
     }
 
     @Test
