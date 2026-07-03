@@ -45,7 +45,9 @@ public class StrikeOffPartnerObjectionService {
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
-        // Validate company before persistence and publishing
+        // Validate company before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a CompanyValidationException on failure to stop processing.
         companyValidator.validateCompany(companyNumber, createObjectionRequest.getSubmissionCompanyName());
 
         final String objectionId = UUID.randomUUID().toString();
