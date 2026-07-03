@@ -11,10 +11,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
-import com.google.api.client.http.HttpHeaders;
-import com.google.api.client.http.HttpResponseException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -24,17 +23,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
-import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
-import uk.gov.companieshouse.api.error.ApiErrorResponseException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
@@ -54,12 +49,13 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Mock
     private ObjectionResponseMapper objectionResponseMapper;
-
-    @Mock
-    private CompanyProfileService companyProfileService;
     
     @Mock
     private ObjectionKafkaProducer objectionKafkaProducer;
+
+    @Mock
+    private CompanyValidator companyValidator;
+
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
     @BeforeEach
@@ -68,14 +64,12 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRepository,
                 objectionRequestMapper,
                 objectionResponseMapper,
-                companyProfileService,
-                objectionKafkaProducer
-
+                objectionKafkaProducer,
+                companyValidator
         );
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -106,7 +100,6 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenKafkaPublishFails_marksEventAsFailedAndRethrows() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -132,7 +125,6 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenRepositoryInsertFails_throwsException() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         String companyNumber = "12345";
         ObjectionDocument mappedDocument = new ObjectionDocument();
@@ -158,7 +150,6 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenCalledMultipleTimes_generatesUniqueObjectionId() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         String companyNumber = "12345";
 
@@ -182,7 +173,6 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenSaveAfterPublishFails_stillReturnsSuccessResponse() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -207,7 +197,6 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenKafkaFailsAndSaveAfterFailureThrows_stillRethrowsOriginalKafkaException() {
-        stubCompanyProfile(validCompanyProfile());
         CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
@@ -261,80 +250,22 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjection_whenCompanyProfileApiReturns404_throwsCompanyNumberNotExistValidationError() {
+    void createObjection_callsCompanyValidator() {
         CreateObjectionRequest request = validCreateObjectionRequest();
-        ServiceException notFoundException = new ServiceException(
-                "Error retrieving company profile",
-                apiErrorResponseException(404, "Not Found"));
+        ObjectionDocument mappedDocument = new ObjectionDocument();
+        ObjectionDocument savedDocument = new ObjectionDocument();
+        BaseObjectionResponse response = new BaseObjectionResponse();
 
-        when(companyProfileService.getCompanyProfile("12345")).thenThrow(notFoundException);
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(request), eq("12345"), eq(PARTNER_ORGANISATION), anyString()))
+                .thenReturn(mappedDocument);
+        when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-6"));
+        when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(response);
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
-                .isInstanceOf(CompanyValidationException.class)
-                .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
-                .isEqualTo(StrikeOffPartnerObjectionService.COMPANY_NUMBER_NOT_EXIST);
+        strikeOffPartnerObjectionService.createObjection("12345", request);
 
-        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer, objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenSubmissionCompanyNameDoesNotMatch_throwsCompanyNameMismatchValidationError() {
-        CompanyProfileApi companyProfile = validCompanyProfile();
-        companyProfile.setCompanyName("Different Co Ltd");
-        stubCompanyProfile(companyProfile);
-        CreateObjectionRequest request = validCreateObjectionRequest();
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
-                .isInstanceOf(CompanyValidationException.class)
-                .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
-                .isEqualTo(StrikeOffPartnerObjectionService.SUBMISSION_COMPANY_NAME_MISMATCH);
-
-        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer, objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenCompanyTypeIsNotEligible_throwsInvalidCompanyTypeValidationError() {
-        CompanyProfileApi companyProfile = validCompanyProfile();
-        companyProfile.setType("charitable-incorporated-organisation");
-        stubCompanyProfile(companyProfile);
-        CreateObjectionRequest request = validCreateObjectionRequest();
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
-                .isInstanceOf(CompanyValidationException.class)
-                .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
-                .isEqualTo(StrikeOffPartnerObjectionService.INVALID_COMPANY_TYPE);
-
-        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer, objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenCompanyHasNoActiveStrikeOffProposal_throwsInvalidCompanyStatusValidationError() {
-        CompanyProfileApi companyProfile = validCompanyProfile();
-        companyProfile.setCompanyStatusDetail("active");
-        stubCompanyProfile(companyProfile);
-        CreateObjectionRequest request = validCreateObjectionRequest();
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
-                .isInstanceOf(CompanyValidationException.class)
-                .extracting(ex -> ((CompanyValidationException) ex).getErrorCode())
-                .isEqualTo(StrikeOffPartnerObjectionService.INVALID_COMPANY_STATUS);
-
-        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer, objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenCompanyProfileApiIsUnavailable_propagatesServiceException() {
-        CreateObjectionRequest request = validCreateObjectionRequest();
-        ServiceException downstreamException = new ServiceException(
-                "Error retrieving company profile",
-                apiErrorResponseException(503, "Service Unavailable"));
-
-        when(companyProfileService.getCompanyProfile("12345")).thenThrow(downstreamException);
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection("12345", request))
-                .isSameAs(downstreamException);
-
-        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer, objectionResponseMapper);
+        verify(companyValidator, times(1)).validateCompany("12345", request.getSubmissionCompanyName());
     }
 
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
@@ -348,29 +279,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 .build();
     }
 
-    private void stubCompanyProfile(CompanyProfileApi companyProfileApi) {
-        when(companyProfileService.getCompanyProfile(anyString())).thenReturn(companyProfileApi);
-    }
-
     private CreateObjectionRequest validCreateObjectionRequest() {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setSubmissionCompanyName("Test Company Ltd");
         return request;
-    }
-
-    private CompanyProfileApi validCompanyProfile() {
-        CompanyProfileApi company = new CompanyProfileApi();
-        company.setCompanyName("Test Company Ltd");
-        company.setType("ltd");
-        company.setCompanyStatusDetail("active-proposal-to-strike-off");
-        return company;
-    }
-
-    private ApiErrorResponseException apiErrorResponseException(int statusCode, String statusMessage) {
-        HttpResponseException.Builder builder = new HttpResponseException.Builder(
-                statusCode,
-                statusMessage,
-                new HttpHeaders());
-        return new ApiErrorResponseException(builder);
     }
 }
