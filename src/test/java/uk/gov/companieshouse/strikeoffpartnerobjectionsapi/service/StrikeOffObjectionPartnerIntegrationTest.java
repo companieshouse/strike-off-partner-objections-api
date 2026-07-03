@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
@@ -23,13 +24,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @SpringBootTest
 @Tag("integration-test")
 class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
-    private static final String COMPANY_NUMBER = "01234567";
 
+    private static final String COMPANY_NUMBER = "01234567";
+    private static final String SECOND_COMPANY_NUMBER = "87654321";
     private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Autowired
@@ -39,17 +42,39 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     private ObjectionRepository objectionRepository;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         objectionRepository.deleteAll();
         // Drain any leftover messages from previous tests
         testConsumer.poll(Duration.ofMillis(100));
+
+        // Default stubs used by tests that are not explicitly exercising validation failures.
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
+        when(internalApiClient.company().get("/company/" + SECOND_COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
+    }
+
+    @Test
+    void createObjections_whenCompanyProfileReturnsValidCompany_acceptsObjection() throws Exception {
+        CompanyProfileApi validCompany = buildValidCompanyProfile();
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(validCompany);
+
+        CreateObjectionRequest request = buildValidRequest();
+
+        BaseObjectionResponse response =
+                strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getObjectionId()).isNotBlank();
+        assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
     }
 
     @Test
     void createObjection_whenRequestIsValid_persistsDocumentInMongo() {
         CreateObjectionRequest request = buildValidRequest();
 
-        Instant before = Instant.now();
+        Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         BaseObjectionResponse response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
         Instant after = Instant.now();
 
@@ -172,5 +197,12 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
         return request;
+    }
+
+    private CompanyProfileApi buildValidCompanyProfile() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName("Acme Limited");
+        companyProfile.setCompanyStatus("dissolution-proposal-active");
+        return companyProfile;
     }
 }
