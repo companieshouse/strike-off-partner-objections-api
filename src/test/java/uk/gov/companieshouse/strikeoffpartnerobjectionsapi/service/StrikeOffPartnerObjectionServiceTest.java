@@ -11,6 +11,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import java.util.UUID;
@@ -22,11 +24,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
-import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
@@ -49,12 +51,15 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Mock
     private ObjectionResponseMapper objectionResponseMapper;
-
-    @Mock
-    private CompanyProfileService companyProfileService;
     
     @Mock
     private ObjectionKafkaProducer objectionKafkaProducer;
+
+    @Mock
+    private CompanyValidator companyValidator;
+    
+    private static final String VALID_COMPANY_NUMBER = "12345";
+
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
     @BeforeEach
@@ -63,18 +68,16 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRepository,
                 objectionRequestMapper,
                 objectionResponseMapper,
-                companyProfileService,
-                objectionKafkaProducer
-
+                objectionKafkaProducer,
+                companyValidator
         );
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
-        stubCompanyProfile();
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
-        String companyNumber = "12345";
+        String companyNumber = VALID_COMPANY_NUMBER;
 
         when(objectionRequestMapper.toObjectionDocument(
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString()))
@@ -101,10 +104,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenKafkaPublishFails_marksEventAsFailedAndRethrows() {
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
-        String companyNumber = "12345";
+        String companyNumber = VALID_COMPANY_NUMBER;
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-2", new RuntimeException("boom"));
 
@@ -126,9 +129,8 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenRepositoryInsertFails_throwsException() {
-        stubCompanyProfile();
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
-        String companyNumber = "12345";
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
+        String companyNumber = VALID_COMPANY_NUMBER;
         ObjectionDocument mappedDocument = new ObjectionDocument();
         DataAccessResourceFailureException cause =
                 new DataAccessResourceFailureException("mongo insert failed");
@@ -152,9 +154,8 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenCalledMultipleTimes_generatesUniqueObjectionId() {
-        stubCompanyProfile();
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
-        String companyNumber = "12345";
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
+        String companyNumber = VALID_COMPANY_NUMBER;
 
         ArgumentCaptor<String> objectionIdCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -176,10 +177,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenSaveAfterPublishFails_stillReturnsSuccessResponse() {
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
-        String companyNumber = "12345";
+        String companyNumber = VALID_COMPANY_NUMBER;
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
         DataAccessResourceFailureException saveException =
                 new DataAccessResourceFailureException("mongo update failed");
@@ -200,10 +201,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void createObjection_whenKafkaFailsAndSaveAfterFailureThrows_stillRethrowsOriginalKafkaException() {
-        CreateObjectionRequest requestDto = new CreateObjectionRequest();
+        CreateObjectionRequest requestDto = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();
         ObjectionDocument savedDocument = new ObjectionDocument();
-        String companyNumber = "12345";
+        String companyNumber = VALID_COMPANY_NUMBER;
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-5", new RuntimeException("boom"));
         DataAccessResourceFailureException saveException =
@@ -224,7 +225,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void getObjection_whenObjectionExists_returnsObjection() {
-        String companyNumber = "12345";
+        String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
         ObjectionDocument document = new ObjectionDocument();
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
@@ -252,6 +253,41 @@ class StrikeOffPartnerObjectionServiceTest {
         verifyNoInteractions(objectionResponseMapper);
     }
 
+    @Test
+    void createObjection_callsCompanyValidator() {
+        CreateObjectionRequest request = validCreateObjectionRequest();
+        ObjectionDocument mappedDocument = new ObjectionDocument();
+        ObjectionDocument savedDocument = new ObjectionDocument();
+        BaseObjectionResponse response = new BaseObjectionResponse();
+
+        when(objectionRequestMapper.toObjectionDocument(
+                eq(request), eq(VALID_COMPANY_NUMBER), eq(PARTNER_ORGANISATION), anyString()))
+                .thenReturn(mappedDocument);
+        when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
+        when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-6"));
+        when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(response);
+
+        strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request);
+
+        verify(companyValidator, times(1)).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
+    }
+
+    @Test
+    void createObjection_whenValidatorReturnsInvalid_doesNotProceed() {
+        CreateObjectionRequest request = validCreateObjectionRequest();
+        CompanyValidationException validationException =
+                new CompanyValidationException("Company not found", "COMPANY_NUMBER_NOT_EXIST");
+
+        doThrow(validationException).when(companyValidator).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
+                .isSameAs(validationException);
+
+        verify(companyValidator).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
         return StrikeOffPartnerObjections.newBuilder()
                 .setEventId(eventId)
@@ -263,7 +299,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 .build();
     }
 
-    private void stubCompanyProfile() {
-        when(companyProfileService.getCompanyProfile(anyString())).thenReturn(new CompanyProfileApi());
+    private CreateObjectionRequest validCreateObjectionRequest() {
+        CreateObjectionRequest request = new CreateObjectionRequest();
+        request.setSubmissionCompanyName("Test Company Ltd");
+        return request;
     }
 }

@@ -26,33 +26,30 @@ public class StrikeOffPartnerObjectionService {
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
-    private final CompanyProfileService companyProfileService;
     private final ObjectionKafkaProducer objectionKafkaProducer;
+    private final CompanyValidator companyValidator;
 
     public StrikeOffPartnerObjectionService(
             ObjectionRepository objectionRepository,
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
-            CompanyProfileService companyProfileService,
-            ObjectionKafkaProducer objectionKafkaProducer) {
+            ObjectionKafkaProducer objectionKafkaProducer,
+            CompanyValidator companyValidator) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
-        this.companyProfileService = companyProfileService;
         this.objectionKafkaProducer = objectionKafkaProducer;
+        this.companyValidator = companyValidator;
     }
-
-    public boolean validateRequest(String companyNumber) {
-        //validation logic as parts of TRACS-64
-        companyProfileService.getCompanyProfile(companyNumber);
-        return true;
-    }
-
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
 
-        validateRequest(companyNumber);
+        // Validate company before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a CompanyValidationException on failure to stop processing.
+        companyValidator.validateCompany(companyNumber, createObjectionRequest.getSubmissionCompanyName());
+
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
