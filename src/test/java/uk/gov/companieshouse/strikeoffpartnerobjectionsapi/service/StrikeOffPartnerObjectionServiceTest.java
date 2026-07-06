@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
@@ -38,6 +39,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRespo
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateObjectionProcessingStatusRequest;
 
 @Tag("unit-test")
 @ExtendWith(MockitoExtension.class)
@@ -286,6 +288,151 @@ class StrikeOffPartnerObjectionServiceTest {
 
         verify(companyValidator).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
         verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenSubmitted_updatesToProcessing() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("objection-processing");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+        when(objectionResponseMapper.toObjectionApiResponse(existing)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request);
+
+        assertThat(result).isSameAs(expectedResponse);
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-processing");
+        assertThat(captor.getValue().getProcessingStatusChangedAt()).isNotNull();
+        assertThat(captor.getValue().getEtag()).isEqualTo("etag-2");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenAlreadyProcessing_returnsResponseWithoutSaving() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("objection-processing");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionResponseMapper.toObjectionApiResponse(existing)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request);
+
+        assertThat(result).isSameAs(expectedResponse);
+        verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        verifyNoInteractions(objectionRequestMapper);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenCurrentStatusIsInvalid_throwsConflict() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("objection-processing");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-rejected");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode.value")
+                .isEqualTo(409);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessing_updatesToAccepted() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("objection-accepted");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+        when(objectionResponseMapper.toObjectionApiResponse(existing)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request);
+
+        assertThat(result).isSameAs(expectedResponse);
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-accepted");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessing_updatesToRejected() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("objection-rejected");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+        BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-4");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+        when(objectionResponseMapper.toObjectionApiResponse(existing)).thenReturn(expectedResponse);
+
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request);
+
+        assertThat(result).isSameAs(expectedResponse);
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-rejected");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenRequestedStatusIsUnsupported_throwsBadRequest() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionProcessingStatusRequest request = new UpdateObjectionProcessingStatusRequest();
+        request.setProcessingStatus("invalid-status");
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode.value")
+                .isEqualTo(400);
     }
 
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {

@@ -5,10 +5,16 @@ import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerObjectionsInterf
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateObjectionProcessingStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerObjectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
 
 @RestController
 public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObjectionsInterface {
@@ -40,6 +46,22 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
         } catch (ObjectionNotFoundException ex) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+        }
+    }
+
+    @PostMapping("/company/{companyNumber}/strike-off-partner-objections/{objectionId}/status")
+    public ResponseEntity<BaseObjectionResponse> updateObjectionProcessingStatus(
+            @PathVariable final String companyNumber,
+            @PathVariable final String objectionId,
+            @Valid @RequestBody final UpdateObjectionProcessingStatusRequest updateStatusRequest) {
+        try {
+            BaseObjectionResponse response = strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                    companyNumber,
+                    objectionId,
+                    updateStatusRequest);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (ObjectionNotFoundException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
         }
     }
 }
