@@ -24,6 +24,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
@@ -351,6 +353,47 @@ class StrikeOffPartnerObjectionServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode.value")
                 .isEqualTo(409);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenRequestedStatusMissing_throwsBadRequest() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request));
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ex.getReason()).isEqualTo("Unsupported status=null");
+    }
+
+    @Test
+    void parseRequestedStatus_whenStatusIsEmpty_throwsBadRequest() {
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", ""));
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ex.getReason()).isEqualTo("Unsupported status=");
+    }
+
+    @Test
+    void parseRequestedStatus_whenStatusIsUnsupported_throwsBadRequest() {
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> ReflectionTestUtils.invokeMethod(
+                        strikeOffPartnerObjectionService,
+                        "parseRequestedStatus",
+                        "unsupported-status"));
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ex.getReason()).isEqualTo("Unsupported status=unsupported-status");
     }
 
     @Test

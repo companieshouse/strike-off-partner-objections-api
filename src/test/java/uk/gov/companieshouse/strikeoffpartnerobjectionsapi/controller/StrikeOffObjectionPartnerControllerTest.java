@@ -195,6 +195,33 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
+    void updateObjectionProcessingStatus_whenProcessingStatusIsMissing_returnsBadRequest() throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessingStatusIsEmpty_returnsBadRequest() throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessingStatusIsUnsupported_returnsBadRequest() throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"unsupported-status\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
+    }
+
+    @Test
     void createObjection_whenBodyIsMissing_returnsMissingRequiredParameter() throws Exception {
         postCreateObjectionWithoutBody()
                 .andExpect(status().isBadRequest())
