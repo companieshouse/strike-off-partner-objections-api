@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
+import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
@@ -18,7 +19,6 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaP
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateObjectionProcessingStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 import static java.lang.String.format;
@@ -125,10 +125,10 @@ public class StrikeOffPartnerObjectionService {
     }
 
 
-    public BaseObjectionResponse updateObjectionProcessingStatus(
+    public void updateObjectionProcessingStatus(
             final String companyNumber,
             final String objectionId,
-            final UpdateObjectionProcessingStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
+            final UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
 
         LOGGER.info(format("Attempting to update objection processing status: objectionId=%s, companyNumber=%s",
                 objectionId, companyNumber));
@@ -141,12 +141,12 @@ public class StrikeOffPartnerObjectionService {
 
         String requestedStatusValue = updateStatusRequest.getProcessingStatus() == null
                 ? null
-                : updateStatusRequest.getProcessingStatus().trim();
+                : updateStatusRequest.getProcessingStatus().getValue().trim();
         ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);
 
         ObjectionProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
         if (currentStatus == requestedStatus) {
-            return objectionResponseMapper.toObjectionApiResponse(existingDocument);
+            return;
         }
 
         if (!isAllowedTransition(currentStatus, requestedStatus)) {
@@ -163,7 +163,6 @@ public class StrikeOffPartnerObjectionService {
             ObjectionDocument updatedObjection = objectionRepository.save(existingDocument);
             LOGGER.info(format("Objection processing status updated successfully: objectionId=%s, companyNumber=%s",
                     updatedObjection.getObjectionId(), updatedObjection.getCompanyNumber()));
-            return objectionResponseMapper.toObjectionApiResponse(updatedObjection);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist updated objection processing status", ex);
         }
@@ -174,7 +173,7 @@ public class StrikeOffPartnerObjectionService {
             return ObjectionProcessingStatus.fromValue(requestedStatusValue);
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    format("Unsupported processing status=%s", requestedStatusValue), ex);
+                    format("Unsupported status=%s", requestedStatusValue), ex);
         }
     }
 
