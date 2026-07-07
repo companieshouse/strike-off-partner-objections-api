@@ -222,6 +222,18 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
+    void updateObjectionProcessingStatus_whenServiceThrowsResponseStatusException_preservesStatusAndReason() throws Exception {
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Invalid status transition"))
+                .when(strikeOffPartnerObjectionService)
+                .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
+
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error_code").value("conflict"))
+                .andExpect(jsonPath("$.message").value("Invalid status transition"));
+    }
+
+    @Test
     void createObjection_whenBodyIsMissing_returnsMissingRequiredParameter() throws Exception {
         postCreateObjectionWithoutBody()
                 .andExpect(status().isBadRequest())
