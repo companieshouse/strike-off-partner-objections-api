@@ -334,7 +334,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void updateObjectionProcessingStatus_whenCurrentStatusIsInvalid_throwsConflict() {
+    void updateObjectionProcessingStatus_whenTransitionNotAllowed_throwsConflict() {
         String companyNumber = "12345";
         String objectionId = "objection-1";
         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
