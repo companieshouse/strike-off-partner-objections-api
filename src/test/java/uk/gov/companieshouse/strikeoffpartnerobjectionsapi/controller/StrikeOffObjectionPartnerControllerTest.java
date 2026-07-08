@@ -194,27 +194,15 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.message").value("Objection not found"));
     }
 
-    @Test
-    void updateObjectionProcessingStatus_whenProcessingStatusIsMissing_returnsBadRequest() throws Exception {
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{}")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
-
-        verifyNoInteractions(strikeOffPartnerObjectionService);
-    }
-
-    @Test
-    void updateObjectionProcessingStatus_whenProcessingStatusIsEmpty_returnsBadRequest() throws Exception {
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"\"}")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
-
-        verifyNoInteractions(strikeOffPartnerObjectionService);
-    }
-
-    @Test
-    void updateObjectionProcessingStatus_whenProcessingStatusIsUnsupported_returnsBadRequest() throws Exception {
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"unsupported-status\"}")
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}",
+            "{\"processing_status\":\"\"}",
+            "{\"processing_status\":\"unsupported-status\"}"
+    })
+    void updateObjectionProcessingStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload)
+            throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
 

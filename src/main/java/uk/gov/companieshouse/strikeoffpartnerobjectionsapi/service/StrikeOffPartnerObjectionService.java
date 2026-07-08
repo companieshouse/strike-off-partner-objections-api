@@ -25,7 +25,6 @@ import static java.lang.String.format;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_ACCEPTED;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_PROCESSING;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_REJECTED;
-import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_SUBMITTED;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -139,9 +138,7 @@ public class StrikeOffPartnerObjectionService {
                     format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
         }
 
-        String requestedStatusValue = updateStatusRequest.getProcessingStatus() == null
-                ? null
-                : updateStatusRequest.getProcessingStatus().getValue().trim();
+        String requestedStatusValue = updateStatusRequest.getProcessingStatus().getValue().trim();
         ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);
 
         ObjectionProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
