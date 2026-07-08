@@ -24,8 +24,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
+import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
@@ -38,6 +43,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRespo
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
+
 
 @Tag("unit-test")
 @ExtendWith(MockitoExtension.class)
@@ -288,6 +294,130 @@ class StrikeOffPartnerObjectionServiceTest {
         verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer);
     }
 
+    @Test
+    void updateObjectionProcessingStatus_whenSubmitted_updatesToProcessing() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-processing");
+        assertThat(captor.getValue().getProcessingStatusChangedAt()).isNotNull();
+        assertThat(captor.getValue().getEtag()).isEqualTo("etag-2");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenAlreadyProcessing_returnsWithoutSaving() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        verifyNoInteractions(objectionRequestMapper);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenTransitionNotAllowed_throwsConflict() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-rejected");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                companyNumber,
+                objectionId,
+                request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode.value")
+                .isEqualTo(409);
+    }
+
+    @Test
+    void parseRequestedStatus_whenStatusIsEmpty_throwsBadRequest() {
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", ""));
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ex.getReason()).isEqualTo("Unsupported status=");
+    }
+
+    @Test
+    void parseRequestedStatus_whenStatusIsUnsupported_throwsBadRequest() {
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> ReflectionTestUtils.invokeMethod(
+                        strikeOffPartnerObjectionService,
+                        "parseRequestedStatus",
+                        "unsupported-status"));
+
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(ex.getReason()).isEqualTo("Unsupported status=unsupported-status");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessing_updatesToAccepted() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-accepted");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenProcessing_updatesToRejected() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_REJECTED);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-4");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+        verify(objectionRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-rejected");
+    }
+    
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
         return StrikeOffPartnerObjections.newBuilder()
                 .setEventId(eventId)

@@ -61,6 +61,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String OBJECTION_ID = "objection-123";
     private static final String CREATE_OBJECTION_URL = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections";
     private static final String GET_OBJECTION_URL = "/company/%s/strike-off-partner-objections/%s";
+    private static final String UPDATE_STATUS_URL = "/internal/company/%s/strike-off-partner-objections/%s/status";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
     private static final String VALID_REASON = "compliance-issue-outstanding";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
@@ -170,6 +171,54 @@ class StrikeOffObjectionPartnerControllerTest {
         // Proving here that the objection ID is valid; it is the company number that causes the 404.
         performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenRequestIsValid_returnsNoContent() throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+                .andExpect(status().isNoContent());
+
+        verify(strikeOffPartnerObjectionService)
+                .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenObjectionDoesNotExist_returnsNotFound() throws Exception {
+        org.mockito.Mockito.doThrow(new ObjectionNotFoundException("Objection not found"))
+                .when(strikeOffPartnerObjectionService)
+                .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
+
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Objection not found"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}",
+            "{\"processing_status\":\"\"}",
+            "{\"processing_status\":\"unsupported-status\"}"
+    })
+    void updateObjectionProcessingStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload)
+            throws Exception {
+        postUpdateObjectionStatus(COMPANY_NUMBER, payload)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenServiceThrowsResponseStatusException_preservesStatusAndReason() throws Exception {
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Invalid status transition"))
+                .when(strikeOffPartnerObjectionService)
+                .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
+
+        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error_code").value("conflict"))
+                .andExpect(jsonPath("$.message").value("Invalid status transition"));
     }
 
     @Test
@@ -514,6 +563,15 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key"));
+    }
+
+    private ResultActions postUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
+        return mockMvc.perform(post(String.format(UPDATE_STATUS_URL, companyNumber, OBJECTION_ID))
+                .contentType(APPLICATION_JSON)
+                .header("X-Request-Id", "test-request-id")
+                .header("ERIC-Identity-Type", "key")
+                .header("CHS_API_KEY", "test-api-key")
+                .content(payload));
     }
 
     private static Stream<Arguments> invalidEmailCases() {

@@ -1,11 +1,16 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
+import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
+import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
@@ -17,6 +22,9 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocume
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 import static java.lang.String.format;
+import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_ACCEPTED;
+import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_PROCESSING;
+import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_REJECTED;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -99,8 +107,6 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-
-
     public BaseObjectionResponse getObjection(final String companyNumber,
                                                  final String objectionId) throws ObjectionNotFoundException {
 
@@ -108,9 +114,82 @@ public class StrikeOffPartnerObjectionService {
                 objectionId, companyNumber));
 
         ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
-        if (document == null) throw new ObjectionNotFoundException(format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
-        LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s", document.getObjectionId(), document.getCompanyNumber()));
+        if (document == null) throw new ObjectionNotFoundException(
+                format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
+        
+        LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s",
+                document.getObjectionId(), document.getCompanyNumber()));
+        
         return objectionResponseMapper.toObjectionApiResponse(document);
+    }
+
+
+    public void updateObjectionProcessingStatus(
+            final String companyNumber,
+            final String objectionId,
+            final UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
+
+        LOGGER.info(format("Attempting to update objection processing status: objectionId=%s, companyNumber=%s",
+                objectionId, companyNumber));
+
+        ObjectionDocument existingDocument = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        if (existingDocument == null) {
+            throw new ObjectionNotFoundException(
+                    format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
+        }
+
+        String requestedStatusValue = updateStatusRequest.getProcessingStatus().getValue().trim();
+        ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);
+
+        ObjectionProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
+        if (currentStatus == requestedStatus) {
+            return;
+        }
+
+        if (!isAllowedTransition(currentStatus, requestedStatus)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    format("Invalid status transition from %s to %s",
+                            currentStatus.getValue(), requestedStatus.getValue()));
+        }
+
+        existingDocument.setProcessingStatus(requestedStatus.getValue());
+        existingDocument.setProcessingStatusChangedAt(Instant.now());
+        existingDocument.setEtag(objectionRequestMapper.getEtag());
+
+        try {
+            ObjectionDocument updatedObjection = objectionRepository.save(existingDocument);
+            LOGGER.info(format("Objection processing status updated successfully: objectionId=%s, companyNumber=%s",
+                    updatedObjection.getObjectionId(), updatedObjection.getCompanyNumber()));
+        } catch (DataAccessException ex) {
+            throw new ObjectionPersistenceException("Failed to persist updated objection processing status", ex);
+        }
+    }
+
+    private ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
+        try {
+            return ObjectionProcessingStatus.fromValue(requestedStatusValue);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    format("Unsupported status=%s", requestedStatusValue), ex);
+        }
+    }
+
+    private ObjectionProcessingStatus parseCurrentStatus(String currentStatusValue) {
+        try {
+            return ObjectionProcessingStatus.fromValue(currentStatusValue);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    format("Invalid current processing status=%s", currentStatusValue), ex);
+        }
+    }
+
+    private boolean isAllowedTransition(ObjectionProcessingStatus currentStatus,
+                                        ObjectionProcessingStatus requestedStatus) {
+        return switch (currentStatus) {
+            case OBJECTION_SUBMITTED -> requestedStatus == OBJECTION_PROCESSING;
+            case OBJECTION_PROCESSING -> requestedStatus == OBJECTION_ACCEPTED || requestedStatus == OBJECTION_REJECTED;
+            case OBJECTION_ACCEPTED, OBJECTION_REJECTED -> false;
+        };
     }
 }
 
