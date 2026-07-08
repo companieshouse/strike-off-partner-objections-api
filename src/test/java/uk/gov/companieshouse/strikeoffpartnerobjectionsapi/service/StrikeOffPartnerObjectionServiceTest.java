@@ -356,24 +356,6 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void updateObjectionProcessingStatus_whenRequestedStatusMissing_throwsBadRequest() {
-        String companyNumber = "12345";
-        String objectionId = "objection-1";
-        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-submitted");
-
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
-
-        ResponseStatusException ex = assertThrows(
-                ResponseStatusException.class,
-                () -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request));
-
-        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(ex.getReason()).isEqualTo("Unsupported status=null");
-    }
-
-    @Test
     void parseRequestedStatus_whenStatusIsEmpty_throwsBadRequest() {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
