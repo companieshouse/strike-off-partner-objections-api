@@ -27,6 +27,9 @@ replay_pid*
 .idea/
 *.iml
 
+# macOS metadata
+.DS_Store
+
 # local application config
 application-local.properties
 
