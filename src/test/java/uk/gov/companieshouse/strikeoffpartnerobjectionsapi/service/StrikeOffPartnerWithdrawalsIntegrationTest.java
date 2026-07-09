@@ -341,7 +341,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     private CompanyProfileApi buildValidCompanyProfile() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("Acme Limited");
-        companyProfile.setCompanyStatus("dissolution-proposal-active");
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
         return companyProfile;
     }
 }
