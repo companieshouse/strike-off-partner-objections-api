@@ -8,6 +8,8 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceExce
 import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
+import java.util.Set;
+
 /**
  * Service for validating company-related information in withdrawal requests.
  * Validates that the company exists, the name matches, and it has an active proposal to strike off.
@@ -18,9 +20,25 @@ public class CompanyValidator {
     private static final String COMPANY_NUMBER_NOT_EXIST = "COMPANY_NUMBER_NOT_EXIST";
     private static final String SUBMISSION_COMPANY_NAME_MISMATCH = "SUBMISSION_COMPANY_NAME_MISMATCH";
     private static final String INVALID_COMPANY_STATUS = "INVALID_COMPANY_STATUS";
+    private static final String INVALID_COMPANY_TYPE = "INVALID_COMPANY_TYPE";
 
     // Status indicating a strike-off proposal exists for the company
-    private static final String DISSOLUTION_PROPOSAL_ACTIVE = "dissolution-proposal-active";
+    private static final String ACTIVE_PROPOSAL_TO_STRIKE_OFF = "active-proposal-to-strike-off";
+
+    // Allowed company types for strike-off withdrawals
+    private static final Set<String> ALLOWED_COMPANY_TYPES = Set.of(
+            "private-unlimited",
+            "ltd",
+            "plc",
+            "old-public-company",
+            "private-limited-guarant-nsc-limited-exemption",
+            "private-limited-guarant-nsc",
+            "private-limited-shares-section-30-exemption",
+            "llp",
+            "other",
+            "united-kingdom-societas",
+            "european-public-limited-liability-company-se"
+    );
 
     private final CompanyProfileService companyProfileService;
 
@@ -58,6 +76,14 @@ public class CompanyValidator {
                     SUBMISSION_COMPANY_NAME_MISMATCH);
         }
 
+        // Validate company type
+        if (!hasValidCompanyType(companyProfile)) {
+            throw new CompanyValidationException(
+                    format("Company has invalid type: companyNumber=%s, type=%s",
+                            companyNumber, companyProfile.getType()),
+                    INVALID_COMPANY_TYPE);
+        }
+
         // Validate company has active proposal to strike off
         if (!hasActiveProposalToStrikeOff(companyProfile)) {
             throw new CompanyValidationException(
@@ -70,6 +96,18 @@ public class CompanyValidator {
     }
 
     /**
+     * Checks if the company has a valid type.
+     * Only specific company types are allowed for strike-off withdrawals.
+     *
+     * @param companyProfile the company profile from the API
+     * @return true if the company type is in the allowed list, false otherwise
+     */
+    private boolean hasValidCompanyType(CompanyProfileApi companyProfile) {
+        String type = companyProfile.getType();
+        return type != null && ALLOWED_COMPANY_TYPES.contains(type);
+    }
+
+    /**
      * Checks if the company has an active proposal to strike off.
      * This is determined by checking the companyStatus field.
      *
@@ -78,7 +116,7 @@ public class CompanyValidator {
      */
     private boolean hasActiveProposalToStrikeOff(CompanyProfileApi companyProfile) {
         String status = companyProfile.getCompanyStatus();
-        return status != null && status.equals(DISSOLUTION_PROPOSAL_ACTIVE);
+        return status != null && status.equals(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
     }
 }
 

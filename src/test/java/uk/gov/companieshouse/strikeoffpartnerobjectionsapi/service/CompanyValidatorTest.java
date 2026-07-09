@@ -8,6 +8,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
@@ -79,17 +82,53 @@ class CompanyValidatorTest {
     void validateCompany_whenCompanyNameMatchesIgnoringCase_succeeds() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("acme ltd");
-        companyProfile.setCompanyStatus("dissolution-proposal-active");
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
         companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"private-unlimited", "ltd", "plc", "llp", "old-public-company",
+            "private-limited-guarant-nsc-limited-exemption", "private-limited-guarant-nsc",
+            "private-limited-shares-section-30-exemption", "other", "united-kingdom-societas",
+            "european-public-limited-liability-company-se"})
+    void validateCompany_whenCompanyTypeIsValid_succeeds(String validType) {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType(validType);
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"sole-trader", "partnership", "unregistered-company", "investment-entity"})
+    @NullSource
+    void validateCompany_whenCompanyTypeIsInvalidOrNull_throwsCompanyValidationException(String invalidType) {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType(invalidType);
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_TYPE", thrown.getErrorCode());
+    }
+
     @Test
     void validateCompany_whenCompanyDoesNotHaveActiveProposalToStrikeOff_throwsCompanyValidationException() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
         companyProfile.setCompanyStatus("active");
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
@@ -105,6 +144,7 @@ class CompanyValidatorTest {
     void validateCompany_whenCompanyStatusIsNull_throwsCompanyValidationException() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
         companyProfile.setCompanyStatus(null);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
@@ -120,7 +160,8 @@ class CompanyValidatorTest {
     void validateCompany_whenAllValidationsPass_succeeds() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
-        companyProfile.setCompanyStatus("dissolution-proposal-active");
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
