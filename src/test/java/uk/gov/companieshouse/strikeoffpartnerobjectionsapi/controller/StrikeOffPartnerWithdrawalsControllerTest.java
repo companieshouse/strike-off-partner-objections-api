@@ -47,6 +47,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
+    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private static final String VALID_WITHDRAWAL_REQUEST = """
             {
@@ -392,7 +393,14 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM)
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
+                        INVALID_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "DS01"),
+                        INVALID_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                                request.put("partner_objection_workstream", "a".repeat(101)),
+                        INVALID_WORKSTREAM)
         );
     }
 

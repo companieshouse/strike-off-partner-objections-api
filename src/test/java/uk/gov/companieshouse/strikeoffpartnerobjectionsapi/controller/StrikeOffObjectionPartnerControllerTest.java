@@ -70,6 +70,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
+    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -316,6 +317,22 @@ class StrikeOffObjectionPartnerControllerTest {
     void createObjection_whenReasonIsValid_returnsCreated(String reason) throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_objection_reason", reason);
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "individuals-and-small-business-compliance",
+            "wealthy-and-mid-sized-business-compliance",
+            "debt-management"
+    })
+    void createObjection_whenWorkstreamIsValid_returnsCreated(String workstream) throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.put("partner_objection_workstream", workstream);
 
         postCreateObjection(request)
                 .andExpect(status().isCreated());
@@ -614,7 +631,14 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
                         MISSING_WORKSTREAM),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM)
+                        MISSING_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", ""),
+                        INVALID_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_workstream", "DS01"),
+                        INVALID_WORKSTREAM),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                                request.put("partner_objection_workstream", "a".repeat(101)),
+                        INVALID_WORKSTREAM)
         );
     }
 

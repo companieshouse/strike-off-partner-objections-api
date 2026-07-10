@@ -609,6 +609,180 @@
           "response": []
         },
         {
+          "name": "400 - Blank Workstream (INVALID_WORKSTREAM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_WORKSTREAM\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_WORKSTREAM\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Invalid Workstream Value (INVALID_WORKSTREAM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_WORKSTREAM\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_WORKSTREAM\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"DS01\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "400 - Workstream Longer Than 100 (INVALID_WORKSTREAM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 400\", function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"error code is INVALID_WORKSTREAM\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.error_code).to.eql(\"INVALID_WORKSTREAM\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "400 - Multiple Errors (blank email + missing workstream)",
           "event": [
             {
