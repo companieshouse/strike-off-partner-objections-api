@@ -33,12 +33,14 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -417,6 +419,94 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasCause(cause);
 
         verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenValidStatus_updatesAndPersists() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-processing");
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-requested");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+        when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
+
+        ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+        verify(withdrawalRepository).save(captor.capture());
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("withdrawal-processing");
+        assertThat(captor.getValue().getEtag()).isNotBlank();
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenSameStatus_returnsWithoutSaving() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-requested");
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-requested");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
+
+        verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenWithdrawalMissing_throwsNotFound() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-processing");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalNotFoundException.class)
+                .hasMessageContaining(COMPANY_NUMBER)
+                .hasMessageContaining(WITHDRAWAL_ID);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenStatusUnsupported_throwsBadRequest() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("unsupported-status");
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-requested");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode.value")
+                .isEqualTo(400);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenRepositorySaveFails_throwsPersistenceException() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-processing");
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-requested");
+        DataAccessResourceFailureException cause =
+                new DataAccessResourceFailureException("mongo update failed");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+        when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(cause);
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to persist updated withdrawal processing status")
+                .hasCause(cause);
     }
 
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {

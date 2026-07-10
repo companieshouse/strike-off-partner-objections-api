@@ -7,11 +7,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
+import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -115,6 +118,55 @@ public class StrikeOffPartnerWithdrawalsService {
         } catch (DataAccessException saveEx) {
             LOGGER.error(format("Failed to update withdrawal event status: withdrawalId=%s",
                     persistedWithdrawal.getWithdrawalId()), saveEx);
+        }
+    }
+
+    public void updateWithdrawalProcessingStatus(
+            final String companyNumber,
+            final String withdrawalId,
+            final UpdateWithdrawalStatusRequest updateStatusRequest) {
+
+        LOGGER.info(format("Attempting to update withdrawal processing status: withdrawalId=%s, companyNumber=%s",
+                withdrawalId, companyNumber));
+
+        WithdrawalDocument existingDocument = withdrawalRepository
+                .findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId)
+                .orElseThrow(() -> new WithdrawalNotFoundException(
+                        format("Withdrawal not found for company number=%s, withdrawalId=%s", companyNumber, withdrawalId)));
+
+        WithdrawalProcessingStatus requestedStatus = parseRequestedStatus(updateStatusRequest.getProcessingStatus());
+        WithdrawalProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
+        if (currentStatus == requestedStatus) {
+            return;
+        }
+
+        existingDocument.setProcessingStatus(requestedStatus.getValue());
+        existingDocument.setEtag(UUID.randomUUID().toString());
+
+        try {
+            WithdrawalDocument updatedWithdrawal = withdrawalRepository.save(existingDocument);
+            LOGGER.info(format("Withdrawal processing status updated successfully: withdrawalId=%s, companyNumber=%s",
+                    updatedWithdrawal.getWithdrawalId(), updatedWithdrawal.getCompanyNumber()));
+        } catch (DataAccessException ex) {
+            throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
+        }
+    }
+
+    private WithdrawalProcessingStatus parseRequestedStatus(String requestedStatusValue) {
+        try {
+            return WithdrawalProcessingStatus.fromValue(requestedStatusValue.trim());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    format("Unsupported status=%s", requestedStatusValue), ex);
+        }
+    }
+
+    private WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
+        try {
+            return WithdrawalProcessingStatus.fromValue(currentStatusValue);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    format("Invalid current processing status=%s", currentStatusValue), ex);
         }
     }
 }

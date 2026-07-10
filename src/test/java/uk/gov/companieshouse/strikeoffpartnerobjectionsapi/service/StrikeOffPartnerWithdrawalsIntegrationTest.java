@@ -16,6 +16,8 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -158,6 +160,46 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         // Verify we get the correct withdrawal
         assertThat(retrieveResponse1.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(retrieveResponse1.getWithdrawalId()).isEqualTo(createResponse1.getWithdrawalId());
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenValidStatus_updatesPersistedDocument() {
+        WithdrawAllObjectionsResponse created =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-processing");
+
+        strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, created.getWithdrawalId(), request);
+
+        WithdrawalDocument updated = withdrawalRepository
+                .findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, created.getWithdrawalId())
+                .orElseThrow();
+        assertThat(updated.getProcessingStatus()).isEqualTo("withdrawal-processing");
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenWithdrawalMissing_throwsNotFound() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("withdrawal-processing");
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, "missing-withdrawal-id", request))
+                .isInstanceOf(WithdrawalNotFoundException.class);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenStatusInvalid_throwsBadRequest() {
+        WithdrawAllObjectionsResponse created =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
+        String withdrawalId = created.getWithdrawalId();
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus("not-a-valid-status");
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, withdrawalId, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_REQUEST);
     }
 
 
