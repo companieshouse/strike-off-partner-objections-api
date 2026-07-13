@@ -3,7 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -69,7 +69,7 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @PostMapping(
+    @PatchMapping(
             value = "/internal/company/{company_number}/strike-off-partner-objections/{withdrawal_id}/withdrawal-status",
             consumes = "application/json",
             produces = "application/json")

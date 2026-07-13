@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -472,7 +473,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     private ResultActions postUpdateWithdrawalStatus(String companyNumber, String payload) throws Exception {
-        return mockMvc().perform(post(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, companyNumber, WITHDRAWAL_ID))
+        return mockMvc().perform(patch(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, companyNumber, WITHDRAWAL_ID))
                 .contentType(APPLICATION_JSON)
                 .content(payload));
     }
