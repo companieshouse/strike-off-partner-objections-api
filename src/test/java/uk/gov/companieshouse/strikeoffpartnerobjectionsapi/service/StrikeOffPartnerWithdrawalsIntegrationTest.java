@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
+import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
@@ -17,7 +18,6 @@ import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -167,7 +167,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         WithdrawAllObjectionsResponse created =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-processing");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
 
         strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                 COMPANY_NUMBER, created.getWithdrawalId(), request);
@@ -181,7 +181,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void updateWithdrawalProcessingStatus_whenWithdrawalMissing_throwsNotFound() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-processing");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
 
         assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                 COMPANY_NUMBER, "missing-withdrawal-id", request))
@@ -189,12 +189,11 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
-    void updateWithdrawalProcessingStatus_whenStatusInvalid_throwsBadRequest() {
+    void updateWithdrawalProcessingStatus_whenStatusMissing_throwsBadRequest() {
         WithdrawAllObjectionsResponse created =
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
         String withdrawalId = created.getWithdrawalId();
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("not-a-valid-status");
 
         assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                 COMPANY_NUMBER, withdrawalId, request))

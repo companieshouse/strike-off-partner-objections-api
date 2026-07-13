@@ -31,6 +31,7 @@ import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
+import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
@@ -40,7 +41,6 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafka
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -424,7 +424,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void updateWithdrawalProcessingStatus_whenValidStatus_updatesAndPersists() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-processing");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
         WithdrawalDocument existing = buildSavedDocument();
         existing.setProcessingStatus("withdrawal-requested");
 
@@ -444,7 +444,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void updateWithdrawalProcessingStatus_whenSameStatus_returnsWithoutSaving() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-requested");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         WithdrawalDocument existing = buildSavedDocument();
         existing.setProcessingStatus("withdrawal-requested");
 
@@ -460,7 +460,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void updateWithdrawalProcessingStatus_whenWithdrawalMissing_throwsNotFound() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-processing");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
 
         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
                 .thenReturn(Optional.empty());
@@ -473,9 +473,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void updateWithdrawalProcessingStatus_whenStatusUnsupported_throwsBadRequest() {
+    void updateWithdrawalProcessingStatus_whenStatusMissing_throwsBadRequest() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("unsupported-status");
         WithdrawalDocument existing = buildSavedDocument();
         existing.setProcessingStatus("withdrawal-requested");
 
@@ -492,7 +491,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void updateWithdrawalProcessingStatus_whenRepositorySaveFails_throwsPersistenceException() {
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus("withdrawal-processing");
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
         WithdrawalDocument existing = buildSavedDocument();
         existing.setProcessingStatus("withdrawal-requested");
         DataAccessResourceFailureException cause =

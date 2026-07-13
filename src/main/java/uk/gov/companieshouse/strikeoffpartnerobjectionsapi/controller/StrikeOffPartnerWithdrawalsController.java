@@ -3,15 +3,14 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.api.StrikeOffPartnerWithdrawalsInterface;
+import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerWithdrawalsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -69,10 +68,7 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @PatchMapping(
-            value = "/internal/company/{company_number}/strike-off-partner-objections/{withdrawal_id}/withdrawal-status",
-            consumes = "application/json",
-            produces = "application/json")
+    @Override
     public ResponseEntity<Void> updateWithdrawalStatus(
             @Size(min = 1) @PathVariable("company_number") final String companyNumber,
             @Size(min = 1) @PathVariable("withdrawal_id") final String withdrawalId,

@@ -5,6 +5,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
@@ -14,7 +15,6 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -152,19 +152,22 @@ public class StrikeOffPartnerWithdrawalsService {
         }
     }
 
-    private WithdrawalProcessingStatus parseRequestedStatus(String requestedStatusValue) {
-        try {
-            return WithdrawalProcessingStatus.fromValue(requestedStatusValue.trim());
-        } catch (IllegalArgumentException | NullPointerException ex) {
+    private WithdrawalProcessingStatus parseRequestedStatus(WithdrawalProcessingStatus requestedStatusValue) {
+        if (requestedStatusValue == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    format("Unsupported status=%s", requestedStatusValue), ex);
+                    format("Unsupported status=%s", requestedStatusValue));
         }
+        return requestedStatusValue;
     }
 
     private WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
+        if (currentStatusValue == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    format("Invalid current processing status=%s", currentStatusValue));
+        }
         try {
             return WithdrawalProcessingStatus.fromValue(currentStatusValue);
-        } catch (IllegalArgumentException | NullPointerException ex) {
+        } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue), ex);
         }
