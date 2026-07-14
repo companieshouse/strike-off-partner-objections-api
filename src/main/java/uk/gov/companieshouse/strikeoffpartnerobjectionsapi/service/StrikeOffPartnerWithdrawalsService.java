@@ -134,7 +134,10 @@ public class StrikeOffPartnerWithdrawalsService {
                 .orElseThrow(() -> new WithdrawalNotFoundException(
                         format("Withdrawal not found for company number=%s, withdrawalId=%s", companyNumber, withdrawalId)));
 
-        WithdrawalProcessingStatus requestedStatus = parseRequestedStatus(updateStatusRequest.getProcessingStatus());
+        WithdrawalProcessingStatus requestedStatus = updateStatusRequest.getProcessingStatus();
+        if (requestedStatus == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported status=null");
+        }
         WithdrawalProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
         if (currentStatus == requestedStatus) {
             return;
@@ -150,14 +153,6 @@ public class StrikeOffPartnerWithdrawalsService {
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
         }
-    }
-
-    private WithdrawalProcessingStatus parseRequestedStatus(WithdrawalProcessingStatus requestedStatusValue) {
-        if (requestedStatusValue == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    format("Unsupported status=%s", requestedStatusValue));
-        }
-        return requestedStatusValue;
     }
 
     private WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
