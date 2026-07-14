@@ -12,6 +12,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,8 +70,9 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     @BeforeEach
     void setUp() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer, companyValidator);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer, companyValidator, validator);
     }
 
     // ===== GET Withdrawal Tests =====

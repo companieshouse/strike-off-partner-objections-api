@@ -1,5 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -31,16 +34,19 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
+    private final Validator validator;
 
     public StrikeOffPartnerWithdrawalsService(
             WithdrawalRepository withdrawalRepository,
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
-            CompanyValidator companyValidator) {
+            CompanyValidator companyValidator,
+            Validator validator) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
+        this.validator = validator;
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
@@ -134,10 +140,13 @@ public class StrikeOffPartnerWithdrawalsService {
                 .orElseThrow(() -> new WithdrawalNotFoundException(
                         format("Withdrawal not found for company number=%s, withdrawalId=%s", companyNumber, withdrawalId)));
 
-        WithdrawalProcessingStatus requestedStatus = updateStatusRequest.getProcessingStatus();
-        if (requestedStatus == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported status=null");
+        Set<ConstraintViolation<UpdateWithdrawalStatusRequest>> violations = validator.validate(updateStatusRequest);
+        if (!violations.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    format("Invalid update status request: %s", violations.iterator().next().getMessage()));
         }
+
+        WithdrawalProcessingStatus requestedStatus = updateStatusRequest.getProcessingStatus();
         WithdrawalProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
         if (currentStatus == requestedStatus) {
             return;
