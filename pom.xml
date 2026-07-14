@@ -26,7 +26,7 @@
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
         <!-- Override vulnerable Tomcat version -->
         <tomcat.version>11.0.23</tomcat.version>
-        <private-api-sdk-java.version>7.0.12</private-api-sdk-java.version>
+        <private-api-sdk-java.version>7.0.13</private-api-sdk-java.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <api-security-java.version>2.0.27</api-security-java.version>
 
