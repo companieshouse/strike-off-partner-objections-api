@@ -22,6 +22,7 @@ public class WithdrawalKafkaProducer extends AbstractKafkaProducer {
     public StrikeOffPartnerObjections publishWithdrawalEvent(WithdrawalDocument withdrawalDocument) {
         var withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(
                 withdrawalDocument.getWithdrawalId(),
+                withdrawalDocument.getCompanyNumber(),
                 withdrawalDocument.getPartnerOrganisation(),
                 EventType.WITHDRAWAL
         );

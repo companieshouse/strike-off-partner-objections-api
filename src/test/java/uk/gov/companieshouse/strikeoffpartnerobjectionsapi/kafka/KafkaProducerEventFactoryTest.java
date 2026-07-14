@@ -13,6 +13,7 @@ class KafkaProducerEventFactoryTest {
         // given
         String topic = "test-topic";
         String documentId = "12345";
+        String companyNumber = "01234567";
         String partnerOrganisation = "PartnerA";
 
         KafkaProducerEventFactory factory =
@@ -22,6 +23,7 @@ class KafkaProducerEventFactoryTest {
         ProducerRecord<String, StrikeOffPartnerObjections> producerRecord =
                 factory.createProducerRecord(
                         documentId,
+                        companyNumber,
                         partnerOrganisation,
                         EventType.WITHDRAWAL);
 
@@ -36,6 +38,9 @@ class KafkaProducerEventFactoryTest {
 
         assertThat(message.getPartnerOrganisation())
                 .isEqualTo(partnerOrganisation);
+
+        assertThat(message.getCompanyNumber())
+                .isEqualTo(companyNumber);
 
         assertThat(message.getEventType())
                 .isEqualTo(EventType.WITHDRAWAL);

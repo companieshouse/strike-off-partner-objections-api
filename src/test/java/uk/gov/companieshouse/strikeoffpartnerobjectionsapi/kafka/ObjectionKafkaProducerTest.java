@@ -58,6 +58,7 @@ class ObjectionKafkaProducerTest {
 
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(objectionEvent);
@@ -78,6 +79,7 @@ class ObjectionKafkaProducerTest {
                         new InterruptedException()));
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getObjectionId(), new StrikeOffPartnerObjections()));
@@ -95,6 +97,7 @@ class ObjectionKafkaProducerTest {
                         new RuntimeException("Kafka failure")));
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getObjectionId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getObjectionId(), new StrikeOffPartnerObjections()));
@@ -107,6 +110,7 @@ class ObjectionKafkaProducerTest {
     private ObjectionDocument buildDocument() {
         ObjectionDocument document = new ObjectionDocument();
         document.setObjectionId("objection-123");
+        document.setCompanyNumber("12345678");
         document.setPartnerOrganisation("TEST_PARTNER");
         return document;
     }
@@ -120,6 +124,7 @@ class ObjectionKafkaProducerTest {
                         .setEventTime(Instant.now().toString())
                         .setSource("test")
                         .setEventType(EventType.OBJECTION)
+                        .setCompanyNumber(document.getCompanyNumber())
                         .setPartnerOrganisation(document.getPartnerOrganisation())
                         .setStrikeOffEventId(document.getObjectionId())
                         .build()

@@ -56,6 +56,7 @@ class WithdrawalKafkaProducerTest {
 
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(
@@ -67,6 +68,7 @@ class WithdrawalKafkaProducerTest {
                                         .setEventTime(Instant.now().toString())
                                         .setSource("test")
                                         .setEventType(EventType.WITHDRAWAL)
+                                        .setCompanyNumber(document.getCompanyNumber())
                                         .setPartnerOrganisation(document.getPartnerOrganisation())
                                         .setStrikeOffEventId(document.getWithdrawalId())
                                         .build()
@@ -89,6 +91,7 @@ class WithdrawalKafkaProducerTest {
                         new RuntimeException("Kafka failure")));
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
@@ -107,6 +110,7 @@ class WithdrawalKafkaProducerTest {
                         new InterruptedException()));
         when(kafkaProducerEventFactory.createProducerRecord(
                 eq(document.getWithdrawalId()),
+                eq(document.getCompanyNumber()),
                 eq(document.getPartnerOrganisation()),
                 any(EventType.class)))
                 .thenReturn(new ProducerRecord<>(TOPIC, document.getWithdrawalId(), new StrikeOffPartnerObjections()));
@@ -118,6 +122,7 @@ class WithdrawalKafkaProducerTest {
     private WithdrawalDocument buildDocument() {
         WithdrawalDocument document = new WithdrawalDocument();
         document.setWithdrawalId("withdrawal-123");
+        document.setCompanyNumber("12345678");
         document.setPartnerOrganisation("TEST_PARTNER");
         return document;
     }
