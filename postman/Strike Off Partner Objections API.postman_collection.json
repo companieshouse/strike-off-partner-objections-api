@@ -1558,6 +1558,78 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "204 - Update Withdrawal Processing Status (Happy Path)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 204 No Content\", function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-withdrawal-status-001",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"withdrawal-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{withdrawal_id}}/withdrawal-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections",
+                "{{withdrawal_id}}",
+                "withdrawal-status"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

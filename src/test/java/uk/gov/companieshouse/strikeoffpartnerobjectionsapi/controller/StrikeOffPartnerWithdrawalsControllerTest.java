@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,7 +42,10 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 class StrikeOffPartnerWithdrawalsControllerTest {
 
     private static final String WITHDRAWALS_PATH = "/company/12345678/strike-off-partner-objections-withdrawals";
+    private static final String UPDATE_WITHDRAWAL_STATUS_PATH =
+            "/internal/company/%s/strike-off-partner-objections/%s/withdrawal-status";
     private static final String COMPANY_NUMBER = "12345678";
+    private static final String WITHDRAWAL_ID = "withdrawal-123";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
@@ -356,6 +360,55 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 "internal_server_error");
     }
 
+    @Test
+    void updateWithdrawalStatus_whenRequestIsValid_returnsNoContent() throws Exception {
+        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+                .andExpect(status().isNoContent());
+
+        verify(strikeOffPartnerWithdrawalsService)
+                .updateWithdrawalProcessingStatus(eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), any());
+    }
+
+    @Test
+    void updateWithdrawalStatus_whenWithdrawalDoesNotExist_returnsNotFound() throws Exception {
+        org.mockito.Mockito.doThrow(
+                        new uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException(
+                                "Withdrawal not found"))
+                .when(strikeOffPartnerWithdrawalsService)
+                .updateWithdrawalProcessingStatus(eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), any());
+
+        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error_code").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Withdrawal not found"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "{}",
+            "{\"processing_status\":\"\"}",
+            "{\"processing_status\":\"unsupported-status\"}"
+    })
+    void updateWithdrawalStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload) throws Exception {
+        postUpdateWithdrawalStatus(COMPANY_NUMBER, payload)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
+
+        verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
+    @Test
+    void updateWithdrawalStatus_whenServiceThrowsResponseStatusException_preservesStatusAndReason() throws Exception {
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Invalid status transition"))
+                .when(strikeOffPartnerWithdrawalsService)
+                .updateWithdrawalProcessingStatus(eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), any());
+
+        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error_code").value("conflict"))
+                .andExpect(jsonPath("$.message").value("Invalid status transition"));
+    }
+
     private void assertResponseStatusExceptionResponse(
             final HttpStatus status,
             final String reason,
@@ -417,6 +470,12 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         return mockMvc().perform(post(WITHDRAWALS_PATH)
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)));
+    }
+
+    private ResultActions postUpdateWithdrawalStatus(String companyNumber, String payload) throws Exception {
+        return mockMvc().perform(patch(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, companyNumber, WITHDRAWAL_ID))
+                .contentType(APPLICATION_JSON)
+                .content(payload));
     }
 
     private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
