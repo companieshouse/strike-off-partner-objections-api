@@ -425,6 +425,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .setEventType(EventType.WITHDRAWAL)
                 .setEventTime(Instant.now().toString())
                 .setSource("strike-off-partner-objections-api")
+                .setCompanyNumber(COMPANY_NUMBER)
                 .setPartnerOrganisation("hmrc")
                 .setStrikeOffEventId(UUID.randomUUID().toString())
                 .build();

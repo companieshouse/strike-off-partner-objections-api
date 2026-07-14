@@ -115,6 +115,7 @@ class AbstractKafkaProducerTest {
                 .setEventTime("2026-01-01T00:00:00Z")
                 .setSource("strike-off-partner-objections-api")
                 .setEventType(EventType.OBJECTION)
+                .setCompanyNumber("12345678")
                 .setPartnerOrganisation("hmrc")
                 .setStrikeOffEventId("document-id-1")
                 .build();

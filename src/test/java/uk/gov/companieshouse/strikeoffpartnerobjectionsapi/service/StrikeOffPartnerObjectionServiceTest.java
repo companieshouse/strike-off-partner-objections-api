@@ -424,6 +424,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 .setEventType(EventType.OBJECTION)
                 .setEventTime(java.time.Instant.now().toString())
                 .setSource("strike-off-partner-objections-api")
+                .setCompanyNumber(VALID_COMPANY_NUMBER)
                 .setPartnerOrganisation("hmrc")
                 .setStrikeOffEventId(UUID.randomUUID().toString())
                 .build();

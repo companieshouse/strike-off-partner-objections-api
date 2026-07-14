@@ -22,6 +22,7 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
     public StrikeOffPartnerObjections publishObjectionEvent(ObjectionDocument objectionDocument) {
         var objectionRecord = kafkaProducerEventFactory.createProducerRecord(
                 objectionDocument.getObjectionId(),
+                objectionDocument.getCompanyNumber(),
                 objectionDocument.getPartnerOrganisation(),
                 EventType.OBJECTION
         );
