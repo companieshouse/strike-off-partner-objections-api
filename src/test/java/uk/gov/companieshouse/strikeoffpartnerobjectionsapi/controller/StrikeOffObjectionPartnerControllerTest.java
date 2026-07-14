@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -175,7 +176,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void updateObjectionProcessingStatus_whenRequestIsValid_returnsNoContent() throws Exception {
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNoContent());
 
         verify(strikeOffPartnerObjectionService)
@@ -188,7 +189,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
@@ -202,7 +203,7 @@ class StrikeOffObjectionPartnerControllerTest {
     })
     void updateObjectionProcessingStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload)
             throws Exception {
-        postUpdateObjectionStatus(COMPANY_NUMBER, payload)
+        patchUpdateObjectionStatus(COMPANY_NUMBER, payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
 
@@ -215,7 +216,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        postUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error_code").value("conflict"))
                 .andExpect(jsonPath("$.message").value("Invalid status transition"));
@@ -564,9 +565,9 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key"));
     }
-
-    private ResultActions postUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
-        return mockMvc.perform(post(String.format(UPDATE_STATUS_URL, companyNumber, OBJECTION_ID))
+    
+    private ResultActions patchUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
+        return mockMvc.perform(patch(String.format(UPDATE_STATUS_URL, companyNumber, OBJECTION_ID))
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
