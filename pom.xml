@@ -25,7 +25,7 @@
         <maven-build-helper-plugin.version>3.6.1</maven-build-helper-plugin.version>
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
         <!-- Override vulnerable Tomcat version -->
-        <tomcat.version>11.0.23</tomcat.version>
+        <tomcat.version>11.0.24</tomcat.version>
         <private-api-sdk-java.version>7.0.13</private-api-sdk-java.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <api-security-java.version>2.0.27</api-security-java.version>
@@ -59,6 +59,14 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${spring-boot-dependencies.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- fix CVE-2026-49844 -->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-bom</artifactId>
+                <version>2.25.5</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
