@@ -240,6 +240,17 @@ class GlobalExceptionHandlerTest {
         assertEquals("Gateway Timeout", body.getMessage());
     }
 
+    @ParameterizedTest
+    @MethodSource("otherHttpStatusResponses")
+    void handleOtherRequiredExceptions_whenInvoked_returnsCorrectCodeAndMessage(HttpStatus status, String expectedErrorCode) {
+        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status, expectedErrorCode));
+        ApiError body = requireBody(response);
+
+        assertEquals(status, response.getStatusCode());
+        assertEquals(expectedErrorCode, body.getErrorCode());
+        assertEquals(expectedErrorCode, body.getMessage());
+    }
+
     @Test
     void handleIOException_whenInvoked_returnsServiceUnavailable() {
         ResponseEntity<ApiError> response = handler.handleIOException(new IOException("connection failed"));
@@ -408,6 +419,16 @@ class GlobalExceptionHandlerTest {
                 Arguments.of(blankWorkstream, "MISSING_WORKSTREAM"),
                 Arguments.of(invalidWorkstream, "INVALID_WORKSTREAM"),
                 Arguments.of(invalidReason, "INVALID_REASON")
+        );
+    }
+
+    private static Stream<Arguments> otherHttpStatusResponses() {
+        return Stream.of(
+                Arguments.of(HttpStatus.UNAUTHORIZED, "unauthorized"),
+                Arguments.of(HttpStatus.FORBIDDEN, "forbidden"),
+                Arguments.of(HttpStatus.NOT_FOUND, "not_found"),
+                Arguments.of(HttpStatus.CONFLICT, "conflict"),
+                Arguments.of(HttpStatus.BAD_GATEWAY, "bad_gateway")
         );
     }
 

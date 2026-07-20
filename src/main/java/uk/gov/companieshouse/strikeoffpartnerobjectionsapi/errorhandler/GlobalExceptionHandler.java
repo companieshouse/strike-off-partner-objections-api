@@ -35,6 +35,16 @@ public class GlobalExceptionHandler {
     private static final String SERVICE_UNAVAILABLE_MESSAGE = "Service Unavailable";
     private static final String GATEWAY_TIMEOUT_CODE = "gateway_timeout";
     private static final String GATEWAY_TIMEOUT_MESSAGE = "Gateway Timeout";
+    private static final String CONFLICT_CODE = "conflict";
+    private static final String CONFLICT_MESSAGE = "conflict";
+    private static final String UNAUTHORIZED_CODE = "unauthorized";
+    private static final String UNAUTHORIZED_MESSAGE = "unauthorized";
+    private static final String FORBIDDEN_CODE = "forbidden";
+    private static final String FORBIDDEN_MESSAGE = "forbidden";
+    private static final String NOT_FOUND_CODE = "not_found";
+    private static final String NOT_FOUND_MESSAGE = "not_found";
+    private static final String BAD_GATEWAY_CODE = "bad_gateway";
+    private static final String BAD_GATEWAY_MESSAGE = "bad_gateway";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
@@ -93,13 +103,32 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatusException(ResponseStatusException ex) {
-        HttpStatusCode statusCode = ex.getStatusCode();
-        String message = ex.getReason() == null || ex.getReason().isBlank()
-                ? DEFAULT_RESPONSE_STATUS_MESSAGE
-                : ex.getReason();
-
-        return ResponseEntity.status(statusCode)
-                .body(new ApiError(toErrorCode(statusCode), message));
+        return switch (ex.getStatusCode()) {
+            case HttpStatus.UNAUTHORIZED -> new ResponseEntity<>(
+                    new ApiError(UNAUTHORIZED_CODE, UNAUTHORIZED_MESSAGE),
+                    HttpStatus.UNAUTHORIZED);
+            case HttpStatus.FORBIDDEN -> new ResponseEntity<>(
+                    new ApiError(FORBIDDEN_CODE, FORBIDDEN_MESSAGE),
+                    HttpStatus.FORBIDDEN);
+            case HttpStatus.NOT_FOUND -> new ResponseEntity<>(
+                    new ApiError(NOT_FOUND_CODE, NOT_FOUND_MESSAGE),
+                    HttpStatus.NOT_FOUND);
+            case HttpStatus.CONFLICT -> new ResponseEntity<>(
+                    new ApiError(CONFLICT_CODE, CONFLICT_MESSAGE),
+                    HttpStatus.CONFLICT);
+            case HttpStatus.BAD_GATEWAY -> new ResponseEntity<>(
+                    new ApiError(BAD_GATEWAY_CODE, BAD_GATEWAY_MESSAGE),
+                    HttpStatus.BAD_GATEWAY);
+            default -> {
+                HttpStatusCode statusCode = ex.getStatusCode();
+                String reason = ex.getReason();
+                String message = reason == null || reason.isBlank()
+                        ? DEFAULT_RESPONSE_STATUS_MESSAGE
+                        : reason;
+                yield ResponseEntity.status(statusCode)
+                        .body(new ApiError(toErrorCode(statusCode), message));
+            }
+        };
     }
 
     @ExceptionHandler(ErrorResponseException.class)
