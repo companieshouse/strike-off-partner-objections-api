@@ -242,8 +242,20 @@ class GlobalExceptionHandlerTest {
 
     @ParameterizedTest
     @MethodSource("otherHttpStatusResponses")
-    void handleOtherRequiredExceptions_whenInvoked_returnsCorrectCodeAndMessage(HttpStatus status, String expectedErrorCode) {
-        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status, expectedErrorCode));
+    void handleOtherRequiredExceptions_whenCustomReasonProvided_reasonOverridesDefaultMessage(HttpStatus status, String expectedErrorCode) {
+        String customReason = "Custom reason for " + status.name();
+        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status, customReason));
+        ApiError body = requireBody(response);
+
+        assertEquals(status, response.getStatusCode());
+        assertEquals(expectedErrorCode, body.getErrorCode());
+        assertEquals(customReason, body.getMessage());
+    }
+
+    @ParameterizedTest
+    @MethodSource("otherHttpStatusResponses")
+    void handleOtherRequiredExceptions_whenNoReasonProvided_usesDefaultConstantMessage(HttpStatus status, String expectedErrorCode) {
+        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status));
         ApiError body = requireBody(response);
 
         assertEquals(status, response.getStatusCode());

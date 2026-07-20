@@ -105,30 +105,31 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleResponseStatusException(ResponseStatusException ex) {
         return switch (ex.getStatusCode()) {
             case HttpStatus.UNAUTHORIZED -> new ResponseEntity<>(
-                    new ApiError(UNAUTHORIZED_CODE, UNAUTHORIZED_MESSAGE),
+                    new ApiError(UNAUTHORIZED_CODE, resolveMessage(ex, UNAUTHORIZED_MESSAGE)),
                     HttpStatus.UNAUTHORIZED);
             case HttpStatus.FORBIDDEN -> new ResponseEntity<>(
-                    new ApiError(FORBIDDEN_CODE, FORBIDDEN_MESSAGE),
+                    new ApiError(FORBIDDEN_CODE, resolveMessage(ex, FORBIDDEN_MESSAGE)),
                     HttpStatus.FORBIDDEN);
             case HttpStatus.NOT_FOUND -> new ResponseEntity<>(
-                    new ApiError(NOT_FOUND_CODE, NOT_FOUND_MESSAGE),
+                    new ApiError(NOT_FOUND_CODE, resolveMessage(ex, NOT_FOUND_MESSAGE)),
                     HttpStatus.NOT_FOUND);
             case HttpStatus.CONFLICT -> new ResponseEntity<>(
-                    new ApiError(CONFLICT_CODE, CONFLICT_MESSAGE),
+                    new ApiError(CONFLICT_CODE, resolveMessage(ex, CONFLICT_MESSAGE)),
                     HttpStatus.CONFLICT);
             case HttpStatus.BAD_GATEWAY -> new ResponseEntity<>(
-                    new ApiError(BAD_GATEWAY_CODE, BAD_GATEWAY_MESSAGE),
+                    new ApiError(BAD_GATEWAY_CODE, resolveMessage(ex, BAD_GATEWAY_MESSAGE)),
                     HttpStatus.BAD_GATEWAY);
             default -> {
                 HttpStatusCode statusCode = ex.getStatusCode();
-                String reason = ex.getReason();
-                String message = reason == null || reason.isBlank()
-                        ? DEFAULT_RESPONSE_STATUS_MESSAGE
-                        : reason;
                 yield ResponseEntity.status(statusCode)
-                        .body(new ApiError(toErrorCode(statusCode), message));
+                        .body(new ApiError(toErrorCode(statusCode), resolveMessage(ex, DEFAULT_RESPONSE_STATUS_MESSAGE)));
             }
         };
+    }
+
+    private String resolveMessage(ResponseStatusException ex, String defaultMessage) {
+        String reason = ex.getReason();
+        return reason == null || reason.isBlank() ? defaultMessage : reason;
     }
 
     @ExceptionHandler(ErrorResponseException.class)
