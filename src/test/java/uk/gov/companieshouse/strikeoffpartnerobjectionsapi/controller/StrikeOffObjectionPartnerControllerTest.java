@@ -487,7 +487,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(baseValidRequest())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
-                .andExpect(jsonPath("$.message").value("Request failed"));
+                .andExpect(jsonPath("$.message").value("not_found"));
     }
 
     @Test

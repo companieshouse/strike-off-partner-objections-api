@@ -240,6 +240,29 @@ class GlobalExceptionHandlerTest {
         assertEquals("Gateway Timeout", body.getMessage());
     }
 
+    @ParameterizedTest
+    @MethodSource("otherHttpStatusResponses")
+    void handleOtherRequiredExceptions_whenCustomReasonProvided_reasonOverridesDefaultMessage(HttpStatus status, String expectedErrorCode) {
+        String customReason = "Custom reason for " + status.name();
+        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status, customReason));
+        ApiError body = requireBody(response);
+
+        assertEquals(status, response.getStatusCode());
+        assertEquals(expectedErrorCode, body.getErrorCode());
+        assertEquals(customReason, body.getMessage());
+    }
+
+    @ParameterizedTest
+    @MethodSource("otherHttpStatusResponses")
+    void handleOtherRequiredExceptions_whenNoReasonProvided_usesDefaultConstantMessage(HttpStatus status, String expectedErrorCode) {
+        ResponseEntity<ApiError> response = handler.handleResponseStatusException(new ResponseStatusException(status));
+        ApiError body = requireBody(response);
+
+        assertEquals(status, response.getStatusCode());
+        assertEquals(expectedErrorCode, body.getErrorCode());
+        assertEquals(expectedErrorCode, body.getMessage());
+    }
+
     @Test
     void handleIOException_whenInvoked_returnsServiceUnavailable() {
         ResponseEntity<ApiError> response = handler.handleIOException(new IOException("connection failed"));
@@ -408,6 +431,16 @@ class GlobalExceptionHandlerTest {
                 Arguments.of(blankWorkstream, "MISSING_WORKSTREAM"),
                 Arguments.of(invalidWorkstream, "INVALID_WORKSTREAM"),
                 Arguments.of(invalidReason, "INVALID_REASON")
+        );
+    }
+
+    private static Stream<Arguments> otherHttpStatusResponses() {
+        return Stream.of(
+                Arguments.of(HttpStatus.UNAUTHORIZED, "unauthorized"),
+                Arguments.of(HttpStatus.FORBIDDEN, "forbidden"),
+                Arguments.of(HttpStatus.NOT_FOUND, "not_found"),
+                Arguments.of(HttpStatus.CONFLICT, "conflict"),
+                Arguments.of(HttpStatus.BAD_GATEWAY, "bad_gateway")
         );
     }
 
