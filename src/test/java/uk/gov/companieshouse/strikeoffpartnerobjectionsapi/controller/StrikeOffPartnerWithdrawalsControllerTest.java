@@ -43,7 +43,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     private static final String WITHDRAWALS_PATH = "/company/12345678/strike-off-partner-objections-withdrawals";
     private static final String UPDATE_WITHDRAWAL_STATUS_PATH =
-            "/internal/company/%s/strike-off-partner-objections/%s/withdrawal-status";
+            "/internal/company/%s/strike-off-partner-objections-withdrawals/%s/withdrawal-status";
     private static final String COMPANY_NUMBER = "12345678";
     private static final String WITHDRAWAL_ID = "withdrawal-123";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
