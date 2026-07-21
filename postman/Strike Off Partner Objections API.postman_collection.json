@@ -1615,7 +1615,7 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{withdrawal_id}}/withdrawal-status",
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}/withdrawal-status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1623,7 +1623,7 @@
                 "internal",
                 "company",
                 "{{companyNumber}}",
-                "strike-off-partner-objections",
+                "strike-off-partner-objections-withdrawals",
                 "{{withdrawal_id}}",
                 "withdrawal-status"
               ]
