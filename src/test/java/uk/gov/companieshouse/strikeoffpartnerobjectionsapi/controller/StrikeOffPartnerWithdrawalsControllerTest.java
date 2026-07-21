@@ -362,7 +362,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void updateWithdrawalStatus_whenRequestIsValid_returnsNoContent() throws Exception {
-        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+        postUpdateWithdrawalStatus("{\"processing_status\":\"withdrawal-processing\"}")
                 .andExpect(status().isNoContent());
 
         verify(strikeOffPartnerWithdrawalsService)
@@ -377,7 +377,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .when(strikeOffPartnerWithdrawalsService)
                 .updateWithdrawalProcessingStatus(eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), any());
 
-        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+        postUpdateWithdrawalStatus("{\"processing_status\":\"withdrawal-processing\"}")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Withdrawal not found"));
@@ -390,7 +390,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
             "{\"processing_status\":\"unsupported-status\"}"
     })
     void updateWithdrawalStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload) throws Exception {
-        postUpdateWithdrawalStatus(COMPANY_NUMBER, payload)
+        postUpdateWithdrawalStatus(payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
 
@@ -403,7 +403,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .when(strikeOffPartnerWithdrawalsService)
                 .updateWithdrawalProcessingStatus(eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), any());
 
-        postUpdateWithdrawalStatus(COMPANY_NUMBER, "{\"processing_status\":\"withdrawal-processing\"}")
+        postUpdateWithdrawalStatus("{\"processing_status\":\"withdrawal-processing\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error_code").value("conflict"))
                 .andExpect(jsonPath("$.message").value("Invalid status transition"));
@@ -472,8 +472,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .content(objectMapper.writeValueAsString(request)));
     }
 
-    private ResultActions postUpdateWithdrawalStatus(String companyNumber, String payload) throws Exception {
-        return mockMvc().perform(patch(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, companyNumber, WITHDRAWAL_ID))
+    private ResultActions postUpdateWithdrawalStatus(String payload) throws Exception {
+        return mockMvc().perform(patch(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, COMPANY_NUMBER, WITHDRAWAL_ID))
                 .contentType(APPLICATION_JSON)
                 .content(payload));
     }
