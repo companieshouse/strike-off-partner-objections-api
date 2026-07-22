@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,7 +70,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     private CompanyValidator companyValidator;
 
     @Mock
-    private TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
+    private HttpServletRequest defaultRequest;
 
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
@@ -78,8 +79,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator, temporaryAuthenticationHeaderExtractor);
-        lenient().when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
+                        withdrawalKafkaProducer, companyValidator, validator, defaultRequest);
+        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -178,7 +179,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     @Test
     void getWithdrawal_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
@@ -189,7 +190,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void getWithdrawal_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+    void getWithdrawal_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
@@ -197,7 +198,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         assertThatThrownBy(() -> serviceWithoutExtractor.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("AuthenticationHeaderExtractor is not configured");
+                .hasMessage("HttpServletRequest is not configured");
 
         verifyNoInteractions(withdrawalRepository, withdrawalMapper);
     }
@@ -460,7 +461,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void withdrawAllObjections_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
@@ -471,7 +472,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
-    void withdrawAllObjections_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+    void withdrawAllObjections_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
@@ -480,7 +481,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         assertThatThrownBy(() -> serviceWithoutExtractor.withdrawAllObjections(COMPANY_NUMBER, request))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("AuthenticationHeaderExtractor is not configured");
+                .hasMessage("HttpServletRequest is not configured");
 
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
     }

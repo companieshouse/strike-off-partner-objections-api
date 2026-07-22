@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -66,7 +67,7 @@ class StrikeOffPartnerObjectionServiceTest {
     private CompanyValidator companyValidator;
 
     @Mock
-    private TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
+    private HttpServletRequest defaultRequest;
 
     private static final String VALID_COMPANY_NUMBER = "12345";
 
@@ -80,9 +81,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionResponseMapper,
                 objectionKafkaProducer,
                 companyValidator,
-                temporaryAuthenticationHeaderExtractor
+                defaultRequest
         );
-        lenient().when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
+        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
@@ -269,7 +270,7 @@ class StrikeOffPartnerObjectionServiceTest {
     @Test
     void createObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
         CreateObjectionRequest request = validCreateObjectionRequest();
-        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
                 .isInstanceOf(IllegalStateException.class)
@@ -280,7 +281,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void getObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection("1", "2"))
                 .isInstanceOf(IllegalStateException.class)
@@ -290,7 +291,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void createObjection_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+    void createObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
         StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
                 objectionRepository,
                 objectionRequestMapper,
@@ -302,13 +303,13 @@ class StrikeOffPartnerObjectionServiceTest {
 
         assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, request))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("AuthenticationHeaderExtractor is not configured");
+                .hasMessage("HttpServletRequest is not configured");
 
         verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
     }
 
     @Test
-    void getObjection_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+    void getObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
         StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
                 objectionRepository,
                 objectionRequestMapper,
@@ -319,7 +320,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
         assertThatThrownBy(() -> serviceWithoutExtractor.getObjection("1", "2"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("AuthenticationHeaderExtractor is not configured");
+                .hasMessage("HttpServletRequest is not configured");
 
         verifyNoInteractions(objectionRepository, objectionResponseMapper);
     }

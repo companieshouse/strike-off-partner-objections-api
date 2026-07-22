@@ -15,7 +15,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.TemporaryAuthenticationHeaderExtractor;
 
 @Tag("unit-test")
 class AuthenticationInterceptorTest {
@@ -24,7 +23,7 @@ class AuthenticationInterceptorTest {
     private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
-    private static final String ERIC_PARTNER_ORG_HEADER = TemporaryAuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER;
+    private static final String ERIC_PARTNER_ORG_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
     private static final String REQUEST_ID = "test-request-id-123";
     private static final String VALID_IDENTITY_TYPE = "key";
     private static final String VALID_API_KEY = "test-api-key-123";
@@ -43,8 +42,7 @@ class AuthenticationInterceptorTest {
     @BeforeEach
     void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-        authenticationInterceptor = new AuthenticationInterceptor(
-                new TemporaryAuthenticationHeaderExtractor(request));
+        authenticationInterceptor = new AuthenticationInterceptor();
         handler = new Object();
 
         // Setup mock response to handle getWriter() calls

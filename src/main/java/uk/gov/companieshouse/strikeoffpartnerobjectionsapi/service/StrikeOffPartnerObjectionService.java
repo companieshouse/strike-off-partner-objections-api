@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -31,12 +32,14 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerObjectionService {
 
+    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
+
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
-    private final TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
+    private final HttpServletRequest httpServletRequest;
 
     @Autowired
     public StrikeOffPartnerObjectionService(
@@ -45,13 +48,13 @@ public class StrikeOffPartnerObjectionService {
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
             CompanyValidator companyValidator,
-            TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor) {
+            HttpServletRequest httpServletRequest) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
-        this.temporaryAuthenticationHeaderExtractor = temporaryAuthenticationHeaderExtractor;
+        this.httpServletRequest = httpServletRequest;
     }
 
     StrikeOffPartnerObjectionService(
@@ -165,14 +168,14 @@ public class StrikeOffPartnerObjectionService {
     }
 
     private String resolvePartnerOrganisation() {
-        if (temporaryAuthenticationHeaderExtractor == null) {
-            throw new IllegalStateException("AuthenticationHeaderExtractor is not configured");
+        if (httpServletRequest == null) {
+            throw new IllegalStateException("HttpServletRequest is not configured");
         }
-        String partnerOrganisation = temporaryAuthenticationHeaderExtractor.getPartnerOrganisation();
-        if (partnerOrganisation == null) {
+        String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
+        if (partnerOrganisation == null || partnerOrganisation.isBlank()) {
             throw new IllegalStateException("Missing partner organisation in request context");
         }
-        return partnerOrganisation;
+        return partnerOrganisation.trim();
     }
 
 
