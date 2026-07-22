@@ -298,8 +298,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionKafkaProducer,
                 companyValidator
         );
+        CreateObjectionRequest request = validCreateObjectionRequest();
 
-        assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, validCreateObjectionRequest()))
+        assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, request))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("AuthenticationHeaderExtractor is not configured");
 
