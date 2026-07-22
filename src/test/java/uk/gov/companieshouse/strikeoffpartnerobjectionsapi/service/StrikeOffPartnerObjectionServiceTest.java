@@ -267,6 +267,63 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
+    void createObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        CreateObjectionRequest request = validCreateObjectionRequest();
+        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
+    @Test
+    void getObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection("1", "2"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(objectionRepository, objectionResponseMapper);
+    }
+
+    @Test
+    void createObjection_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
+                objectionRepository,
+                objectionRequestMapper,
+                objectionResponseMapper,
+                objectionKafkaProducer,
+                companyValidator
+        );
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, validCreateObjectionRequest()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("AuthenticationHeaderExtractor is not configured");
+
+        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
+    @Test
+    void getObjection_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
+                objectionRepository,
+                objectionRequestMapper,
+                objectionResponseMapper,
+                objectionKafkaProducer,
+                companyValidator
+        );
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.getObjection("1", "2"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("AuthenticationHeaderExtractor is not configured");
+
+        verifyNoInteractions(objectionRepository, objectionResponseMapper);
+    }
+
+    @Test
     void createObjection_callsCompanyValidator() {
         CreateObjectionRequest request = validCreateObjectionRequest();
         ObjectionDocument mappedDocument = new ObjectionDocument();

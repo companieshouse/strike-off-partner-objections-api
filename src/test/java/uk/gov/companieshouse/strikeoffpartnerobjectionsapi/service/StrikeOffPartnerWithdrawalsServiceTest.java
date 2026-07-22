@@ -176,6 +176,32 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         verifyNoInteractions(withdrawalMapper);
     }
 
+    @Test
+    void getWithdrawal_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
+    }
+
+    @Test
+    void getWithdrawal_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator);
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("AuthenticationHeaderExtractor is not configured");
+
+        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
+    }
+
     // ===== Company Validation Tests =====
 
     @Test
@@ -429,6 +455,34 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasCause(cause);
 
         verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
+    }
+
+    @Test
+    void withdrawAllObjections_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
+    }
+
+    @Test
+    void withdrawAllObjections_whenHeaderExtractorIsNotConfigured_throwsIllegalStateException() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator);
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("AuthenticationHeaderExtractor is not configured");
+
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
     }
 
     @Test
