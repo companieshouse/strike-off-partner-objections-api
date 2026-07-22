@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
@@ -26,7 +27,6 @@ import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStat
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_PROCESSING;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_REJECTED;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
-import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Service
 public class StrikeOffPartnerObjectionService {
@@ -36,22 +36,48 @@ public class StrikeOffPartnerObjectionService {
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
+    private final PartnerOrganisationProvider partnerOrganisationProvider;
 
+    @Autowired
     public StrikeOffPartnerObjectionService(
             ObjectionRepository objectionRepository,
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
-            CompanyValidator companyValidator) {
+            CompanyValidator companyValidator,
+            PartnerOrganisationProvider partnerOrganisationProvider) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
+        this.partnerOrganisationProvider = partnerOrganisationProvider;
+    }
+
+    StrikeOffPartnerObjectionService(
+            ObjectionRepository objectionRepository,
+            ObjectionRequestMapper objectionRequestMapper,
+            ObjectionResponseMapper objectionResponseMapper,
+            ObjectionKafkaProducer objectionKafkaProducer,
+            CompanyValidator companyValidator) {
+        this(objectionRepository,
+                objectionRequestMapper,
+                objectionResponseMapper,
+                objectionKafkaProducer,
+                companyValidator,
+                null);
     }
 
     public BaseObjectionResponse createObjection(final String companyNumber,
                                                  final CreateObjectionRequest createObjectionRequest) {
+        return createObjection(companyNumber,
+                createObjectionRequest,
+                resolvePartnerOrganisation());
+    }
+
+    public BaseObjectionResponse createObjection(final String companyNumber,
+                                                 final CreateObjectionRequest createObjectionRequest,
+                                                 final String partnerOrganisation) {
 
         // Validate company before persistence and publishing.
         // This validator is intentionally exception-driven: it returns nothing on success
@@ -61,12 +87,12 @@ public class StrikeOffPartnerObjectionService {
         final String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
-                companyNumber, PARTNER_ORGANISATION, objectionId));
+                companyNumber, partnerOrganisation, objectionId));
 
         ObjectionDocument document = objectionRequestMapper.toObjectionDocument(
                 createObjectionRequest,
                 companyNumber,
-                PARTNER_ORGANISATION,
+                partnerOrganisation,
                 objectionId
         );
         EventTracker.markPending(document);
@@ -108,19 +134,45 @@ public class StrikeOffPartnerObjectionService {
     }
 
     public BaseObjectionResponse getObjection(final String companyNumber,
-                                                 final String objectionId) throws ObjectionNotFoundException {
+                                                 final String objectionId,
+                                                 final String partnerOrganisation) throws ObjectionNotFoundException {
 
         LOGGER.info(format("Attempting to fetch objection with ID=%s and company number=%s",
                 objectionId, companyNumber));
 
         ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
-        if (document == null) throw new ObjectionNotFoundException(
-                format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
-        
+        if (document == null) {
+            throw new ObjectionNotFoundException(
+                    format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
+        }
+
+        if (!partnerOrganisation.equals(document.getPartnerOrganisation())) {
+            LOGGER.error(format("Organisation mismatch: caller=%s, document=%s, objectionId=%s",
+                    partnerOrganisation, document.getPartnerOrganisation(), objectionId));
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: objection belongs to a different organisation");
+        }
+
         LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s",
                 document.getObjectionId(), document.getCompanyNumber()));
-        
+
         return objectionResponseMapper.toObjectionApiResponse(document);
+    }
+
+    public BaseObjectionResponse getObjection(final String companyNumber,
+                                              final String objectionId) throws ObjectionNotFoundException {
+        return getObjection(companyNumber, objectionId, resolvePartnerOrganisation());
+    }
+
+    private String resolvePartnerOrganisation() {
+        if (partnerOrganisationProvider == null) {
+            throw new IllegalStateException("PartnerOrganisationProvider is not configured");
+        }
+        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        if (partnerOrganisation == null) {
+            throw new IllegalStateException("Missing partner organisation in request context");
+        }
+        return partnerOrganisation;
     }
 
 

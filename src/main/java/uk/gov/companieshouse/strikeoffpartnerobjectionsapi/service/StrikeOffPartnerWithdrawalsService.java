@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,31 +28,54 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
-    //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
-    private static final String PARTNER_ORGANISATION = "hmrc";
 
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
+    private final PartnerOrganisationProvider partnerOrganisationProvider;
 
+    @Autowired
     public StrikeOffPartnerWithdrawalsService(
             WithdrawalRepository withdrawalRepository,
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
-            Validator validator) {
+            Validator validator,
+            PartnerOrganisationProvider partnerOrganisationProvider) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
+        this.partnerOrganisationProvider = partnerOrganisationProvider;
+    }
+
+    StrikeOffPartnerWithdrawalsService(
+            WithdrawalRepository withdrawalRepository,
+            WithdrawalMapper withdrawalMapper,
+            WithdrawalKafkaProducer withdrawalKafkaProducer,
+            CompanyValidator companyValidator,
+            Validator validator) {
+        this(withdrawalRepository,
+                withdrawalMapper,
+                withdrawalKafkaProducer,
+                companyValidator,
+                validator,
+                null);
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
             final String companyNumber,
             final String withdrawalId) {
+        return getWithdrawal(companyNumber, withdrawalId, resolvePartnerOrganisation());
+    }
+
+    public WithdrawAllObjectionsResponse getWithdrawal(
+            final String companyNumber,
+            final String withdrawalId,
+            final String partnerOrganisation) {
 
         LOGGER.info(format("Retrieving withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
@@ -62,6 +86,13 @@ public class StrikeOffPartnerWithdrawalsService {
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             format("Withdrawal not found: withdrawalId=%s for company=%s", withdrawalId, companyNumber)));
+
+            if (!partnerOrganisation.equals(document.getPartnerOrganisation())) {
+                LOGGER.error(format("Organisation mismatch: caller=%s, document=%s, withdrawalId=%s",
+                        partnerOrganisation, document.getPartnerOrganisation(), withdrawalId));
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Access denied: withdrawal belongs to a different organisation");
+            }
 
             LOGGER.info(format("Withdrawal retrieved successfully: withdrawalId=%s, companyNumber=%s",
                     document.getWithdrawalId(), document.getCompanyNumber()));
@@ -74,7 +105,8 @@ public class StrikeOffPartnerWithdrawalsService {
 
     public WithdrawAllObjectionsResponse withdrawAllObjections(
             final String companyNumber,
-            final WithdrawAllObjectionsRequest request) {
+            final WithdrawAllObjectionsRequest request,
+            final String partnerOrganisation) {
 
         final String withdrawalId = UUID.randomUUID().toString();
         final String etag = UUID.randomUUID().toString();
@@ -88,7 +120,7 @@ public class StrikeOffPartnerWithdrawalsService {
         companyValidator.validateCompany(companyNumber, request.getSubmissionCompanyName());
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
-                request, companyNumber, PARTNER_ORGANISATION, withdrawalId, etag);
+                request, companyNumber, partnerOrganisation, withdrawalId, etag);
         EventTracker.markPending(document);
 
         try {
@@ -102,6 +134,12 @@ public class StrikeOffPartnerWithdrawalsService {
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);
         }
+    }
+
+    public WithdrawAllObjectionsResponse withdrawAllObjections(
+            final String companyNumber,
+            final WithdrawAllObjectionsRequest request) {
+        return withdrawAllObjections(companyNumber, request, resolvePartnerOrganisation());
     }
 
     private void publishAndSaveWithdrawal(WithdrawalDocument persistedWithdrawal) {
@@ -175,5 +213,16 @@ public class StrikeOffPartnerWithdrawalsService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue), ex);
         }
+    }
+
+    private String resolvePartnerOrganisation() {
+        if (partnerOrganisationProvider == null) {
+            throw new IllegalStateException("PartnerOrganisationProvider is not configured");
+        }
+        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        if (partnerOrganisation == null) {
+            throw new IllegalStateException("Missing partner organisation in request context");
+        }
+        return partnerOrganisation;
     }
 }

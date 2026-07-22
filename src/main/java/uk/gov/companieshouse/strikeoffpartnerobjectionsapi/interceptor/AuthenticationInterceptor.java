@@ -12,21 +12,32 @@ import java.util.HashMap;
 import java.util.Map;
 
 import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.AuthenticationService;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.PartnerOrganisationProvider;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
+    private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String KEY = "key";
+    private static final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
+    private static final String IDENTITY_TYPE_SUFFIX = ", identityType=";
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final AuthenticationService authenticationService;
+    private final PartnerOrganisationProvider partnerOrganisationProvider;
+
+    public AuthenticationInterceptor(AuthenticationService authenticationService,
+                                     PartnerOrganisationProvider partnerOrganisationProvider) {
+        this.authenticationService = authenticationService;
+        this.partnerOrganisationProvider = partnerOrganisationProvider;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        final String X_REQUEST_ID_HEADER = "X-Request-Id";
-        final String KEY = "key";
-        final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
-        final String IDENTITY_TYPE_SUFFIX = ", identityType=";
-
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
         String identityType = AuthorisationUtil.getAuthorisedIdentityType(request);
         String identityHeader = AuthorisationUtil.getAuthorisedIdentity(request);
@@ -43,7 +54,20 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        LOGGER.info("Authentication credentials validated: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", passing request through");
+        if (!authenticationService.hasRequiredPermission(request)) {
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + AuthenticationService.REQUIRED_PERMISSION);
+            sendForbiddenResponse(response, requestId, "Missing required permission: " + AuthenticationService.REQUIRED_PERMISSION);
+            return false;
+        }
+
+        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        if (partnerOrganisation == null) {
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + PartnerOrganisationProvider.ERIC_PARTNER_ORGANISATION_HEADER);
+            sendForbiddenResponse(response, requestId, "Missing required header: " + PartnerOrganisationProvider.ERIC_PARTNER_ORGANISATION_HEADER);
+            return false;
+        }
+
+        LOGGER.info("Authentication credentials validated: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", partnerOrganisation=" + partnerOrganisation + ", passing request through");
         return true;
     }
 
