@@ -14,20 +14,21 @@ import org.mockito.MockitoAnnotations;
 import java.util.stream.Stream;
 
 @Tag("unit-test")
-class AuthenticationServiceTest {
+class AuthenticationHeaderExtractorTest {
 
     private static final String PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
+    private static final String PARTNER_ORG_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
     private static final String REQUIRED_PERMISSION = "strike-off-partner-objections";
 
     @Mock
     private HttpServletRequest request;
 
-    private AuthenticationService authenticationService;
+    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        authenticationService = new AuthenticationService();
+        authenticationHeaderExtractor = new AuthenticationHeaderExtractor(request);
     }
 
     // ===== hasRequiredPermission =====
@@ -37,7 +38,7 @@ class AuthenticationServiceTest {
     void hasRequiredPermission_whenPermissionIsValid_returnsTrue(String permission) {
         when(request.getHeader(PERMISSIONS_HEADER)).thenReturn(permission);
 
-        assertThat(authenticationService.hasRequiredPermission(request)).isTrue();
+        assertThat(authenticationHeaderExtractor.hasRequiredPermission()).isTrue();
     }
 
     @ParameterizedTest
@@ -45,7 +46,27 @@ class AuthenticationServiceTest {
     void hasRequiredPermission_whenPermissionIsAbsentOrInvalid_returnsFalse(String permission) {
         when(request.getHeader(PERMISSIONS_HEADER)).thenReturn(permission);
 
-        assertThat(authenticationService.hasRequiredPermission(request)).isFalse();
+        assertThat(authenticationHeaderExtractor.hasRequiredPermission()).isFalse();
+    }
+
+    // ===== getPartnerOrganisation =====
+
+    @ParameterizedTest
+    @MethodSource("differentValidPartnerOrgCases")
+    void getPartnerOrganisation_whenHeaderIsValid_returnsPartnerOrg(String partnerOrg) {
+        when(request.getHeader(PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
+
+        assertThat(authenticationHeaderExtractor.getPartnerOrganisation())
+                .isNotNull()
+                .isNotBlank();
+    }
+
+    @ParameterizedTest
+    @MethodSource("differentInvalidPartnerOrgCases")
+    void getPartnerOrganisation_whenHeaderIsAbsentOrBlank_returnsNull(String partnerOrg) {
+        when(request.getHeader(PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
+
+        assertThat(authenticationHeaderExtractor.getPartnerOrganisation()).isNull();
     }
 
     private static Stream<Arguments> differentValidPermissionCases() {
@@ -60,10 +81,23 @@ class AuthenticationServiceTest {
         return Stream.of(
                 Arguments.of("some-other-permission another-permission"),
                 Arguments.of((Object) null),
-                Arguments.of("", "   "),
+                Arguments.of("   "),
                 Arguments.of("strike-off-partner-objections-extra")
         );
     }
+
+    private static Stream<Arguments> differentValidPartnerOrgCases() {
+        return Stream.of(
+                Arguments.of("HMRC"),
+                Arguments.of("  HMRC  "),
+                Arguments.of("Companies House")
+        );
+    }
+
+    private static Stream<Arguments> differentInvalidPartnerOrgCases() {
+        return Stream.of(
+                Arguments.of((Object) null),
+                Arguments.of("   ")
+        );
+    }
 }
-
-

@@ -36,7 +36,7 @@ public class StrikeOffPartnerObjectionService {
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
-    private final PartnerOrganisationProvider partnerOrganisationProvider;
+    private final AuthenticationHeaderExtractor authenticationHeaderExtractor;
 
     @Autowired
     public StrikeOffPartnerObjectionService(
@@ -45,13 +45,13 @@ public class StrikeOffPartnerObjectionService {
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
             CompanyValidator companyValidator,
-            PartnerOrganisationProvider partnerOrganisationProvider) {
+            AuthenticationHeaderExtractor authenticationHeaderExtractor) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
-        this.partnerOrganisationProvider = partnerOrganisationProvider;
+        this.authenticationHeaderExtractor = authenticationHeaderExtractor;
     }
 
     StrikeOffPartnerObjectionService(
@@ -165,10 +165,10 @@ public class StrikeOffPartnerObjectionService {
     }
 
     private String resolvePartnerOrganisation() {
-        if (partnerOrganisationProvider == null) {
-            throw new IllegalStateException("PartnerOrganisationProvider is not configured");
+        if (authenticationHeaderExtractor == null) {
+            throw new IllegalStateException("AuthenticationHeaderExtractor is not configured");
         }
-        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        String partnerOrganisation = authenticationHeaderExtractor.getPartnerOrganisation();
         if (partnerOrganisation == null) {
             throw new IllegalStateException("Missing partner organisation in request context");
         }

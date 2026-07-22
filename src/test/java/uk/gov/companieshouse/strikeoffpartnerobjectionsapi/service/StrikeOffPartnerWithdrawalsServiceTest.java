@@ -8,9 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -66,13 +68,18 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
+    @Mock
+    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
     void setUp() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer, companyValidator, validator);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator, authenticationHeaderExtractor);
+        lenient().when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
     }
 
     // ===== GET Withdrawal Tests =====

@@ -34,7 +34,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
-    private final PartnerOrganisationProvider partnerOrganisationProvider;
+    private final AuthenticationHeaderExtractor authenticationHeaderExtractor;
 
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
@@ -43,13 +43,13 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
             Validator validator,
-            PartnerOrganisationProvider partnerOrganisationProvider) {
+            AuthenticationHeaderExtractor authenticationHeaderExtractor) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
-        this.partnerOrganisationProvider = partnerOrganisationProvider;
+        this.authenticationHeaderExtractor = authenticationHeaderExtractor;
     }
 
     StrikeOffPartnerWithdrawalsService(
@@ -216,10 +216,10 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     private String resolvePartnerOrganisation() {
-        if (partnerOrganisationProvider == null) {
-            throw new IllegalStateException("PartnerOrganisationProvider is not configured");
+        if (authenticationHeaderExtractor == null) {
+            throw new IllegalStateException("AuthenticationHeaderExtractor is not configured");
         }
-        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        String partnerOrganisation = authenticationHeaderExtractor.getPartnerOrganisation();
         if (partnerOrganisation == null) {
             throw new IllegalStateException("Missing partner organisation in request context");
         }

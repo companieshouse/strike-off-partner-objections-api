@@ -12,8 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.AuthenticationService;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.PartnerOrganisationProvider;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.AuthenticationHeaderExtractor;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
@@ -27,13 +26,10 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final AuthenticationService authenticationService;
-    private final PartnerOrganisationProvider partnerOrganisationProvider;
+    private final AuthenticationHeaderExtractor authenticationHeaderExtractor;
 
-    public AuthenticationInterceptor(AuthenticationService authenticationService,
-                                     PartnerOrganisationProvider partnerOrganisationProvider) {
-        this.authenticationService = authenticationService;
-        this.partnerOrganisationProvider = partnerOrganisationProvider;
+    public AuthenticationInterceptor(AuthenticationHeaderExtractor authenticationHeaderExtractor) {
+        this.authenticationHeaderExtractor = authenticationHeaderExtractor;
     }
 
     @Override
@@ -54,16 +50,16 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if (!authenticationService.hasRequiredPermission(request)) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + AuthenticationService.REQUIRED_PERMISSION);
-            sendForbiddenResponse(response, requestId, "Missing required permission: " + AuthenticationService.REQUIRED_PERMISSION);
+        if (!authenticationHeaderExtractor.hasRequiredPermission()) {
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + AuthenticationHeaderExtractor.REQUIRED_PERMISSION);
+            sendForbiddenResponse(response, requestId, "Missing required permission: " + AuthenticationHeaderExtractor.REQUIRED_PERMISSION);
             return false;
         }
 
-        String partnerOrganisation = partnerOrganisationProvider.getPartnerOrganisation();
+        String partnerOrganisation = authenticationHeaderExtractor.getPartnerOrganisation();
         if (partnerOrganisation == null) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + PartnerOrganisationProvider.ERIC_PARTNER_ORGANISATION_HEADER);
-            sendForbiddenResponse(response, requestId, "Missing required header: " + PartnerOrganisationProvider.ERIC_PARTNER_ORGANISATION_HEADER);
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + AuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
+            sendForbiddenResponse(response, requestId, "Missing required header: " + AuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
             return false;
         }
 

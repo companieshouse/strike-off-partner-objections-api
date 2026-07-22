@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import java.util.UUID;
@@ -63,7 +64,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Mock
     private CompanyValidator companyValidator;
-    
+
+    @Mock
+    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
+
     private static final String VALID_COMPANY_NUMBER = "12345";
 
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -75,8 +79,10 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRequestMapper,
                 objectionResponseMapper,
                 objectionKafkaProducer,
-                companyValidator
+                companyValidator,
+                authenticationHeaderExtractor
         );
+        lenient().when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
@@ -234,6 +240,7 @@ class StrikeOffPartnerObjectionServiceTest {
         String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
         ObjectionDocument document = new ObjectionDocument();
+        document.setPartnerOrganisation(PARTNER_ORGANISATION);
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
 
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
