@@ -14,7 +14,7 @@ import org.mockito.MockitoAnnotations;
 import java.util.stream.Stream;
 
 @Tag("unit-test")
-class AuthenticationHeaderExtractorTest {
+class TemporaryAuthenticationHeaderExtractorTest {
 
     private static final String PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
     private static final String PARTNER_ORG_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
@@ -23,12 +23,12 @@ class AuthenticationHeaderExtractorTest {
     @Mock
     private HttpServletRequest request;
 
-    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
+    private TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        authenticationHeaderExtractor = new AuthenticationHeaderExtractor(request);
+        temporaryAuthenticationHeaderExtractor = new TemporaryAuthenticationHeaderExtractor(request);
     }
 
     // ===== hasRequiredPermission =====
@@ -38,7 +38,7 @@ class AuthenticationHeaderExtractorTest {
     void hasRequiredPermission_whenPermissionIsValid_returnsTrue(String permission) {
         when(request.getHeader(PERMISSIONS_HEADER)).thenReturn(permission);
 
-        assertThat(authenticationHeaderExtractor.hasRequiredPermission()).isTrue();
+        assertThat(temporaryAuthenticationHeaderExtractor.hasRequiredPermission()).isTrue();
     }
 
     @ParameterizedTest
@@ -46,7 +46,7 @@ class AuthenticationHeaderExtractorTest {
     void hasRequiredPermission_whenPermissionIsAbsentOrInvalid_returnsFalse(String permission) {
         when(request.getHeader(PERMISSIONS_HEADER)).thenReturn(permission);
 
-        assertThat(authenticationHeaderExtractor.hasRequiredPermission()).isFalse();
+        assertThat(temporaryAuthenticationHeaderExtractor.hasRequiredPermission()).isFalse();
     }
 
     // ===== getPartnerOrganisation =====
@@ -56,7 +56,7 @@ class AuthenticationHeaderExtractorTest {
     void getPartnerOrganisation_whenHeaderIsValid_returnsPartnerOrg(String partnerOrg) {
         when(request.getHeader(PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
 
-        assertThat(authenticationHeaderExtractor.getPartnerOrganisation())
+        assertThat(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation())
                 .isNotNull()
                 .isNotBlank();
     }
@@ -66,7 +66,7 @@ class AuthenticationHeaderExtractorTest {
     void getPartnerOrganisation_whenHeaderIsAbsentOrBlank_returnsNull(String partnerOrg) {
         when(request.getHeader(PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
 
-        assertThat(authenticationHeaderExtractor.getPartnerOrganisation()).isNull();
+        assertThat(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).isNull();
     }
 
     private static Stream<Arguments> differentValidPermissionCases() {

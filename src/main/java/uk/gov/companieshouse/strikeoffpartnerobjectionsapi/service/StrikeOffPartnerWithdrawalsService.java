@@ -34,7 +34,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
-    private final AuthenticationHeaderExtractor authenticationHeaderExtractor;
+    private final TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
 
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
@@ -43,13 +43,13 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
             Validator validator,
-            AuthenticationHeaderExtractor authenticationHeaderExtractor) {
+            TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
-        this.authenticationHeaderExtractor = authenticationHeaderExtractor;
+        this.temporaryAuthenticationHeaderExtractor = temporaryAuthenticationHeaderExtractor;
     }
 
     StrikeOffPartnerWithdrawalsService(
@@ -216,10 +216,10 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     private String resolvePartnerOrganisation() {
-        if (authenticationHeaderExtractor == null) {
+        if (temporaryAuthenticationHeaderExtractor == null) {
             throw new IllegalStateException("AuthenticationHeaderExtractor is not configured");
         }
-        String partnerOrganisation = authenticationHeaderExtractor.getPartnerOrganisation();
+        String partnerOrganisation = temporaryAuthenticationHeaderExtractor.getPartnerOrganisation();
         if (partnerOrganisation == null) {
             throw new IllegalStateException("Missing partner organisation in request context");
         }

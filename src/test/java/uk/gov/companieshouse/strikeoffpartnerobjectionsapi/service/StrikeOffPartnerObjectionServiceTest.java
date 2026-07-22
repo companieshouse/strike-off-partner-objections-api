@@ -66,7 +66,7 @@ class StrikeOffPartnerObjectionServiceTest {
     private CompanyValidator companyValidator;
 
     @Mock
-    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
+    private TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
 
     private static final String VALID_COMPANY_NUMBER = "12345";
 
@@ -80,9 +80,9 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionResponseMapper,
                 objectionKafkaProducer,
                 companyValidator,
-                authenticationHeaderExtractor
+                temporaryAuthenticationHeaderExtractor
         );
-        lenient().when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
+        lenient().when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
@@ -269,7 +269,7 @@ class StrikeOffPartnerObjectionServiceTest {
     @Test
     void createObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
         CreateObjectionRequest request = validCreateObjectionRequest();
-        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
                 .isInstanceOf(IllegalStateException.class)
@@ -280,7 +280,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void getObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection("1", "2"))
                 .isInstanceOf(IllegalStateException.class)

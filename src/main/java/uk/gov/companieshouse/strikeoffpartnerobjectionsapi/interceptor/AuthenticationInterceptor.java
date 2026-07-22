@@ -12,7 +12,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.AuthenticationHeaderExtractor;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.TemporaryAuthenticationHeaderExtractor;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
@@ -26,10 +27,10 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final AuthenticationHeaderExtractor authenticationHeaderExtractor;
+    private final TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
 
-    public AuthenticationInterceptor(AuthenticationHeaderExtractor authenticationHeaderExtractor) {
-        this.authenticationHeaderExtractor = authenticationHeaderExtractor;
+    public AuthenticationInterceptor(TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor) {
+        this.temporaryAuthenticationHeaderExtractor = temporaryAuthenticationHeaderExtractor;
     }
 
     @Override
@@ -37,6 +38,8 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
         String identityType = AuthorisationUtil.getAuthorisedIdentityType(request);
         String identityHeader = AuthorisationUtil.getAuthorisedIdentity(request);
+        // Once additional ERIC headers are added to this Util class, they can be obtainer here
+        // And the Temporary Extractor can be removed
 
         if (!KEY.equals(identityType)) {
             LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
@@ -50,16 +53,16 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if (!authenticationHeaderExtractor.hasRequiredPermission()) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + AuthenticationHeaderExtractor.REQUIRED_PERMISSION);
-            sendForbiddenResponse(response, requestId, "Missing required permission: " + AuthenticationHeaderExtractor.REQUIRED_PERMISSION);
+        if (!temporaryAuthenticationHeaderExtractor.hasRequiredPermission()) {
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION);
+            sendForbiddenResponse(response, requestId, "Missing required permission: " + StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION);
             return false;
         }
 
-        String partnerOrganisation = authenticationHeaderExtractor.getPartnerOrganisation();
+        String partnerOrganisation = temporaryAuthenticationHeaderExtractor.getPartnerOrganisation();
         if (partnerOrganisation == null) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + AuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
-            sendForbiddenResponse(response, requestId, "Missing required header: " + AuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
+            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + TemporaryAuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
+            sendForbiddenResponse(response, requestId, "Missing required header: " + TemporaryAuthenticationHeaderExtractor.ERIC_PARTNER_ORGANISATION_HEADER);
             return false;
         }
 

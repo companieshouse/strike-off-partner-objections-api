@@ -4,19 +4,21 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import org.springframework.stereotype.Component;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION;
+
 /**
  * Extracts and validates ERIC authentication headers from the current request.
+ * Once Team
  */
 @Component
-public class AuthenticationHeaderExtractor {
+public class TemporaryAuthenticationHeaderExtractor {
 
     public static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
     public static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
-    public static final String REQUIRED_PERMISSION = "strike-off-partner-objections";
 
     private final HttpServletRequest httpServletRequest;
 
-    public AuthenticationHeaderExtractor(HttpServletRequest httpServletRequest) {
+    public TemporaryAuthenticationHeaderExtractor(HttpServletRequest httpServletRequest) {
         this.httpServletRequest = httpServletRequest;
     }
 
@@ -42,7 +44,7 @@ public class AuthenticationHeaderExtractor {
         if (permissions == null || permissions.isBlank()) {
             return false;
         }
-        return Arrays.asList(permissions.trim().split("\\s+")).contains(REQUIRED_PERMISSION);
+        return Arrays.asList(permissions.trim().split("\\s+")).contains(REQUIRED_ERIC_PERMISSION);
     }
 }
 

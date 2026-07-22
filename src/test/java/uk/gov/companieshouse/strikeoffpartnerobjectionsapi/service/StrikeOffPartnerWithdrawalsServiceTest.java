@@ -69,7 +69,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     private CompanyValidator companyValidator;
 
     @Mock
-    private AuthenticationHeaderExtractor authenticationHeaderExtractor;
+    private TemporaryAuthenticationHeaderExtractor temporaryAuthenticationHeaderExtractor;
 
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
@@ -78,8 +78,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator, authenticationHeaderExtractor);
-        lenient().when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
+                        withdrawalKafkaProducer, companyValidator, validator, temporaryAuthenticationHeaderExtractor);
+        lenient().when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(PARTNER_ORGANISATION);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -178,7 +178,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     @Test
     void getWithdrawal_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
@@ -460,7 +460,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void withdrawAllObjections_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        when(authenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
+        when(temporaryAuthenticationHeaderExtractor.getPartnerOrganisation()).thenReturn(null);
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
