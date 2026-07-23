@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -8,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -66,13 +69,18 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
+    @Mock
+    private HttpServletRequest defaultRequest;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
     void setUp() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper, withdrawalKafkaProducer, companyValidator, validator);
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator, defaultRequest);
+        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -167,6 +175,32 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId);
         verifyNoInteractions(withdrawalMapper);
+    }
+
+    @Test
+    void getWithdrawal_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
+    }
+
+    @Test
+    void getWithdrawal_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator);
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("HttpServletRequest is not configured");
+
+        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
     }
 
     // ===== Company Validation Tests =====
@@ -422,6 +456,34 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasCause(cause);
 
         verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
+    }
+
+    @Test
+    void withdrawAllObjections_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
+    }
+
+    @Test
+    void withdrawAllObjections_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
+                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                        withdrawalKafkaProducer, companyValidator, validator);
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.withdrawAllObjections(COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("HttpServletRequest is not configured");
+
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
     }
 
     @Test

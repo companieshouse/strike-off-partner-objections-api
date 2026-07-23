@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import java.util.UUID;
@@ -63,7 +65,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Mock
     private CompanyValidator companyValidator;
-    
+
+    @Mock
+    private HttpServletRequest defaultRequest;
+
     private static final String VALID_COMPANY_NUMBER = "12345";
 
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -75,8 +80,10 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRequestMapper,
                 objectionResponseMapper,
                 objectionKafkaProducer,
-                companyValidator
+                companyValidator,
+                defaultRequest
         );
+        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
@@ -234,6 +241,7 @@ class StrikeOffPartnerObjectionServiceTest {
         String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
         ObjectionDocument document = new ObjectionDocument();
+        document.setPartnerOrganisation(PARTNER_ORGANISATION);
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
 
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
@@ -257,6 +265,64 @@ class StrikeOffPartnerObjectionServiceTest {
                 ex.getMessage());
         verify(objectionRepository).findByCompanyNumberAndObjectionId("1", "2");
         verifyNoInteractions(objectionResponseMapper);
+    }
+
+    @Test
+    void createObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        CreateObjectionRequest request = validCreateObjectionRequest();
+        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
+    @Test
+    void getObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
+        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
+
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection("1", "2"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Missing partner organisation in request context");
+
+        verifyNoInteractions(objectionRepository, objectionResponseMapper);
+    }
+
+    @Test
+    void createObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
+        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
+                objectionRepository,
+                objectionRequestMapper,
+                objectionResponseMapper,
+                objectionKafkaProducer,
+                companyValidator
+        );
+        CreateObjectionRequest request = validCreateObjectionRequest();
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("HttpServletRequest is not configured");
+
+        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
+    }
+
+    @Test
+    void getObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
+        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
+                objectionRepository,
+                objectionRequestMapper,
+                objectionResponseMapper,
+                objectionKafkaProducer,
+                companyValidator
+        );
+
+        assertThatThrownBy(() -> serviceWithoutExtractor.getObjection("1", "2"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("HttpServletRequest is not configured");
+
+        verifyNoInteractions(objectionRepository, objectionResponseMapper);
     }
 
     @Test

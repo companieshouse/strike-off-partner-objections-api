@@ -2,23 +2,22 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.util.stream.Stream;
 
 @Tag("unit-test")
 class AuthenticationInterceptorTest {
@@ -26,9 +25,13 @@ class AuthenticationInterceptorTest {
     private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
     private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
+    private static final String ERIC_PARTNER_ORG_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
     private static final String REQUEST_ID = "test-request-id-123";
     private static final String VALID_IDENTITY_TYPE = "key";
     private static final String VALID_API_KEY = "test-api-key-123";
+    private static final String VALID_PERMISSION = "strike-off-partner-objections";
+    private static final String VALID_PARTNER_ORG = "HMRC";
 
     @Mock
     private HttpServletRequest request;
@@ -44,36 +47,35 @@ class AuthenticationInterceptorTest {
         MockitoAnnotations.openMocks(this);
         authenticationInterceptor = new AuthenticationInterceptor();
         handler = new Object();
-        
-        // Setup mock response to handle getWriter() calls
+
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
         when(response.getWriter()).thenReturn(printWriter);
-        
-        // Setup mock request to handle setAttribute/getAttribute
-        Map<String, Object> attributes = new HashMap<>();
-        doAnswer(invocation -> {
-            attributes.put(invocation.getArgument(0), invocation.getArgument(1));
-            return null;
-        }).when(request).setAttribute(any(), any());
-        when(request.getAttribute(any())).thenAnswer(
-            invocation -> attributes.get(invocation.getArgument(0))
-        );
     }
 
     @Test
-    void preHandle_whenValidApiKey_allowsRequest() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
-        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+    void preHandle_whenAllHeadersAreValid_allowsRequest() {
+        setupValidHeaders();
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
         assertTrue(result);
     }
 
+    @ParameterizedTest
+    @MethodSource("invalidIdentityTypes")
+    void preHandle_whenIdentityTypeIsInvalid_returns403(String identityType) {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(identityType);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertFalse(result);
+    }
+
     @Test
-    void preHandle_whenInvalidApiKey_returns401() {
+    void preHandle_whenApiKeyIsMissing_returns401() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
@@ -84,25 +86,82 @@ class AuthenticationInterceptorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "invalid"})
-    void preHandle_whenInvalidIdentityType_returns403(String invalidType) {
+    @MethodSource("invalidPermissions")
+    void preHandle_whenPermissionsIsInvalid_returns403(String permissions) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(invalidType);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
         assertFalse(result);
     }
 
-    @Test
-    void preHandle_whenMissingIdentityType_returns403() {
+    @ParameterizedTest
+    @MethodSource("validPermissions")
+    void preHandle_whenPermissionsIsValid_allowsRequest(String permissions) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(null);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertTrue(result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("missingPartnerOrganisation")
+    void preHandle_whenPartnerOrganisationIsInvalid_returns403(String partnerOrg) {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
         assertFalse(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"HMRC", "companies-house", "any-valid-partner"})
+    void preHandle_whenPartnerOrganisationIsValid_allowsRequest(String partnerOrg) {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertTrue(result);
+    }
+
+    private void setupValidHeaders() {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+    }
+
+    static Stream<String> invalidIdentityTypes() {
+        return Stream.of(null, "", "   ", "invalid", "oauth2", "stream-key");
+    }
+
+    static Stream<String> invalidPermissions() {
+        return Stream.of(null, "", "   ", "other-permission", "strike-off-partner-objections-extra");
+    }
+
+    static Stream<String> validPermissions() {
+        return Stream.of("strike-off-partner-objections", "other-permission strike-off-partner-objections", "strike-off-partner-objections other-permission", "first second strike-off-partner-objections third");
+    }
+
+    static Stream<String> missingPartnerOrganisation() {
+        return Stream.of(null, "", "   ", "");
     }
 }

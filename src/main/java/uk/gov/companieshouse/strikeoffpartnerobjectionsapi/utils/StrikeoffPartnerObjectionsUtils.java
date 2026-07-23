@@ -11,6 +11,7 @@ public class StrikeoffPartnerObjectionsUtils {
 
     public static final String APPLICATION_NAMESPACE = "strike-off-partner-objections-api";
     public static final Logger LOGGER = LoggerFactory.getLogger(APPLICATION_NAMESPACE);
-    //TODO: partnerOrganisation will be retrieved from API key // NOSONAR
+    public static final String REQUIRED_ERIC_PERMISSION = "strike-off-partner-objections";
+    // For use within test files only
     public static final String PARTNER_ORGANISATION = "hmrc";
 }
