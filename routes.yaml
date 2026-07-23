@@ -6,5 +6,5 @@ routes:
   2: ^/strike-off-partner-objections-api/company/.*/strike-off-partner-objections-withdrawals(/.*)?$
   3: ^/internal/callback-update$
   4: ^/internal/company/.*/strike-off-partner-objections/.*/status$
-  5: ^/internal/company/.*/strike-off-partner-objections/.*/withdrawal-status$
+  5: ^/internal/company/.*/strike-off-partner-objections-withdrawals/.*/withdrawal-status$
   6: ^/strike-off-partner-objections-api/healthcheck$
