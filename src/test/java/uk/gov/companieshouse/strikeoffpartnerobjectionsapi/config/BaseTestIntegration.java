@@ -3,12 +3,16 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 import consumer.deserialization.AvroDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Answers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 import uk.gov.companieshouse.api.InternalApiClient;
@@ -21,19 +25,26 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestConstants.KAFKA_VERSION;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @Import(TestKafkaConfiguration.class)
 public abstract class BaseTestIntegration extends MongoDbIntegration {
     protected static final KafkaContainer kafkaContainer =
             new KafkaContainer(DockerImageName.parse("apache/kafka:" + KAFKA_VERSION));
+    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
 
     @MockitoBean(answers = Answers.RETURNS_DEEP_STUBS)
     protected InternalApiClient internalApiClient;
 
-
     @Autowired
     protected KafkaConsumer<String, byte[]> testConsumer;
 
+    @BeforeEach
+    void setUpRequestContextHeaders() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(ERIC_PARTNER_ORGANISATION_HEADER, PARTNER_ORGANISATION);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+    }
 
     @DynamicPropertySource
     static void kafkaProperties(DynamicPropertyRegistry registry) {
