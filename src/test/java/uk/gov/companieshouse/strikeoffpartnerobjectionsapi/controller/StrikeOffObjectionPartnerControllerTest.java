@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,7 +90,7 @@ class StrikeOffObjectionPartnerControllerTest {
     @BeforeEach
     void setUp() {
         when(authenticationInterceptor.preHandle(any(), any(), any())).thenReturn(true);
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenReturn(defaultCreatedResponse());
         clearInvocations(strikeOffPartnerObjectionService);
     }
@@ -101,7 +102,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(jsonPath("$.objection_id").value("objection-123"))
                 .andExpect(jsonPath("$.processing_status").value("objection-submitted"));
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -109,12 +110,44 @@ class StrikeOffObjectionPartnerControllerTest {
         performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
 
-        verify(strikeOffPartnerObjectionService, times(1)).getObjection(COMPANY_NUMBER, OBJECTION_ID);
+        verify(strikeOffPartnerObjectionService, times(1)).getObjection(COMPANY_NUMBER, OBJECTION_ID, PARTNER_ORGANISATION);
+    }
+
+    @ParameterizedTest
+    @MethodSource("missingOrBlankPartnerOrgHeaderCases")
+    void createObjection_whenPartnerOrgHeaderIsBlank_returnsForbidden(String headerValue) throws Exception {
+        mockMvc.perform(post(CREATE_OBJECTION_URL)
+                        .contentType(APPLICATION_JSON)
+                        .header("X-Request-Id", "test-request-id")
+                        .header("ERIC-Identity-Type", "key")
+                        .header("CHS_API_KEY", "test-api-key")
+                        .header("ERIC-Authorised-Application-Partner-Organisation", headerValue)
+                        .content(objectMapper.writeValueAsString(baseValidRequest())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code").value("forbidden"))
+                .andExpect(jsonPath("$.message").value("Missing or blank partner organisation header"));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
+    }
+
+    @Test
+    void createObjection_whenPartnerOrgHeaderIsMissing_returnsForbidden() throws Exception {
+        mockMvc.perform(post(CREATE_OBJECTION_URL)
+                        .contentType(APPLICATION_JSON)
+                        .header("X-Request-Id", "test-request-id")
+                        .header("ERIC-Identity-Type", "key")
+                        .header("CHS_API_KEY", "test-api-key")
+                        .content(objectMapper.writeValueAsString(baseValidRequest())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code").value("forbidden"))
+                .andExpect(jsonPath("$.message").value("Missing or blank partner organisation header"));
+
+        verifyNoInteractions(strikeOffPartnerObjectionService);
     }
 
     @Test
     void getObjection_whenObjectionIsFound_returns200AndContainsCorrectAttributes() throws Exception {
-        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
+        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID, PARTNER_ORGANISATION))
                 .thenReturn(defaultCreatedResponse());
 
         MvcResult result = performGetObjection(COMPANY_NUMBER)
@@ -148,7 +181,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjection_whenObjectionIsNotFound_returns404() throws Exception {
-        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
+        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID, PARTNER_ORGANISATION))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
 
         performGetObjection(COMPANY_NUMBER)
@@ -159,9 +192,9 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void getObjection_whenCompanyNumberIsIncorrect_returns404() throws Exception {
-        when(strikeOffPartnerObjectionService.getObjection("123", OBJECTION_ID))
+        when(strikeOffPartnerObjectionService.getObjection("123", OBJECTION_ID, PARTNER_ORGANISATION))
                 .thenThrow(new ObjectionNotFoundException("Objection not found"));
-        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID))
+        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID, PARTNER_ORGANISATION))
                 .thenReturn(defaultCreatedResponse());
 
         performGetObjection("123")
@@ -257,7 +290,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(request)
                 .andExpect(status().isCreated());
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -276,7 +309,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(request)
                 .andExpect(status().isCreated());
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -295,7 +328,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(request)
                 .andExpect(status().isCreated());
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @ParameterizedTest
@@ -321,7 +354,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(request)
                 .andExpect(status().isCreated());
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @ParameterizedTest
@@ -360,7 +393,7 @@ class StrikeOffObjectionPartnerControllerTest {
         postCreateObjection(baseValidRequest())
                 .andExpect(status().isCreated());
 
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -427,7 +460,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(status().isCreated());
 
         ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture(), eq(PARTNER_ORGANISATION));
         assertEquals("test@test.com", requestCaptor.getValue().getPartnerContactEmail());
     }
 
@@ -440,7 +473,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(status().isCreated());
 
         ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture(), eq(PARTNER_ORGANISATION));
         assertEquals("CASE123", requestCaptor.getValue().getPartnerCaseReference());
     }
 
@@ -453,13 +486,13 @@ class StrikeOffObjectionPartnerControllerTest {
                 .andExpect(status().isCreated());
 
         ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
-        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture());
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture(), eq(PARTNER_ORGANISATION));
         assertEquals("Valid Company Ltd", requestCaptor.getValue().getSubmissionCompanyName());
     }
 
     @Test
     void createObjection_whenServiceThrowsException_returns500() throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new RuntimeException("Internal service error"));
 
         postCreateObjection(baseValidRequest())
@@ -470,7 +503,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void createObjection_whenServiceThrowsResponseStatusException_preservesStatusAndReason() throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate objection"));
 
         postCreateObjection(baseValidRequest())
@@ -481,7 +514,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void createObjection_whenResponseStatusExceptionHasNoReason_usesFallbackMessage() throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         postCreateObjection(baseValidRequest())
@@ -492,7 +525,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void createObjection_whenServiceThrowsErrorResponseException_preservesStatus() throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ErrorResponseException(
                         HttpStatus.FORBIDDEN,
                         ProblemDetail.forStatus(HttpStatus.FORBIDDEN),
@@ -506,7 +539,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void createObjection_whenResponseStatusCodeIsNonStandard_usesGenericErrorCode() throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(HttpStatusCode.valueOf(499)));
 
         postCreateObjection(baseValidRequest())
@@ -519,7 +552,7 @@ class StrikeOffObjectionPartnerControllerTest {
     @MethodSource("gatewayErrorCases")
     void createObjection_whenServiceThrowsGatewayError_returnsCorrectStatus(
             HttpStatus status, String expectedErrorCode) throws Exception {
-        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any()))
+        when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(status, status.getReasonPhrase()));
 
         postCreateObjection(baseValidRequest())
@@ -543,6 +576,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key")
+                .header("ERIC-Authorised-Application-Partner-Organisation", "hmrc")
                 .content(objectMapper.writeValueAsString(payload)));
     }
 
@@ -563,7 +597,8 @@ class StrikeOffObjectionPartnerControllerTest {
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
-                .header("CHS_API_KEY", "test-api-key"));
+                .header("CHS_API_KEY", "test-api-key")
+                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION));
     }
     
     private ResultActions patchUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
@@ -655,6 +690,10 @@ class StrikeOffObjectionPartnerControllerTest {
         response.setInitialExpirationOn(OffsetDateTime.parse("2026-12-03T12:00:00Z"));
         response.setFailureReason(FailureReason.COMPANY_HAS_BEEN_DISSOLVED);
         return response;
+    }
+
+    static Stream<String> missingOrBlankPartnerOrgHeaderCases() {
+        return Stream.of( "", "   ");
     }
 
 }

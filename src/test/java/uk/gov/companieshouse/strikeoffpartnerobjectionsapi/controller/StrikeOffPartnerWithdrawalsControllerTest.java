@@ -7,17 +7,23 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -41,10 +47,10 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 @ExtendWith(MockitoExtension.class)
 class StrikeOffPartnerWithdrawalsControllerTest {
 
-    private static final String WITHDRAWALS_PATH = "/company/12345678/strike-off-partner-objections-withdrawals";
+    private static final String COMPANY_NUMBER = "12345678";
+    private static final String WITHDRAWALS_PATH = "/company/" + COMPANY_NUMBER + "/strike-off-partner-objections-withdrawals";
     private static final String UPDATE_WITHDRAWAL_STATUS_PATH =
             "/internal/company/%s/strike-off-partner-objections/%s/withdrawal-status";
-    private static final String COMPANY_NUMBER = "12345678";
     private static final String WITHDRAWAL_ID = "withdrawal-123";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
@@ -66,33 +72,35 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     @Mock
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
+    @Mock
+    private HttpServletRequest httpServletRequest;
+
     @InjectMocks
     private StrikeOffPartnerWithdrawalsController strikeOffPartnerWithdrawalsController;
 
-    private MockMvc mockMvc() {
-        return MockMvcBuilders.standaloneSetup(strikeOffPartnerWithdrawalsController)
-                .setControllerAdvice(new CreateObjectionRequestBodyAdvice(), new GlobalExceptionHandler())
-                .build();
+    @BeforeEach
+    void setUp() {
+        lenient().when(httpServletRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation"))
+                .thenReturn(PARTNER_ORGANISATION);
     }
 
     // ===== GET Withdrawal Tests =====
 
     @Test
-    void getAllWithdrawals_whenWithdrawalIdIsValid_returnsOkAndDelegatesToService() {
+    void getAllWithdrawals_whenWithdrawalIdIsValid_returnsOkAndDelegatesToService() throws Exception {
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
-        response.setWithdrawalId("withdrawal-123");
+        response.setWithdrawalId(WITHDRAWAL_ID);
 
-        when(strikeOffPartnerWithdrawalsService.getWithdrawal("12345678", "withdrawal-123"))
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
                 .thenReturn(response);
 
-        ResponseEntity<WithdrawAllObjectionsResponse> result =
-                strikeOffPartnerWithdrawalsController.getAllWithdrawals("12345678", "withdrawal-123");
+        getWithdrawal(WITHDRAWAL_ID)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
 
-        assertEquals(200, result.getStatusCode().value());
-        assertSame(response, result.getBody());
-        verify(strikeOffPartnerWithdrawalsService).getWithdrawal("12345678", "withdrawal-123");
+        verify(strikeOffPartnerWithdrawalsService)
+                .getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION);
     }
-
 
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
@@ -105,17 +113,17 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         request.setPartnerObjectionWorkstream("individuals-and-small-business-compliance");
 
         WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
-        serviceResponse.setWithdrawalId("withdrawal-123");
+        serviceResponse.setWithdrawalId(WITHDRAWAL_ID);
 
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections("12345678", request))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .thenReturn(serviceResponse);
 
         ResponseEntity<WithdrawAllObjectionsResponse> response =
-                strikeOffPartnerWithdrawalsController.withdrawAllObjections("12345678", request);
+                strikeOffPartnerWithdrawalsController.withdrawAllObjections(COMPANY_NUMBER, request);
 
         assertEquals(201, response.getStatusCode().value());
         assertSame(serviceResponse, response.getBody());
-        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections("12345678", request);
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
     }
 
     @Test
@@ -205,7 +213,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any());
+                any(),
+                eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -217,7 +226,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any());
+                any(),
+                eq(PARTNER_ORGANISATION));
     }
 
     @Test
@@ -229,7 +239,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(status().isCreated());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any());
+                any(),
+                eq(PARTNER_ORGANISATION));
     }
 
     @ParameterizedTest
@@ -257,27 +268,30 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     @Test
     void withdrawAllObjections_whenRequestIsValid_callsService() throws Exception {
         WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
-        serviceResponse.setWithdrawalId("withdrawal-123");
+        serviceResponse.setWithdrawalId(WITHDRAWAL_ID);
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any())).thenReturn(serviceResponse);
+                any(),
+                eq(PARTNER_ORGANISATION))).thenReturn(serviceResponse);
 
         postWithdrawals(baseValidRequest())
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.withdrawal_id").value("withdrawal-123"));
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
 
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any());
+                any(),
+                eq(PARTNER_ORGANISATION));
     }
 
     @Test
     void withdrawAllObjections_whenRequestContainsWhitespace_trimsWhitespaceFieldsBeforeCallingService() throws Exception {
         WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
-        serviceResponse.setWithdrawalId("withdrawal-123");
+        serviceResponse.setWithdrawalId(WITHDRAWAL_ID);
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                any())).thenReturn(serviceResponse);
+                any(),
+                 eq(PARTNER_ORGANISATION))).thenReturn(serviceResponse);
 
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", " case.owner@example.com ");
@@ -286,13 +300,14 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
         postWithdrawals(request)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.withdrawal_id").value("withdrawal-123"));
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
 
         ArgumentCaptor<WithdrawAllObjectionsRequest> requestCaptor =
                 ArgumentCaptor.forClass(WithdrawAllObjectionsRequest.class);
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
                 eq(COMPANY_NUMBER),
-                requestCaptor.capture());
+                requestCaptor.capture(),
+                 eq(PARTNER_ORGANISATION));
         assertEquals("case.owner@example.com", requestCaptor.getValue().getPartnerContactEmail());
         assertEquals("CASE-123", requestCaptor.getValue().getPartnerCaseReference());
         assertEquals("ACME LTD", requestCaptor.getValue().getSubmissionCompanyName());
@@ -300,8 +315,9 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_whenServiceThrowsRuntimeException_returnsInternalServerErrorResponse() throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
-                any()))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq(COMPANY_NUMBER),
+                any(),
+                eq(PARTNER_ORGANISATION)))
                 .thenThrow(new RuntimeException("Downstream unavailable"));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -314,8 +330,9 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @Test
     void withdrawAllObjections_whenServiceThrowsConflictResponseStatusException_returnsConflictErrorResponse() throws Exception {
-        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq("12345678"),
-                any()))
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq(COMPANY_NUMBER),
+                any(),
+                eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate withdrawal request"));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -414,7 +431,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
             final String reason,
             final String expectedErrorCode) throws Exception {
         when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(eq(COMPANY_NUMBER),
-                any()))
+                any(),
+                 eq(PARTNER_ORGANISATION)))
                 .thenThrow(new ResponseStatusException(status, reason));
 
         mockMvc().perform(post(WITHDRAWALS_PATH)
@@ -469,7 +487,14 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private ResultActions postWithdrawals(JsonNode request) throws Exception {
         return mockMvc().perform(post(WITHDRAWALS_PATH)
                 .contentType(APPLICATION_JSON)
+                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION)
                 .content(objectMapper.writeValueAsString(request)));
+    }
+
+    private ResultActions getWithdrawal(String withdrawalId) throws Exception {
+        return mockMvc().perform(get(WITHDRAWALS_PATH + "/" + withdrawalId)
+                .contentType(APPLICATION_JSON)
+                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION));
     }
 
     private ResultActions postUpdateWithdrawalStatus(String companyNumber, String payload) throws Exception {
@@ -484,5 +509,11 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .andExpect(jsonPath("$.error_code").value(expectedErrorCode))
                 .andExpect(jsonPath("$.message").value("Invalid Message"));
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
+    private MockMvc mockMvc() {
+        return MockMvcBuilders.standaloneSetup(strikeOffPartnerWithdrawalsController)
+                .setControllerAdvice(new CreateObjectionRequestBodyAdvice(), new GlobalExceptionHandler())
+                .build();
     }
 }

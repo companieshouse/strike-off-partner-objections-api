@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,7 +13,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import java.util.UUID;
@@ -66,9 +64,6 @@ class StrikeOffPartnerObjectionServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
-    @Mock
-    private HttpServletRequest defaultRequest;
-
     private static final String VALID_COMPANY_NUMBER = "12345";
 
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -80,10 +75,8 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRequestMapper,
                 objectionResponseMapper,
                 objectionKafkaProducer,
-                companyValidator,
-                defaultRequest
+                companyValidator
         );
-        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
     }
     @Test
     void createObjection_whenRequestIsValid_returnsMappedResponse() {
@@ -101,7 +94,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-1"));
 
 
-        BaseObjectionResponse result = strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto);
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION);
 
         assertThat(result).isSameAs(expectedResponse);
         verify(objectionRequestMapper).toObjectionDocument(
@@ -130,7 +123,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenThrow(kafkaException);
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
         ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
@@ -154,7 +147,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenThrow(cause);
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION))
                 .isInstanceOf(ObjectionPersistenceException.class)
                 .hasMessage("Failed to persist objection")
                 .hasCause(cause);
@@ -179,8 +172,8 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionKafkaProducer.publishObjectionEvent(any(ObjectionDocument.class))).thenReturn(getPublishedEvent("event-id-3"));
         when(objectionResponseMapper.toObjectionApiResponse(any())).thenReturn(new BaseObjectionResponse());
 
-        strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto);
-        strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto);
+        strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION);
+        strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION);
 
         assertThat(objectionIdCaptor.getAllValues()).hasSize(2);
         assertThat(objectionIdCaptor.getAllValues().get(0)).isNotBlank();
@@ -206,7 +199,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
 
-        BaseObjectionResponse result = strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto);
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION);
 
         assertThat(result).isSameAs(expectedResponse);
         verify(objectionRepository).save(any(ObjectionDocument.class));
@@ -230,7 +223,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenThrow(kafkaException);
         when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
 
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto))
+        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
         verify(objectionRepository).save(any(ObjectionDocument.class));
@@ -247,7 +240,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
         when(objectionResponseMapper.toObjectionApiResponse(document)).thenReturn(expectedResponse);
 
-        BaseObjectionResponse result = strikeOffPartnerObjectionService.getObjection(companyNumber, objectionId);
+        BaseObjectionResponse result = strikeOffPartnerObjectionService.getObjection(companyNumber, objectionId, PARTNER_ORGANISATION);
 
         assertEquals(expectedResponse, result);
         verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
@@ -259,70 +252,12 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionRepository.findByCompanyNumberAndObjectionId("1", "2")).thenReturn(null);
         ObjectionNotFoundException ex = assertThrows(
                 ObjectionNotFoundException.class,
-                () -> strikeOffPartnerObjectionService.getObjection("1", "2"));
+                () -> strikeOffPartnerObjectionService.getObjection("1", "2", PARTNER_ORGANISATION));
         assertEquals(
                 format("Objection not found for company number=%s, objectionId=%s", "1", "2"),
                 ex.getMessage());
         verify(objectionRepository).findByCompanyNumberAndObjectionId("1", "2");
         verifyNoInteractions(objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        CreateObjectionRequest request = validCreateObjectionRequest();
-        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Missing partner organisation in request context");
-
-        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
-    }
-
-    @Test
-    void getObjection_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection("1", "2"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Missing partner organisation in request context");
-
-        verifyNoInteractions(objectionRepository, objectionResponseMapper);
-    }
-
-    @Test
-    void createObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
-        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
-                objectionRepository,
-                objectionRequestMapper,
-                objectionResponseMapper,
-                objectionKafkaProducer,
-                companyValidator
-        );
-        CreateObjectionRequest request = validCreateObjectionRequest();
-
-        assertThatThrownBy(() -> serviceWithoutExtractor.createObjection(VALID_COMPANY_NUMBER, request))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("HttpServletRequest is not configured");
-
-        verifyNoInteractions(companyValidator, objectionRequestMapper, objectionRepository, objectionKafkaProducer);
-    }
-
-    @Test
-    void getObjection_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
-        StrikeOffPartnerObjectionService serviceWithoutExtractor = new StrikeOffPartnerObjectionService(
-                objectionRepository,
-                objectionRequestMapper,
-                objectionResponseMapper,
-                objectionKafkaProducer,
-                companyValidator
-        );
-
-        assertThatThrownBy(() -> serviceWithoutExtractor.getObjection("1", "2"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("HttpServletRequest is not configured");
-
-        verifyNoInteractions(objectionRepository, objectionResponseMapper);
     }
 
     @Test
@@ -339,7 +274,7 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-6"));
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(response);
 
-        strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request);
+        strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(companyValidator, times(1)).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
     }
@@ -353,7 +288,7 @@ class StrikeOffPartnerObjectionServiceTest {
         doThrow(validationException).when(companyValidator).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
 
         assertThatThrownBy(() ->
-                strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request))
+                strikeOffPartnerObjectionService.createObjection(VALID_COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompany(VALID_COMPANY_NUMBER, request.getSubmissionCompanyName());
@@ -491,7 +426,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 .setEventTime(java.time.Instant.now().toString())
                 .setSource("strike-off-partner-objections-api")
                 .setCompanyNumber(VALID_COMPANY_NUMBER)
-                .setPartnerOrganisation("hmrc")
+                .setPartnerOrganisation(PARTNER_ORGANISATION)
                 .setStrikeOffEventId(UUID.randomUUID().toString())
                 .build();
     }

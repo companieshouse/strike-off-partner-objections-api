@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -32,14 +31,11 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerObjectionService {
 
-    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
-
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
-    private final HttpServletRequest httpServletRequest;
 
     @Autowired
     public StrikeOffPartnerObjectionService(
@@ -47,35 +43,12 @@ public class StrikeOffPartnerObjectionService {
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
-            CompanyValidator companyValidator,
-            HttpServletRequest httpServletRequest) {
+            CompanyValidator companyValidator) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
-        this.httpServletRequest = httpServletRequest;
-    }
-
-    StrikeOffPartnerObjectionService(
-            ObjectionRepository objectionRepository,
-            ObjectionRequestMapper objectionRequestMapper,
-            ObjectionResponseMapper objectionResponseMapper,
-            ObjectionKafkaProducer objectionKafkaProducer,
-            CompanyValidator companyValidator) {
-        this(objectionRepository,
-                objectionRequestMapper,
-                objectionResponseMapper,
-                objectionKafkaProducer,
-                companyValidator,
-                null);
-    }
-
-    public BaseObjectionResponse createObjection(final String companyNumber,
-                                                 final CreateObjectionRequest createObjectionRequest) {
-        return createObjection(companyNumber,
-                createObjectionRequest,
-                resolvePartnerOrganisation());
     }
 
     public BaseObjectionResponse createObjection(final String companyNumber,
@@ -162,23 +135,6 @@ public class StrikeOffPartnerObjectionService {
         return objectionResponseMapper.toObjectionApiResponse(document);
     }
 
-    public BaseObjectionResponse getObjection(final String companyNumber,
-                                              final String objectionId) throws ObjectionNotFoundException {
-        return getObjection(companyNumber, objectionId, resolvePartnerOrganisation());
-    }
-
-    private String resolvePartnerOrganisation() {
-        if (httpServletRequest == null) {
-            throw new IllegalStateException("HttpServletRequest is not configured");
-        }
-        String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
-        if (partnerOrganisation == null || partnerOrganisation.isBlank()) {
-            throw new IllegalStateException("Missing partner organisation in request context");
-        }
-        return partnerOrganisation.trim();
-    }
-
-
     public void updateObjectionProcessingStatus(
             final String companyNumber,
             final String objectionId,
@@ -247,4 +203,3 @@ public class StrikeOffPartnerObjectionService {
         };
     }
 }
-

@@ -29,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 @SpringBootTest
 @Tag("integration-test")
@@ -69,7 +70,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         assertThat(response).isNotNull();
         assertThat(response.getWithdrawalId()).isNotBlank();
@@ -83,10 +84,10 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void getWithdrawal_whenWithdrawalIsFound_retrievesWithdrawalFromMongo() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         WithdrawAllObjectionsResponse retrieveResponse =
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId());
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId(), PARTNER_ORGANISATION);
 
         assertThat(retrieveResponse).isNotNull();
         assertThat(retrieveResponse.getWithdrawalId()).isEqualTo(createResponse.getWithdrawalId());
@@ -97,10 +98,10 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void getWithdrawal_whenRetrieved_returnsMappedResponseWithAllFields() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         WithdrawAllObjectionsResponse retrieveResponse =
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId());
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse.getWithdrawalId(), PARTNER_ORGANISATION);
 
         // Verify all fields have correct values and links
         assertThat(retrieveResponse.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
@@ -123,7 +124,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void getWithdrawal_whenWithdrawalDoesNotExist_throwsNotFoundException() {
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, "non-existent-id"))
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, "non-existent-id", PARTNER_ORGANISATION))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
     }
@@ -132,12 +133,12 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void getWithdrawal_whenCompanyNumberDoesNotMatch_throwsNotFoundException() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse createResponse =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         String withdrawalId = createResponse.getWithdrawalId();
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.getWithdrawal(
-                        SECOND_COMPANY_NUMBER, withdrawalId))
+                        SECOND_COMPANY_NUMBER, withdrawalId, PARTNER_ORGANISATION))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
     }
@@ -147,15 +148,15 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         // Create first withdrawal for company A
         WithdrawAllObjectionsRequest request1 = buildRequest();
         WithdrawAllObjectionsResponse createResponse1 =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request1);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request1, PARTNER_ORGANISATION);
 
         // Create second withdrawal for company B
         WithdrawAllObjectionsRequest request2 = buildRequest();
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(SECOND_COMPANY_NUMBER, request2);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(SECOND_COMPANY_NUMBER, request2, PARTNER_ORGANISATION);
 
         // Retrieve first withdrawal
         WithdrawAllObjectionsResponse retrieveResponse1 =
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse1.getWithdrawalId());
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, createResponse1.getWithdrawalId(), PARTNER_ORGANISATION);
 
         // Verify we get the correct withdrawal
         assertThat(retrieveResponse1.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
@@ -165,7 +166,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void updateWithdrawalProcessingStatus_whenValidStatus_updatesPersistedDocument() {
         WithdrawAllObjectionsResponse created =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION);
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
 
@@ -191,7 +192,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Test
     void updateWithdrawalProcessingStatus_whenStatusMissing_throwsBadRequest() {
         WithdrawAllObjectionsResponse created =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest());
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION);
         String withdrawalId = created.getWithdrawalId();
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
 
@@ -210,7 +211,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
         Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         Instant after = Instant.now();
 
         List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
@@ -256,7 +257,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void findByWithdrawalId_whenWithdrawalIsPersisted_returnsWithdrawalDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         Optional<WithdrawalDocument> found =
                 withdrawalRepository.findByWithdrawalId(response.getWithdrawalId());
@@ -270,7 +271,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void findByCompanyNumberAndWithdrawalId_whenWithdrawalIsPersisted_returnsWithdrawalDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         Optional<WithdrawalDocument> found =
                 withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, response.getWithdrawalId());
@@ -285,8 +286,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void withdrawAllObjections_whenCalledMultipleTimes_persistsWithUniqueWithdrawalId() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<WithdrawalDocument> savedDocs = withdrawalRepository.findAll();
         assertThat(savedDocs).hasSize(2);
@@ -301,7 +302,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         WithdrawAllObjectionsRequest request = buildRequest();
 
         WithdrawAllObjectionsResponse response =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(response.getSubmissionCompanyName()).isEqualTo("Acme Limited");
@@ -324,7 +325,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void withdrawAllObjections_whenRequestIsValid_publishesWithdrawalEventToKafkaTopic() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getWithdrawalId()));
 
@@ -343,8 +344,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void withdrawAllObjections_whenCalledMultipleTimes_publishesOneKafkaEventPerCall() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        var response1 = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-        var response2 = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        var response1 = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        var response2 = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response1.getWithdrawalId(), response2.getWithdrawalId()));
 
@@ -360,7 +361,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     void withdrawAllObjections_whenSuccessful_kafkaEventContainsWithdrawalIdMatchingPersistedDocument() {
         WithdrawAllObjectionsRequest request = buildRequest();
 
-        var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getWithdrawalId()));
 

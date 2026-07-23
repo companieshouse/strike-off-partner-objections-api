@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.util.Set;
@@ -29,15 +28,11 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
-    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
-
-
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
-    private final HttpServletRequest httpServletRequest;
 
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
@@ -45,34 +40,12 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
-            Validator validator,
-            HttpServletRequest httpServletRequest) {
+            Validator validator) {
         this.withdrawalRepository = withdrawalRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
-        this.httpServletRequest = httpServletRequest;
-    }
-
-    StrikeOffPartnerWithdrawalsService(
-            WithdrawalRepository withdrawalRepository,
-            WithdrawalMapper withdrawalMapper,
-            WithdrawalKafkaProducer withdrawalKafkaProducer,
-            CompanyValidator companyValidator,
-            Validator validator) {
-        this(withdrawalRepository,
-                withdrawalMapper,
-                withdrawalKafkaProducer,
-                companyValidator,
-                validator,
-                null);
-    }
-
-    public WithdrawAllObjectionsResponse getWithdrawal(
-            final String companyNumber,
-            final String withdrawalId) {
-        return getWithdrawal(companyNumber, withdrawalId, resolvePartnerOrganisation());
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
@@ -137,12 +110,6 @@ public class StrikeOffPartnerWithdrawalsService {
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist withdrawal", ex);
         }
-    }
-
-    public WithdrawAllObjectionsResponse withdrawAllObjections(
-            final String companyNumber,
-            final WithdrawAllObjectionsRequest request) {
-        return withdrawAllObjections(companyNumber, request, resolvePartnerOrganisation());
     }
 
     private void publishAndSaveWithdrawal(WithdrawalDocument persistedWithdrawal) {
@@ -216,16 +183,5 @@ public class StrikeOffPartnerWithdrawalsService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue), ex);
         }
-    }
-
-    private String resolvePartnerOrganisation() {
-        if (httpServletRequest == null) {
-            throw new IllegalStateException("HttpServletRequest is not configured");
-        }
-        String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
-        if (partnerOrganisation == null || partnerOrganisation.isBlank()) {
-            throw new IllegalStateException("Missing partner organisation in request context");
-        }
-        return partnerOrganisation.trim();
     }
 }
