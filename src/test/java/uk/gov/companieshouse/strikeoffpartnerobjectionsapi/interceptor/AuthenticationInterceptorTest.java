@@ -12,9 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.util.stream.Stream;
 
 @Tag("unit-test")
 class AuthenticationInterceptorTest {
@@ -45,7 +48,6 @@ class AuthenticationInterceptorTest {
         authenticationInterceptor = new AuthenticationInterceptor();
         handler = new Object();
 
-        // Setup mock response to handle getWriter() calls
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
         when(response.getWriter()).thenReturn(printWriter);
@@ -60,8 +62,20 @@ class AuthenticationInterceptorTest {
         assertTrue(result);
     }
 
+    @ParameterizedTest
+    @MethodSource("invalidIdentityTypes")
+    void preHandle_whenIdentityTypeIsInvalid_returns403(String identityType) {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(identityType);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertFalse(result);
+    }
+
     @Test
-    void preHandle_whenInvalidApiKey_returns401() {
+    void preHandle_whenApiKeyIsMissing_returns401() {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
@@ -72,34 +86,12 @@ class AuthenticationInterceptorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "invalid"})
-    void preHandle_whenInvalidIdentityType_returns403(String invalidType) {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(invalidType);
-        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
-
-        boolean result = authenticationInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-    }
-
-    @Test
-    void preHandle_whenMissingIdentityType_returns403() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(null);
-        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
-
-        boolean result = authenticationInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-    }
-
-    @Test
-    void preHandle_whenPermissionsHeaderIsMissing_returns403() {
+    @MethodSource("invalidPermissions")
+    void preHandle_whenPermissionsIsInvalid_returns403(String permissions) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
-        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(null);
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
         when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
@@ -107,52 +99,42 @@ class AuthenticationInterceptorTest {
         assertFalse(result);
     }
 
-    @Test
-    void preHandle_whenRequiredPermissionIsAbsent_returns403() {
+    @ParameterizedTest
+    @MethodSource("validPermissions")
+    void preHandle_whenPermissionsIsValid_allowsRequest(String permissions) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
-        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn("other-permission");
+        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
         when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
-        assertFalse(result);
+        assertTrue(result);
     }
 
-    @Test
-    void preHandle_whenPartnerOrganisationHeaderIsMissing_returns403() {
+    @ParameterizedTest
+    @MethodSource("missingPartnerOrganisation")
+    void preHandle_whenPartnerOrganisationIsInvalid_returns403(String partnerOrg) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(null);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
         assertFalse(result);
     }
 
-    @Test
-    void preHandle_whenPartnerOrganisationHeaderIsBlank_returns403() {
+    @ParameterizedTest
+    @ValueSource(strings = {"HMRC", "companies-house", "any-valid-partner"})
+    void preHandle_whenPartnerOrganisationIsValid_allowsRequest(String partnerOrg) {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn("   ");
-
-        boolean result = authenticationInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-    }
-
-    @Test
-    void preHandle_whenRequiredPermissionIsPresentAmongMultiple_allowsRequest() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
-        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
-        when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn("other-permission " + VALID_PERMISSION + " another");
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -165,5 +147,21 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
         when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+    }
+
+    static Stream<String> invalidIdentityTypes() {
+        return Stream.of(null, "", "   ", "invalid", "oauth2", "stream-key");
+    }
+
+    static Stream<String> invalidPermissions() {
+        return Stream.of(null, "", "   ", "other-permission", "strike-off-partner-objections-extra");
+    }
+
+    static Stream<String> validPermissions() {
+        return Stream.of("strike-off-partner-objections", "other-permission strike-off-partner-objections", "strike-off-partner-objections other-permission", "first second strike-off-partner-objections third");
+    }
+
+    static Stream<String> missingPartnerOrganisation() {
+        return Stream.of(null, "", "   ", "");
     }
 }
