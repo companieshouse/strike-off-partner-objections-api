@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
@@ -218,8 +219,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         UpdateObjectionStatusRequest updateRequest = new UpdateObjectionStatusRequest();
         updateRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
 
-        // Should not throw
-        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest);
+        assertThatCode(() ->
+                strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest))
+                .doesNotThrowAnyException();
 
         ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(COMPANY_NUMBER, objectionId);
         assertThat(document.getProcessingStatus()).isEqualTo("objection-submitted");
