@@ -144,6 +144,20 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
+    void getWithdrawal_whenPartnerOrganisationDoesNotMatch_throwsForbidden() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        WithdrawAllObjectionsResponse createResponse =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        String withdrawalId = createResponse.getWithdrawalId();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(
+                        COMPANY_NUMBER, withdrawalId, "different-organisation"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.FORBIDDEN);
+    }
+
+    @Test
     void getWithdrawal_whenMultipleWithdrawalsExist_retrievesCorrectWithdrawal() {
         // Create first withdrawal for company A
         WithdrawAllObjectionsRequest request1 = buildRequest();

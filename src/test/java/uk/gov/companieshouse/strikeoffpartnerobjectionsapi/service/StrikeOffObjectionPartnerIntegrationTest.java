@@ -7,14 +7,18 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.PartnerObjectionReason;
+import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
@@ -24,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -156,6 +161,84 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         AssertionsForInterfaceTypes.assertThat(events).hasSize(1);
         AssertionsForClassTypes.assertThat(events.getFirst().getStrikeOffEventId())
                 .isEqualTo(response.getObjectionId());
+    }
+
+    @Test
+    void getObjection_whenPartnerOrganisationDoesNotMatch_throwsForbidden() {
+        CreateObjectionRequest request = buildValidRequest();
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        String objectionId = created.getObjectionId();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, objectionId, "different-organisation"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void getObjection_whenObjectionDoesNotExist_throwsObjectionNotFoundException() {
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, "non-existent-objection-id", PARTNER_ORGANISATION))
+                .isInstanceOf(ObjectionNotFoundException.class);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenValidTransition_updatesStatusInMongo() {
+        CreateObjectionRequest request = buildValidRequest();
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+
+        UpdateObjectionStatusRequest updateRequest = new UpdateObjectionStatusRequest();
+        updateRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, created.getObjectionId(), updateRequest);
+
+        ObjectionDocument updated = objectionRepository.findByCompanyNumberAndObjectionId(COMPANY_NUMBER, created.getObjectionId());
+        assertThat(updated).isNotNull();
+        assertThat(updated.getProcessingStatus()).isEqualTo("objection-processing");
+        assertThat(updated.getProcessingStatusChangedAt()).isNotNull();
+        assertThat(updated.getEtag()).isNotBlank();
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenObjectionDoesNotExist_throwsObjectionNotFoundException() {
+        UpdateObjectionStatusRequest updateRequest = new UpdateObjectionStatusRequest();
+        updateRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, "non-existent-id", updateRequest))
+                .isInstanceOf(ObjectionNotFoundException.class);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenAlreadySameStatus_doesNothing() {
+        CreateObjectionRequest request = buildValidRequest();
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        String objectionId = created.getObjectionId();
+
+        UpdateObjectionStatusRequest updateRequest = new UpdateObjectionStatusRequest();
+        updateRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
+
+        // Should not throw
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest);
+
+        ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(COMPANY_NUMBER, objectionId);
+        assertThat(document.getProcessingStatus()).isEqualTo("objection-submitted");
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenInvalidTransition_throwsConflict() {
+        CreateObjectionRequest request = buildValidRequest();
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        String objectionId = created.getObjectionId();
+
+        // Trying to go directly from submitted to accepted (skipping processing) is invalid
+        UpdateObjectionStatusRequest updateRequest = new UpdateObjectionStatusRequest();
+        updateRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
     }
 
     private static void assertResponse(BaseObjectionResponse response, ObjectionDocument saved) {

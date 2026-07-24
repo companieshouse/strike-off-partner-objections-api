@@ -513,6 +513,54 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .hasCause(cause);
     }
 
+    @Test
+    void getWithdrawal_whenPartnerOrganisationDoesNotMatch_throwsForbidden() {
+        WithdrawalDocument document = buildSavedDocument();
+        document.setPartnerOrganisation("different-organisation");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(document));
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(withdrawalMapper);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCurrentStatusIsNull_throwsConflict() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus(null);
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCurrentStatusIsInvalid_throwsConflict() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("unknown-status-value");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
+    }
+
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
         return StrikeOffPartnerObjections.newBuilder()
                 .setEventId(eventId)

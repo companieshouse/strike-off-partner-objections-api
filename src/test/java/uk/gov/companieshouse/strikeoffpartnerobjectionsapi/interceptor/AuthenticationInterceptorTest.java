@@ -2,11 +2,13 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,6 +141,29 @@ class AuthenticationInterceptorTest {
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
         assertTrue(result);
+    }
+
+    @Test
+    void preHandle_whenIdentityTypeIsInvalidAndWriterThrowsIOException_returnsFalse() throws IOException {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn("invalid-type");
+        doThrow(new IOException("stream closed")).when(response).getWriter();
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void preHandle_whenApiKeyMissingAndWriterThrowsIOException_returnsFalse() throws IOException {
+        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
+        when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
+        when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
+        doThrow(new IOException("stream closed")).when(response).getWriter();
+
+        boolean result = authenticationInterceptor.preHandle(request, response, handler);
+
+        assertFalse(result);
     }
 
     private void setupValidHeaders() {

@@ -407,12 +407,16 @@ class GlobalExceptionHandlerTest {
     private static Stream<Arguments> unreadableMessageFallbackCases() {
         return Stream.of(
                 Arguments.of("Value for partner_objection_reason is invalid", "INVALID_REASON"),
+                Arguments.of("Value for partnerObjectionReason is invalid", "INVALID_REASON"),
                 Arguments.of("Cannot deserialize partner_objection_workstream from string \"\"", "MISSING_WORKSTREAM"),
                 Arguments.of("Cannot deserialize partner_objection_workstream from string \\\"\\\"",
                         "MISSING_WORKSTREAM"),
                 Arguments.of("Cannot deserialize partner_objection_workstream from value ''", "MISSING_WORKSTREAM"),
                 Arguments.of("Cannot deserialize partner_objection_workstream from string \"invalid\"",
                         "INVALID_WORKSTREAM"),
+                Arguments.of("Cannot deserialize partnerObjectionWorkstream from string \"invalid\"",
+                        "INVALID_WORKSTREAM"),
+                Arguments.of("Cannot deserialize partnerObjectionWorkstream from string \"\"", "MISSING_WORKSTREAM"),
                 Arguments.of("completely unknown parse issue", "MISSING_REQUIRED_PARAMETER")
         );
     }
@@ -461,6 +465,18 @@ class GlobalExceptionHandlerTest {
                 Arguments.of(
                         new FieldError("createObjectionRequest", "partnerCaseReference", null, false,
                                 new String[]{"Size"}, null, null),
+                        "MISSING_REQUIRED_PARAMETER"),
+                Arguments.of(
+                        new FieldError("createObjectionRequest", "submissionCompanyName", "a".repeat(300), false,
+                                new String[]{"Size"}, null, null),
+                        "MAX_LENGTH_EXCEEDED"),
+                Arguments.of(
+                        new FieldError("createObjectionRequest", "submissionCompanyName", "", false,
+                                new String[]{"Size"}, null, null),
+                        "MISSING_REQUIRED_PARAMETER"),
+                Arguments.of(
+                        new FieldError("createObjectionRequest", "unknownField", null, false,
+                                new String[]{"NotNull"}, null, null),
                         "MISSING_REQUIRED_PARAMETER")
         );
     }
