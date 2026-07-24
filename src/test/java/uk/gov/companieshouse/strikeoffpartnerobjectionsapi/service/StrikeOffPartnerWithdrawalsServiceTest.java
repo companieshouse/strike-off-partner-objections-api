@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -69,9 +67,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
-    @Mock
-    private HttpServletRequest defaultRequest;
-
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
@@ -79,8 +74,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         strikeOffPartnerWithdrawalsService =
                 new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator, defaultRequest);
-        lenient().when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(PARTNER_ORGANISATION);
+                        withdrawalKafkaProducer, companyValidator, validator);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -95,7 +89,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(document))
                 .thenReturn(response);
 
-        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION);
 
         verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
     }
@@ -110,7 +104,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(document))
                 .thenReturn(response);
 
-        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+        strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION);
 
         verify(withdrawalMapper).toWithdrawAllObjectionsResponse(document);
     }
@@ -128,7 +122,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .thenReturn(expectedResponse);
 
         WithdrawAllObjectionsResponse result =
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID);
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION);
 
         assertThat(result).isSameAs(expectedResponse);
     }
@@ -139,7 +133,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND)
                 .hasMessageContaining(WITHDRAWAL_ID)
@@ -152,7 +146,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.NOT_FOUND);
     }
@@ -168,39 +162,13 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         WithdrawalPersistenceException ex = assertThrows(
                 WithdrawalPersistenceException.class,
-                () -> strikeOffPartnerWithdrawalsService.getWithdrawal(companyNumber, withdrawalId));
+                () -> strikeOffPartnerWithdrawalsService.getWithdrawal(companyNumber, withdrawalId, PARTNER_ORGANISATION));
 
         assertEquals("Failed to retrieve withdrawal", ex.getMessage());
         assertSame(dataAccessException, ex.getCause());
 
         verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId);
         verifyNoInteractions(withdrawalMapper);
-    }
-
-    @Test
-    void getWithdrawal_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        when(defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
-
-        assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Missing partner organisation in request context");
-
-        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
-    }
-
-    @Test
-    void getWithdrawal_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
-        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator);
-
-        assertThatThrownBy(() -> serviceWithoutExtractor.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("HttpServletRequest is not configured");
-
-        verifyNoInteractions(withdrawalRepository, withdrawalMapper);
     }
 
     // ===== Company Validation Tests =====
@@ -214,7 +182,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
@@ -237,7 +205,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(withdrawalRepository).insert(mappedDocument);
@@ -261,7 +229,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(withdrawalMapper).toWithdrawalDocument(
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any());
@@ -281,7 +249,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(mappedDocument))
                 .thenReturn(new WithdrawAllObjectionsResponse());
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(mappedDocument);
@@ -305,7 +273,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalKafkaProducer.publishWithdrawalEvent(savedDocument)).thenThrow(kafkaException);
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
          ArgumentCaptor<WithdrawalDocument> saveCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
@@ -333,7 +301,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalMapper.toWithdrawAllObjectionsResponse(savedDocument)).thenReturn(expectedResponse);
 
         WithdrawAllObjectionsResponse result =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         assertThat(result).isSameAs(expectedResponse);
         verify(withdrawalRepository).save(any(WithdrawalDocument.class));
@@ -356,7 +324,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenThrow(saveException);
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
         verify(withdrawalRepository).save(any(WithdrawalDocument.class));
@@ -377,7 +345,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .thenReturn(expectedResponse);
 
         WithdrawAllObjectionsResponse result =
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(withdrawalMapper).toWithdrawAllObjectionsResponse(savedDocument);
         assertThat(result).isSameAs(expectedResponse);
@@ -398,8 +366,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         ArgumentCaptor<String> withdrawalIdCaptor = ArgumentCaptor.forClass(String.class);
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(withdrawalMapper, org.mockito.Mockito.times(2))
                 .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
@@ -426,8 +394,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         ArgumentCaptor<String> etagCaptor = ArgumentCaptor.forClass(String.class);
 
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
-        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(withdrawalMapper, org.mockito.Mockito.times(2))
                 .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
@@ -450,40 +418,12 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         when(withdrawalRepository.insert(any(WithdrawalDocument.class))).thenThrow(cause);
 
         assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isInstanceOf(WithdrawalPersistenceException.class)
                 .hasMessage("Failed to persist withdrawal")
                 .hasCause(cause);
 
         verify(withdrawalRepository).insert(any(WithdrawalDocument.class));
-    }
-
-    @Test
-    void withdrawAllObjections_whenPartnerOrganisationMissingInRequestContext_throwsIllegalStateException() {
-        WithdrawAllObjectionsRequest request = buildRequest();
-        when(this.defaultRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation")).thenReturn(null);
-
-        assertThatThrownBy(() ->
-                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Missing partner organisation in request context");
-
-        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
-    }
-
-    @Test
-    void withdrawAllObjections_whenHttpServletRequestIsNotConfigured_throwsIllegalStateException() {
-        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        StrikeOffPartnerWithdrawalsService serviceWithoutExtractor =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator);
-        WithdrawAllObjectionsRequest request = buildRequest();
-
-        assertThatThrownBy(() -> serviceWithoutExtractor.withdrawAllObjections(COMPANY_NUMBER, request))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("HttpServletRequest is not configured");
-
-        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer, companyValidator);
     }
 
     @Test

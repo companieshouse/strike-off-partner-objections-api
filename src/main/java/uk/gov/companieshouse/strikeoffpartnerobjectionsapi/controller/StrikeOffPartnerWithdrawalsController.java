@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +16,9 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.validatePartnerOrganisation;
+
 /**
  * REST controller for strike off partner withdrawal operations.
  *
@@ -26,15 +30,19 @@ import jakarta.validation.constraints.Size;
 public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWithdrawalsInterface {
 
     private final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
+    private final HttpServletRequest httpServletRequest;
 
     /**
      * Constructs the controller with the service used to process withdrawal operations.
      *
      * @param strikeOffPartnerWithdrawalsService service handling withdrawal retrieval and creation
+     * @param httpServletRequest the current HTTP request used to resolve the partner organisation header
      */
     public StrikeOffPartnerWithdrawalsController(
-            final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService) {
+            final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService,
+            final HttpServletRequest httpServletRequest) {
         this.strikeOffPartnerWithdrawalsService = strikeOffPartnerWithdrawalsService;
+        this.httpServletRequest = httpServletRequest;
     }
 
     /**
@@ -47,8 +55,9 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
     @Override
     public ResponseEntity<WithdrawAllObjectionsResponse> getAllWithdrawals(
             final String companyNumber, final String withdrawalId) {
+        String partnerOrganisation = resolvePartnerOrganisation();
         WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService
-                .getWithdrawal(companyNumber, withdrawalId);
+                .getWithdrawal(companyNumber, withdrawalId, partnerOrganisation);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -63,8 +72,9 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
     public ResponseEntity<WithdrawAllObjectionsResponse> withdrawAllObjections(
             final String companyNumber,
             final WithdrawAllObjectionsRequest withdrawAllObjectionsRequest) {
+        String partnerOrganisation = resolvePartnerOrganisation();
         WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(
-                companyNumber, withdrawAllObjectionsRequest);
+                companyNumber, withdrawAllObjectionsRequest, partnerOrganisation);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -82,5 +92,10 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
         } catch (WithdrawalNotFoundException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
         }
+    }
+
+    private String resolvePartnerOrganisation() {
+        String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
+        return validatePartnerOrganisation(partnerOrganisation);
     }
 }

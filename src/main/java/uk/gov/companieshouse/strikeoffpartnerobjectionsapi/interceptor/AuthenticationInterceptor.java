@@ -16,6 +16,7 @@ import java.util.Map;
 import uk.gov.companieshouse.api.util.security.AuthorisationUtil;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 @Component
@@ -24,7 +25,6 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String KEY = "key";
     private static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
-    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
     private static final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
     private static final String IDENTITY_TYPE_SUFFIX = ", identityType=";
 

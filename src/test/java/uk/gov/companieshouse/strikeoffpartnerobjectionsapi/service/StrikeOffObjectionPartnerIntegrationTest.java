@@ -63,7 +63,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         CreateObjectionRequest request = buildValidRequest();
 
         BaseObjectionResponse response =
-                strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+                strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         assertThat(response).isNotNull();
         assertThat(response.getObjectionId()).isNotBlank();
@@ -75,7 +75,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         CreateObjectionRequest request = buildValidRequest();
 
         Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-        BaseObjectionResponse response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        BaseObjectionResponse response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         Instant after = Instant.now();
 
         List<ObjectionDocument> savedDocs = objectionRepository.findAll();
@@ -91,11 +91,12 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void getObjection_whenRequestIsValid_fetchesDocumentInMongo() {
         CreateObjectionRequest request = buildValidRequest();
 
-        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         BaseObjectionResponse fetched = strikeOffPartnerObjectionService.getObjection(
                 COMPANY_NUMBER,
-                created.getObjectionId());
+                created.getObjectionId(),
+                PARTNER_ORGANISATION);
 
         List<ObjectionDocument> savedDocs = objectionRepository.findAll();
         assertThat(savedDocs).hasSize(1);
@@ -112,7 +113,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjection_whenRequestIsValid_publishesObjectionEventToKafkaTopic() {
         CreateObjectionRequest request = buildValidRequest();
 
-        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getObjectionId()));
 
@@ -131,8 +132,8 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjection_whenCalledMultipleTimes_publishesOneKafkaEventPerCall() {
         var request = buildValidRequest();
 
-        var response1 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
-        var response2 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        var response1 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+        var response2 = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response1.getObjectionId(), response2.getObjectionId()));
 
@@ -148,7 +149,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     void createObjection_whenSuccessful_kafkaEventContainsObjectionIdMatchingPersistedDocument() {
         var request = buildValidRequest();
 
-        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request);
+        var response = strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         List<StrikeOffPartnerObjections> events = pollKafkaForEvents(List.of(response.getObjectionId()));
 
@@ -171,7 +172,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
     private static void assertSavedDocument(ObjectionDocument saved, Instant before, Instant after) {
         Instant beforeAtMillisPrecision = before.truncatedTo(ChronoUnit.MILLIS);
         assertThat(saved.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
-        assertThat(saved.getPartnerOrganisation()).isEqualTo("hmrc");
+        assertThat(saved.getPartnerOrganisation()).isEqualTo(PARTNER_ORGANISATION);
         assertThat(saved.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
