@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -80,7 +81,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(httpServletRequest.getHeader("ERIC-Authorised-Application-Partner-Organisation"))
+        lenient().when(httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER))
                 .thenReturn(PARTNER_ORGANISATION);
     }
 

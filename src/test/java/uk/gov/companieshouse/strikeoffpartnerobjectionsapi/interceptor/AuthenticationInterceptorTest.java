@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +27,6 @@ class AuthenticationInterceptorTest {
     private static final String ERIC_IDENTITY_HEADER = "ERIC-Identity";
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
-    private static final String ERIC_PARTNER_ORG_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
     private static final String REQUEST_ID = "test-request-id-123";
     private static final String VALID_IDENTITY_TYPE = "key";
     private static final String VALID_API_KEY = "test-api-key-123";
@@ -92,7 +92,7 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(VALID_PARTNER_ORG);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -106,7 +106,7 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(VALID_PARTNER_ORG);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -120,7 +120,7 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
+        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(partnerOrg);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -134,7 +134,7 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(partnerOrg);
+        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(partnerOrg);
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -146,7 +146,7 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
-        when(request.getHeader(ERIC_PARTNER_ORG_HEADER)).thenReturn(VALID_PARTNER_ORG);
+        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(VALID_PARTNER_ORG);
     }
 
     static Stream<String> invalidIdentityTypes() {

@@ -17,10 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.validatePartnerOrganisation;
+
 @RestController
 public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObjectionsInterface {
-
-    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
 
     private final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
     private final HttpServletRequest httpServletRequest;
@@ -75,10 +76,6 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
 
     private String resolvePartnerOrganisation() {
         String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
-        if (partnerOrganisation == null || partnerOrganisation.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Missing or blank partner organisation header");
-        }
-        return partnerOrganisation.trim();
+        return validatePartnerOrganisation(partnerOrganisation);
     }
 }

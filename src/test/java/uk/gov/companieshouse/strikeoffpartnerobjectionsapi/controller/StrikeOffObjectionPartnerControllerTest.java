@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -121,7 +122,7 @@ class StrikeOffObjectionPartnerControllerTest {
                         .header("X-Request-Id", "test-request-id")
                         .header("ERIC-Identity-Type", "key")
                         .header("CHS_API_KEY", "test-api-key")
-                        .header("ERIC-Authorised-Application-Partner-Organisation", headerValue)
+                        .header(ERIC_PARTNER_ORGANISATION_HEADER, headerValue)
                         .content(objectMapper.writeValueAsString(baseValidRequest())))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error_code").value("forbidden"))
@@ -576,7 +577,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key")
-                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION)
+                .header(ERIC_PARTNER_ORGANISATION_HEADER, PARTNER_ORGANISATION)
                 .content(objectMapper.writeValueAsString(payload)));
     }
 
@@ -598,7 +599,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key")
-                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION));
+                .header(ERIC_PARTNER_ORGANISATION_HEADER, PARTNER_ORGANISATION));
     }
     
     private ResultActions patchUpdateObjectionStatus(String companyNumber, String payload) throws Exception {

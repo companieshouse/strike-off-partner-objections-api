@@ -16,6 +16,9 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPart
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.validatePartnerOrganisation;
+
 /**
  * REST controller for strike off partner withdrawal operations.
  *
@@ -25,8 +28,6 @@ import jakarta.validation.constraints.Size;
  */
 @RestController
 public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWithdrawalsInterface {
-
-    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
 
     private final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
     private final HttpServletRequest httpServletRequest;
@@ -95,10 +96,6 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
 
     private String resolvePartnerOrganisation() {
         String partnerOrganisation = httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
-        if (partnerOrganisation == null || partnerOrganisation.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Missing or blank partner organisation header");
-        }
-        return partnerOrganisation.trim();
+        return validatePartnerOrganisation(partnerOrganisation);
     }
 }
