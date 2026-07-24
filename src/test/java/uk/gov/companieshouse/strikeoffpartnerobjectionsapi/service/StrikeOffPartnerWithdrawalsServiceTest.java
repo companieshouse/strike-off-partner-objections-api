@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
 import jakarta.validation.Validator;
 import java.time.Instant;
 import java.util.Optional;
@@ -71,10 +72,12 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     @BeforeEach
     void setUp() {
-        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator);
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = factory.getValidator();
+            strikeOffPartnerWithdrawalsService =
+                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                            withdrawalKafkaProducer, companyValidator, validator);
+        }
     }
 
     // ===== GET Withdrawal Tests =====
@@ -511,6 +514,54 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .isInstanceOf(WithdrawalPersistenceException.class)
                 .hasMessage("Failed to persist updated withdrawal processing status")
                 .hasCause(cause);
+    }
+
+    @Test
+    void getWithdrawal_whenPartnerOrganisationDoesNotMatch_throwsForbidden() {
+        WithdrawalDocument document = buildSavedDocument();
+        document.setPartnerOrganisation("different-organisation");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(document));
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(withdrawalMapper);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCurrentStatusIsNull_throwsConflict() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus(null);
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCurrentStatusIsInvalid_throwsConflict() {
+        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("unknown-status-value");
+
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
     }
 
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {

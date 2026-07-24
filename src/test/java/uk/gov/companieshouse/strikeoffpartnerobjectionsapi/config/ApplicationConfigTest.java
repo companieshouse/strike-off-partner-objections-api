@@ -39,11 +39,13 @@ class ApplicationConfigTest {
 
         when(registry.addInterceptor(interceptor)).thenReturn(registration);
         when(registration.addPathPatterns("/**")).thenReturn(registration);
+        when(registration.excludePathPatterns("/healthcheck")).thenReturn(registration);
 
         config.addInterceptors(registry);
 
         verify(registry).addInterceptor(interceptor);
         verify(registration).addPathPatterns("/**");
+        verify(registration).excludePathPatterns("/healthcheck");
     }
 
     @Test
