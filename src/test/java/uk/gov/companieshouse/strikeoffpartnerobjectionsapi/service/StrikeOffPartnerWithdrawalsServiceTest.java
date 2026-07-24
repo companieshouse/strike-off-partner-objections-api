@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
 import jakarta.validation.Validator;
 import java.time.Instant;
 import java.util.Optional;
@@ -71,10 +72,12 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
     @BeforeEach
     void setUp() {
-        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        strikeOffPartnerWithdrawalsService =
-                new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
-                        withdrawalKafkaProducer, companyValidator, validator);
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = factory.getValidator();
+            strikeOffPartnerWithdrawalsService =
+                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                            withdrawalKafkaProducer, companyValidator, validator);
+        }
     }
 
     // ===== GET Withdrawal Tests =====

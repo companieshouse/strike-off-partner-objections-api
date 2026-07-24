@@ -14,15 +14,17 @@ import java.io.StringWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.stream.Stream;
 
 @Tag("unit-test")
+@ExtendWith(MockitoExtension.class)
 class AuthenticationInterceptorTest {
 
     private static final String ERIC_IDENTITY_TYPE_HEADER = "ERIC-Identity-Type";
@@ -45,14 +47,9 @@ class AuthenticationInterceptorTest {
     private Object handler;
 
     @BeforeEach
-    void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
+    void setUp() {
         authenticationInterceptor = new AuthenticationInterceptor();
         handler = new Object();
-
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(stringWriter);
-        when(response.getWriter()).thenReturn(printWriter);
     }
 
     @Test
@@ -66,10 +63,11 @@ class AuthenticationInterceptorTest {
 
     @ParameterizedTest
     @MethodSource("invalidIdentityTypes")
-    void preHandle_whenIdentityTypeIsInvalid_returns403(String identityType) {
+    void preHandle_whenIdentityTypeIsInvalid_returns403(String identityType) throws IOException {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(identityType);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
+        stubResponseWriter();
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -77,10 +75,11 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void preHandle_whenApiKeyIsMissing_returns401() {
+    void preHandle_whenApiKeyIsMissing_returns401() throws IOException {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(null);
+        stubResponseWriter();
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -89,12 +88,12 @@ class AuthenticationInterceptorTest {
 
     @ParameterizedTest
     @MethodSource("invalidPermissions")
-    void preHandle_whenPermissionsIsInvalid_returns403(String permissions) {
+    void preHandle_whenPermissionsIsInvalid_returns403(String permissions) throws IOException {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(permissions);
-        when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(VALID_PARTNER_ORG);
+        stubResponseWriter();
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -117,12 +116,13 @@ class AuthenticationInterceptorTest {
 
     @ParameterizedTest
     @MethodSource("missingPartnerOrganisation")
-    void preHandle_whenPartnerOrganisationIsInvalid_returns403(String partnerOrg) {
+    void preHandle_whenPartnerOrganisationIsInvalid_returns403(String partnerOrg) throws IOException {
         when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
         when(request.getHeader(ERIC_IDENTITY_TYPE_HEADER)).thenReturn(VALID_IDENTITY_TYPE);
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
         when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(partnerOrg);
+        stubResponseWriter();
 
         boolean result = authenticationInterceptor.preHandle(request, response, handler);
 
@@ -172,6 +172,10 @@ class AuthenticationInterceptorTest {
         when(request.getHeader(ERIC_IDENTITY_HEADER)).thenReturn(VALID_API_KEY);
         when(request.getHeader(ERIC_PERMISSIONS_HEADER)).thenReturn(VALID_PERMISSION);
         when(request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER)).thenReturn(VALID_PARTNER_ORG);
+    }
+
+    private void stubResponseWriter() throws IOException {
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
     }
 
     static Stream<String> invalidIdentityTypes() {
