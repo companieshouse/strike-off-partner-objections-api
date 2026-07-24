@@ -576,7 +576,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
                 .header("CHS_API_KEY", "test-api-key")
-                .header("ERIC-Authorised-Application-Partner-Organisation", "hmrc")
+                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION)
                 .content(objectMapper.writeValueAsString(payload)));
     }
 

@@ -20,7 +20,7 @@ import jakarta.validation.constraints.Size;
 @RestController
 public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObjectionsInterface {
 
-    static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
+    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
 
     private final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
     private final HttpServletRequest httpServletRequest;

@@ -26,7 +26,7 @@ import jakarta.validation.constraints.Size;
 @RestController
 public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWithdrawalsInterface {
 
-    static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
+    private static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
 
     private final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
     private final HttpServletRequest httpServletRequest;

@@ -487,14 +487,12 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private ResultActions postWithdrawals(JsonNode request) throws Exception {
         return mockMvc().perform(post(WITHDRAWALS_PATH)
                 .contentType(APPLICATION_JSON)
-                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION)
                 .content(objectMapper.writeValueAsString(request)));
     }
 
     private ResultActions getWithdrawal(String withdrawalId) throws Exception {
         return mockMvc().perform(get(WITHDRAWALS_PATH + "/" + withdrawalId)
-                .contentType(APPLICATION_JSON)
-                .header("ERIC-Authorised-Application-Partner-Organisation", PARTNER_ORGANISATION));
+                .contentType(APPLICATION_JSON));
     }
 
     private ResultActions postUpdateWithdrawalStatus(String payload) throws Exception {
