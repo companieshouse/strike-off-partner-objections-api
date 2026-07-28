@@ -51,10 +51,10 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("MISSING_REQUIRED_PARAMETER", body.getErrorCode());
-        assertEquals("Invalid Message", body.getMessage());
+        assertEquals("The request is missing fields that are required.", body.getMessage());
     }
 
-    @Test
+     @Test
     void handleValidationExceptions_whenDistinctErrorsExist_mapsInPriorityOrder() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
@@ -66,8 +66,7 @@ class GlobalExceptionHandlerTest {
                 fieldError("partnerContactEmail", "a".repeat(260), "Size"),
                 fieldError("partnerCaseReference", "abc", "Size"),
                 fieldError("partnerObjectionReason", "bad", "Enum"),
-                fieldError("partnerObjectionWorkstream", "bad", "Enum"),
-                fieldError("partnerObjectionWorkstream", "", "Enum")));
+                fieldError("partnerObjectionWorkstream", "bad", "NotBlank")));
 
         ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
         ApiError body = requireBody(response);
@@ -75,7 +74,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(
                 "MISSING_REQUIRED_PARAMETER, EMAIL_INCORRECT_FORMAT, EMAIL_MAX_LENGTH, "
-                        + "MAX_LENGTH_EXCEEDED, INVALID_REASON, INVALID_WORKSTREAM, MISSING_WORKSTREAM",
+                        + "MAX_LENGTH_EXCEEDED, INVALID_REASON",
                 body.getErrorCode());
     }
 
@@ -102,56 +101,6 @@ class GlobalExceptionHandlerTest {
         assertEquals(expectedErrorCode, body.getErrorCode());
     }
 
-    @Test
-    void handleUnreadableMessage_whenWorkstreamPathAndBlankTextWithoutInvalidFormat_returnsMissingWorkstream() {
-        JsonMappingException cause = workstreamJsonMapping("Cannot deserialize partner_objection_workstream from string \"\"");
-        HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
-
-        ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
-        ApiError body = requireBody(response);
-
-        assertEquals("MISSING_WORKSTREAM", body.getErrorCode());
-    }
-
-    @Test
-    void handleUnreadableMessage_whenWorkstreamInvalidFormatHasNullValue_returnsMissingWorkstream() {
-        InvalidFormatException cause = workstreamInvalidFormatWithNullValue();
-        HttpMessageNotReadableException ex = unreadable("Cannot deserialize value", cause);
-
-        ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
-        ApiError body = requireBody(response);
-
-        assertEquals("MISSING_WORKSTREAM", body.getErrorCode());
-    }
-
-    @Test
-    void handleUnreadableMessage_whenWorkstreamMappingCauseMessageIsNull_usesPrimaryMessageFallback() {
-        JsonMappingException cause = workstreamJsonMapping(null);
-        HttpMessageNotReadableException ex = unreadable(
-                "Cannot deserialize partner_objection_workstream from string \"\"",
-                cause);
-
-        ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
-        ApiError body = requireBody(response);
-
-        assertEquals("MISSING_WORKSTREAM", body.getErrorCode());
-    }
-
-    @Test
-    void handleUnreadableMessage_whenWorkstreamCauseHasNullMessage_usesPrimaryMessage() {
-        JsonMappingException cause = mock(JsonMappingException.class);
-        when(cause.getPath()).thenReturn(List.of(new JsonMappingException.Reference(new Object(), "partner_objection_workstream")));
-        when(cause.getMessage()).thenReturn(null);
-
-        HttpMessageNotReadableException ex = unreadable(
-                "Cannot deserialize partner_objection_workstream from string \"\"",
-                cause);
-
-        ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
-        ApiError body = requireBody(response);
-
-        assertEquals("MISSING_WORKSTREAM", body.getErrorCode());
-    }
 
     @Test
     void handleUnreadableMessage_whenInvalidFormatHasNoPath_fallsBackToMessageText() {
@@ -356,8 +305,101 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("COMPANY_NUMBER_NOT_EXIST", body.getErrorCode());
-        assertEquals("Invalid Message", body.getMessage());
+        assertEquals("There is no company registered with this number.", body.getMessage());
     }
+
+    @ParameterizedTest
+    @MethodSource("companyValidationErrorMessages")
+    void handleCompanyValidationException_returnsExpectedMessageForEachErrorCode(
+            String errorCode, String expectedMessage) {
+        CompanyValidationException ex = new CompanyValidationException("validation failed", errorCode);
+
+        ResponseEntity<ApiError> response = handler.handleCompanyValidationException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(errorCode, body.getErrorCode());
+        assertEquals(expectedMessage, body.getMessage());
+    }
+
+    @Test
+    void handleValidationExceptions_whenSingleEmailFormatError_returnsSpecificMessage() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("partnerContactEmail", "not-an-email", "Email")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("EMAIL_INCORRECT_FORMAT", body.getErrorCode());
+        assertEquals("Invalid partner_contact_email. Must be a valid email format.", body.getMessage());
+    }
+
+    @Test
+    void handleValidationExceptions_whenSingleEmailMaxLengthError_returnsSpecificMessage() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("partnerContactEmail", "a".repeat(260), "Size")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("EMAIL_MAX_LENGTH", body.getErrorCode());
+        assertEquals("Invalid partner_contact_email. Must not exceed 255 characters.", body.getMessage());
+    }
+
+    @Test
+    void handleValidationExceptions_whenSingleInvalidReasonError_returnsSpecificMessage() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("partnerObjectionReason", "bad-reason", "Enum")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("INVALID_REASON", body.getErrorCode());
+        assertEquals("partner_objection_reason is not recognised.", body.getMessage());
+    }
+
+    @Test
+    void handleValidationExceptions_whenMultipleErrors_returnsMessageOfHighestPriorityCode() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("partnerObjectionReason", "bad", "Enum"),
+                fieldError("partnerContactEmail", "not-an-email", "Email")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("EMAIL_INCORRECT_FORMAT, INVALID_REASON", body.getErrorCode());
+        assertEquals("Invalid partner_contact_email. Must be a valid email format.", body.getMessage());
+    }
+
+    @Test
+    void handleUnreadableMessage_whenInvalidReason_returnsSpecificMessage() {
+        HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
+                "Value for partner_objection_reason is invalid", new MockHttpInputMessage(new byte[0]));
+
+        ResponseEntity<ApiError> response = handler.handleUnreadableMessage(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("INVALID_REASON", body.getErrorCode());
+        assertEquals("partner_objection_reason is not recognised.", body.getMessage());
+    }
+
 
     @ParameterizedTest
     @MethodSource("validationEdgeCases")
@@ -384,17 +426,6 @@ class GlobalExceptionHandlerTest {
         return new HttpMessageNotReadableException(message, cause, new MockHttpInputMessage(new byte[0]));
     }
 
-    private InvalidFormatException workstreamInvalidFormatWithNullValue() {
-        InvalidFormatException exception = InvalidFormatException.from(null, "bad format", null, String.class);
-        exception.prependPath(new Object(), "partner_objection_workstream");
-        return exception;
-    }
-
-    private JsonMappingException workstreamJsonMapping(String message) {
-        JsonMappingException exception = JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, message);
-        exception.prependPath(new Object(), "partner_objection_workstream");
-        return exception;
-    }
 
     private ApiErrorResponseException apiErrorResponseException(int statusCode, String statusMessage) {
         HttpResponseException.Builder builder = new HttpResponseException.Builder(
@@ -408,32 +439,15 @@ class GlobalExceptionHandlerTest {
         return Stream.of(
                 Arguments.of("Value for partner_objection_reason is invalid", "INVALID_REASON"),
                 Arguments.of("Value for partnerObjectionReason is invalid", "INVALID_REASON"),
-                Arguments.of("Cannot deserialize partner_objection_workstream from string \"\"", "MISSING_WORKSTREAM"),
-                Arguments.of("Cannot deserialize partner_objection_workstream from string \\\"\\\"",
-                        "MISSING_WORKSTREAM"),
-                Arguments.of("Cannot deserialize partner_objection_workstream from value ''", "MISSING_WORKSTREAM"),
-                Arguments.of("Cannot deserialize partner_objection_workstream from string \"invalid\"",
-                        "INVALID_WORKSTREAM"),
-                Arguments.of("Cannot deserialize partnerObjectionWorkstream from string \"invalid\"",
-                        "INVALID_WORKSTREAM"),
-                Arguments.of("Cannot deserialize partnerObjectionWorkstream from string \"\"", "MISSING_WORKSTREAM"),
                 Arguments.of("completely unknown parse issue", "MISSING_REQUIRED_PARAMETER")
         );
     }
 
     private static Stream<Arguments> unreadableMessageMappedPathCases() {
-        InvalidFormatException blankWorkstream = InvalidFormatException.from(null, "bad format", "", String.class);
-        blankWorkstream.prependPath(new Object(), "partner_objection_workstream");
-
-        InvalidFormatException invalidWorkstream = InvalidFormatException.from(null, "bad format", "other", String.class);
-        invalidWorkstream.prependPath(new Object(), "partner_objection_workstream");
-
         JsonMappingException invalidReason = JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "bad mapping");
         invalidReason.prependPath(new Object(), "partner_objection_reason");
 
         return Stream.of(
-                Arguments.of(blankWorkstream, "MISSING_WORKSTREAM"),
-                Arguments.of(invalidWorkstream, "INVALID_WORKSTREAM"),
                 Arguments.of(invalidReason, "INVALID_REASON")
         );
     }
@@ -478,6 +492,16 @@ class GlobalExceptionHandlerTest {
                         new FieldError("createObjectionRequest", "unknownField", null, false,
                                 new String[]{"NotNull"}, null, null),
                         "MISSING_REQUIRED_PARAMETER")
+        );
+    }
+
+    private static Stream<Arguments> companyValidationErrorMessages() {
+        return Stream.of(
+                Arguments.of("COMPANY_NUMBER_NOT_EXIST", "There is no company registered with this number."),
+                Arguments.of("SUBMISSION_COMPANY_NAME_MISMATCH", "Company name does not match."),
+                Arguments.of("INVALID_COMPANY_TYPE", "You cannot create an objection for this company type."),
+                Arguments.of("INVALID_COMPANY_STATUS", "The company does not have an active proposal to strike off"),
+                Arguments.of("UNKNOWN_CODE", "Invalid Message")
         );
     }
 

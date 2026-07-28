@@ -182,6 +182,120 @@ class CompanyValidatorTest {
         assertEquals("Error retrieving company profile", thrown.getMessage());
     }
 
+    // ===== validateCompanyForWithdrawal Tests =====
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyNotFound_throwsCompanyValidationException() {
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(null);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("COMPANY_NUMBER_NOT_EXIST", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyNameDoesNotMatch_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName("DIFFERENT LTD");
+        companyProfile.setCompanyStatus("dissolution-proposal-active");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("SUBMISSION_COMPANY_NAME_MISMATCH", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyDoesNotHaveActiveProposalToStrikeOff_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("invalid-type");
+        companyProfile.setCompanyStatus("active");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyTypeIsInvalid_doesNotThrowCompanyTypeException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("sole-trader");
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        // Should NOT throw INVALID_COMPANY_TYPE for withdrawal
+        companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME);
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenAllValidationsPass_succeeds() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME);
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyNameIsNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(null);
+        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("SUBMISSION_COMPANY_NAME_MISMATCH", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyStatusIsNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus(null);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyProfileServiceThrowsServiceException_propagatesException() {
+        ApiErrorResponseException apiError = apiErrorResponseException();
+        ServiceException serviceException = new ServiceException("Error retrieving company profile", apiError);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenThrow(serviceException);
+
+        ServiceException thrown = assertThrows(
+                ServiceException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("Error retrieving company profile", thrown.getMessage());
+    }
+
     private ApiErrorResponseException apiErrorResponseException() {
         HttpResponseException.Builder builder = new HttpResponseException.Builder(
                 502,

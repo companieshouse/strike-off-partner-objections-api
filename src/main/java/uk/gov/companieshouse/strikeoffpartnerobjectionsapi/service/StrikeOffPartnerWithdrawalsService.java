@@ -93,7 +93,8 @@ public class StrikeOffPartnerWithdrawalsService {
         // Validate company before persistence and publishing.
         // This validator is intentionally exception-driven: it returns nothing on success
         // and throws a CompanyValidationException on failure to stop processing.
-        companyValidator.validateCompany(companyNumber, request.getSubmissionCompanyName());
+        // Company type validation is excluded for withdrawals (per acceptance criteria).
+        companyValidator.validateCompanyForWithdrawal(companyNumber, request.getSubmissionCompanyName());
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, partnerOrganisation, withdrawalId, etag);

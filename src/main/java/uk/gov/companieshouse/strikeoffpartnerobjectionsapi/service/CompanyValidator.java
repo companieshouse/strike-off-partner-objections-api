@@ -47,7 +47,8 @@ public class CompanyValidator {
     }
 
     /**
-     * Validates company information for a withdrawal request.
+     * Validates company information for a create objection request.
+     * Includes company type validation in addition to common checks.
      *
      * @param companyNumber the company number from the request path
      * @param submissionCompanyName the company name from the request body
@@ -58,16 +59,41 @@ public class CompanyValidator {
         LOGGER.info(format("Validating company: companyNumber=%s, submissionCompanyName=%s",
                 companyNumber, submissionCompanyName));
 
+        CompanyProfileApi companyProfile = validateCommonFields(companyNumber, submissionCompanyName);
+        validateCompanyType(companyProfile, companyNumber);
+        validateCompanyStatus(companyProfile, companyNumber);
+
+        LOGGER.info(format("Company validation passed: companyNumber=%s", companyNumber));
+    }
+
+    /**
+     * Validates company information for a withdrawal request.
+     * Skips company type validation; applies all other checks.
+     *
+     * @param companyNumber the company number from the request path
+     * @param submissionCompanyName the company name from the request body
+     * @throws CompanyValidationException if any validation check fails
+     * @throws ServiceException if the Company Profile API call fails
+     */
+    public void validateCompanyForWithdrawal(String companyNumber, String submissionCompanyName) {
+        LOGGER.info(format("Validating company for withdrawal: companyNumber=%s, submissionCompanyName=%s",
+                companyNumber, submissionCompanyName));
+
+        CompanyProfileApi companyProfile = validateCommonFields(companyNumber, submissionCompanyName);
+        validateCompanyStatus(companyProfile, companyNumber);
+
+        LOGGER.info(format("Company validation for withdrawal passed: companyNumber=%s", companyNumber));
+    }
+
+    private CompanyProfileApi validateCommonFields(String companyNumber, String submissionCompanyName) {
         CompanyProfileApi companyProfile = companyProfileService.getCompanyProfile(companyNumber);
 
-        // Validate company exists
         if (companyProfile == null) {
             throw new CompanyValidationException(
                     format("Company not found: companyNumber=%s", companyNumber),
                     COMPANY_NUMBER_NOT_EXIST);
         }
 
-        // Validate company name matches
         String retrievedName = companyProfile.getCompanyName();
         if (retrievedName == null || !retrievedName.equalsIgnoreCase(submissionCompanyName)) {
             throw new CompanyValidationException(
@@ -76,23 +102,25 @@ public class CompanyValidator {
                     SUBMISSION_COMPANY_NAME_MISMATCH);
         }
 
-        // Validate company type
+        return companyProfile;
+    }
+
+    private void validateCompanyType(CompanyProfileApi companyProfile, String companyNumber) {
         if (!hasValidCompanyType(companyProfile)) {
             throw new CompanyValidationException(
                     format("Company has invalid type: companyNumber=%s, type=%s",
                             companyNumber, companyProfile.getType()),
                     INVALID_COMPANY_TYPE);
         }
+    }
 
-        // Validate company has active proposal to strike off
+    private void validateCompanyStatus(CompanyProfileApi companyProfile, String companyNumber) {
         if (!hasActiveProposalToStrikeOff(companyProfile)) {
             throw new CompanyValidationException(
                     format("Company does not have an active proposal to strike off: companyNumber=%s",
                             companyNumber),
                     INVALID_COMPANY_STATUS);
         }
-
-        LOGGER.info(format("Company validation passed: companyNumber=%s", companyNumber));
     }
 
     /**

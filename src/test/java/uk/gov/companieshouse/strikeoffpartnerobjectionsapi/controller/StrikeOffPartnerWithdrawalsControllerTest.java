@@ -57,7 +57,6 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
-    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private static final String VALID_WITHDRAWAL_REQUEST = """
             {
@@ -137,8 +136,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER + ", " + MISSING_WORKSTREAM))
-                .andExpect(jsonPath("$.message").value("Invalid Message"));
+                .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
+                .andExpect(jsonPath("$.message").value("The request is missing fields that are required."));
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
     }
 
@@ -147,7 +146,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         mockMvc().perform(post(WITHDRAWALS_PATH).contentType(APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
-                .andExpect(jsonPath("$.message").value("Invalid Message"));
+                .andExpect(jsonPath("$.message").value("The request is missing fields that are required."));
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
     }
 
@@ -158,7 +157,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                         .content("{\"partner_contact_email\":\"valid@email.com\","))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER))
-                .andExpect(jsonPath("$.message").value("Invalid Message"));
+                .andExpect(jsonPath("$.message").value("The request is missing fields that are required."));
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
     }
 
@@ -255,16 +254,6 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         assertBadRequestWithoutServiceCall(request, MISSING_REQUIRED_PARAMETER);
     }
 
-    @ParameterizedTest
-    @MethodSource("workstreamCases")
-    void withdrawAllObjections_whenWorkstreamIsInvalid_returnsExpectedErrorCode(
-            Consumer<ObjectNode> requestMutator,
-            String expectedErrorCode) throws Exception {
-        ObjectNode request = baseValidRequest();
-        requestMutator.accept(request);
-
-        assertBadRequestWithoutServiceCall(request, expectedErrorCode);
-    }
 
     @Test
     void withdrawAllObjections_whenRequestIsValid_callsService() throws Exception {
@@ -459,14 +448,6 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         );
     }
 
-    private static Stream<Arguments> workstreamCases() {
-        return Stream.of(
-                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM)
-        );
-    }
 
     private static Stream<Arguments> wrongTypeCases() {
         return Stream.of(
@@ -503,11 +484,24 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
+        String primaryCode = expectedErrorCode.contains(", ")
+                ? expectedErrorCode.substring(0, expectedErrorCode.indexOf(", "))
+                : expectedErrorCode;
+        String expectedMessage = expectedMessageFor(primaryCode);
         postWithdrawals(payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(expectedErrorCode))
-                .andExpect(jsonPath("$.message").value("Invalid Message"));
+                .andExpect(jsonPath("$.message").value(expectedMessage));
         verifyNoInteractions(strikeOffPartnerWithdrawalsService);
+    }
+
+    private static String expectedMessageFor(String errorCode) {
+        return switch (errorCode) {
+            case MISSING_REQUIRED_PARAMETER -> "The request is missing fields that are required.";
+            case EMAIL_INCORRECT_FORMAT -> "Invalid partner_contact_email. Must be a valid email format.";
+            case EMAIL_MAX_LENGTH -> "Invalid partner_contact_email. Must not exceed 255 characters.";
+            default -> "Invalid Message";
+        };
     }
 
     private MockMvc mockMvc() {
