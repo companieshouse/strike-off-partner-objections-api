@@ -209,7 +209,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void updateObjectionProcessingStatus_whenRequestIsValid_returnsNoContent() throws Exception {
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNoContent());
 
         verify(strikeOffPartnerObjectionService)
@@ -222,7 +222,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
@@ -236,7 +236,7 @@ class StrikeOffObjectionPartnerControllerTest {
     })
     void updateObjectionProcessingStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload)
             throws Exception {
-        patchUpdateObjectionStatus(COMPANY_NUMBER, payload)
+        patchUpdateObjectionStatus(payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
 
@@ -249,7 +249,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error_code").value("conflict"))
                 .andExpect(jsonPath("$.message").value("Invalid status transition"));
@@ -578,11 +578,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     private ResultActions performGetObjection(String companyNumber) throws Exception {
-        return performGetObjection(companyNumber, OBJECTION_ID);
-    }
-
-    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
-        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, OBJECTION_ID))
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
@@ -590,8 +586,8 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header(ERIC_PARTNER_ORGANISATION_HEADER, PARTNER_ORGANISATION));
     }
     
-    private ResultActions patchUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
-        return mockMvc.perform(patch(String.format(UPDATE_STATUS_URL, companyNumber, OBJECTION_ID))
+    private ResultActions patchUpdateObjectionStatus(String payload) throws Exception {
+        return mockMvc.perform(patch(String.format(UPDATE_STATUS_URL, COMPANY_NUMBER, OBJECTION_ID))
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")

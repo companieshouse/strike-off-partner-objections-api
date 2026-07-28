@@ -94,7 +94,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         when(strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
                 .thenReturn(response);
 
-        getWithdrawal(WITHDRAWAL_ID)
+        getWithdrawal()
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
 
@@ -472,8 +472,8 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .content(objectMapper.writeValueAsString(request)));
     }
 
-    private ResultActions getWithdrawal(String withdrawalId) throws Exception {
-        return mockMvc().perform(get(WITHDRAWALS_PATH + "/" + withdrawalId)
+    private ResultActions getWithdrawal() throws Exception {
+        return mockMvc().perform(get(WITHDRAWALS_PATH + "/" + WITHDRAWAL_ID)
                 .contentType(APPLICATION_JSON));
     }
 
