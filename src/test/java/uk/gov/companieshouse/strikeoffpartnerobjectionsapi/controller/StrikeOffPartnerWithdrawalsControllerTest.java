@@ -192,7 +192,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         ObjectNode request = baseValidRequest();
         request.put("partner_case_reference", "a".repeat(65));
 
-        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED, "Case reference max length exceeded.");
     }
 
     @Test
@@ -200,7 +200,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         ObjectNode request = baseValidRequest();
         request.put("submission_company_name", "a".repeat(161));
 
-        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED);
+        assertBadRequestWithoutServiceCall(request, MAX_LENGTH_EXCEEDED, "Max length exceeded.");
     }
 
     @Test
@@ -488,6 +488,13 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 ? expectedErrorCode.substring(0, expectedErrorCode.indexOf(", "))
                 : expectedErrorCode;
         String expectedMessage = expectedMessageFor(primaryCode);
+        assertBadRequestWithoutServiceCall(payload, expectedErrorCode, expectedMessage);
+    }
+
+    private void assertBadRequestWithoutServiceCall(
+            JsonNode payload,
+            String expectedErrorCode,
+            String expectedMessage) throws Exception {
         postWithdrawals(payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(expectedErrorCode))

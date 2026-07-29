@@ -55,6 +55,8 @@ public class GlobalExceptionHandler {
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_NOT_RECOGNISED = "EMAIL_NOT_RECOGNISED";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
+    private static final String MAX_LENGTH_EXCEEDED_MESSAGE = "Max length exceeded.";
+    private static final String CASE_REFERENCE_MAX_LENGTH_EXCEEDED_MESSAGE = "Case reference max length exceeded.";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String SIZE = "Size";
     private static final String EMAIL = "Email";
@@ -71,6 +73,10 @@ public class GlobalExceptionHandler {
             MAX_LENGTH_EXCEEDED,
             INVALID_REASON);
 
+    private static final Map<String, String> MAX_LENGTH_MESSAGES_BY_FIELD = Map.of(
+            PARTNER_CASE_REFERENCE, CASE_REFERENCE_MAX_LENGTH_EXCEEDED_MESSAGE
+    );
+
     private static final Map<String, String> ERROR_MESSAGES = Map.ofEntries(
             Map.entry(MISSING_REQUIRED_PARAMETER, "The request is missing fields that are required."),
             Map.entry(COMPANY_NUMBER_NOT_EXIST, "There is no company registered with this number."),
@@ -79,6 +85,7 @@ public class GlobalExceptionHandler {
             Map.entry(INVALID_COMPANY_STATUS, "The company does not have an active proposal to strike off"),
             Map.entry(EMAIL_INCORRECT_FORMAT, "Invalid partner_contact_email. Must be a valid email format."),
             Map.entry(EMAIL_MAX_LENGTH, "Invalid partner_contact_email. Must not exceed 255 characters."),
+            Map.entry(MAX_LENGTH_EXCEEDED, MAX_LENGTH_EXCEEDED_MESSAGE),
             Map.entry(EMAIL_NOT_RECOGNISED, "The email is not a recognised email address"),
             Map.entry(INVALID_REASON, "partner_objection_reason is not recognised.")
     );
@@ -96,7 +103,7 @@ public class GlobalExceptionHandler {
                 .sorted(Comparator.comparingInt(this::errorPriorityIndex))
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(MISSING_REQUIRED_PARAMETER);
-        return badRequest(allErrorCodes);
+        return badRequest(allErrorCodes, fieldErrors);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -327,8 +334,41 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiError> badRequest(String errorCode) {
-        String primaryCode = errorCode.contains(", ") ? errorCode.substring(0, errorCode.indexOf(", ")) : errorCode;
-        String message = ERROR_MESSAGES.getOrDefault(primaryCode, VALIDATION_MESSAGE);
+        return badRequest(errorCode, List.of());
+    }
+
+    private ResponseEntity<ApiError> badRequest(String errorCode, List<FieldError> fieldErrors) {
+        String primaryCode = extractPrimaryCode(errorCode);
+        String message = resolveValidationMessage(primaryCode, fieldErrors);
         return new ResponseEntity<>(new ApiError(errorCode, message), HttpStatus.BAD_REQUEST);
+    }
+
+    private String extractPrimaryCode(String errorCode) {
+        int separatorIndex = errorCode.indexOf(", ");
+        if (separatorIndex < 0) {
+            return errorCode;
+        }
+        return errorCode.substring(0, separatorIndex);
+    }
+
+    private String resolveValidationMessage(String primaryCode, List<FieldError> fieldErrors) {
+        if (!MAX_LENGTH_EXCEEDED.equals(primaryCode)) {
+            return ERROR_MESSAGES.getOrDefault(primaryCode, VALIDATION_MESSAGE);
+        }
+
+        return resolveMaxLengthMessage(fieldErrors);
+    }
+
+    private String resolveMaxLengthMessage(List<FieldError> fieldErrors) {
+        return fieldErrors.stream()
+                .filter(this::isMaxLengthExceededFieldError)
+                .map(FieldError::getField)
+                .map(field -> MAX_LENGTH_MESSAGES_BY_FIELD.getOrDefault(field, MAX_LENGTH_EXCEEDED_MESSAGE))
+                .findFirst()
+                .orElse(MAX_LENGTH_EXCEEDED_MESSAGE);
+    }
+
+    private boolean isMaxLengthExceededFieldError(FieldError fieldError) {
+        return MAX_LENGTH_EXCEEDED.equals(mapFieldError(fieldError));
     }
 }

@@ -371,6 +371,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleValidationExceptions_whenPartnerCaseReferenceLengthExceeded_returnsFieldSpecificMessage() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("partnerCaseReference", "a".repeat(300), "Size")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("MAX_LENGTH_EXCEEDED", body.getErrorCode());
+        assertEquals("Case reference max length exceeded.", body.getMessage());
+    }
+
+    @Test
+    void handleValidationExceptions_whenSubmissionCompanyNameLengthExceeded_returnsGenericMaxLengthMessage() {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(
+                fieldError("submissionCompanyName", "a".repeat(300), "Size")));
+
+        ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("MAX_LENGTH_EXCEEDED", body.getErrorCode());
+        assertEquals("Max length exceeded.", body.getMessage());
+    }
+
+    @Test
     void handleValidationExceptions_whenMultipleErrors_returnsMessageOfHighestPriorityCode() {
         MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
