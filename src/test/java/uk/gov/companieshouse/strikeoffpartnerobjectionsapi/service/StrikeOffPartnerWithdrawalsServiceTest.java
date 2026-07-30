@@ -182,13 +182,13 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         CompanyValidationException validationException =
             new CompanyValidationException("Company not found", "COMPANY_NUMBER_NOT_EXIST");
 
-        doThrow(validationException).when(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        doThrow(validationException).when(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
 
         assertThatThrownBy(() ->
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isSameAs(validationException);
 
-        verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -210,7 +210,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(companyValidator).validateCompany(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
     }

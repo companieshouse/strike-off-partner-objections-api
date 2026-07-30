@@ -72,7 +72,6 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
     private static final String INVALID_REASON = "INVALID_REASON";
-    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -210,7 +209,7 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @Test
     void updateObjectionProcessingStatus_whenRequestIsValid_returnsNoContent() throws Exception {
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNoContent());
 
         verify(strikeOffPartnerObjectionService)
@@ -223,7 +222,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error_code").value("not_found"))
                 .andExpect(jsonPath("$.message").value("Objection not found"));
@@ -237,7 +236,7 @@ class StrikeOffObjectionPartnerControllerTest {
     })
     void updateObjectionProcessingStatus_whenProcessingStatusIsInvalid_returnsBadRequest(String payload)
             throws Exception {
-        patchUpdateObjectionStatus(COMPANY_NUMBER, payload)
+        patchUpdateObjectionStatus(payload)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value(MISSING_REQUIRED_PARAMETER));
 
@@ -250,7 +249,7 @@ class StrikeOffObjectionPartnerControllerTest {
                 .when(strikeOffPartnerObjectionService)
                 .updateObjectionProcessingStatus(eq(COMPANY_NUMBER), eq(OBJECTION_ID), any());
 
-        patchUpdateObjectionStatus(COMPANY_NUMBER, "{\"processing_status\":\"objection-processing\"}")
+        patchUpdateObjectionStatus("{\"processing_status\":\"objection-processing\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error_code").value("conflict"))
                 .andExpect(jsonPath("$.message").value("Invalid status transition"));
@@ -358,26 +357,15 @@ class StrikeOffObjectionPartnerControllerTest {
         verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION));
     }
 
-    @ParameterizedTest
-    @MethodSource("workstreamCases")
-    void createObjection_whenWorkstreamIsInvalid_returnsExpectedErrorCode(Consumer<ObjectNode> requestMutator,
-                                                String expectedErrorCode) throws Exception {
-        ObjectNode request = baseValidRequest();
-        requestMutator.accept(request);
-
-        assertBadRequestWithoutServiceCall(request, expectedErrorCode);
-    }
-
     @Test
     void createObjection_whenMultipleFieldsAreInvalid_returnsMultipleErrors() throws Exception {
         ObjectNode request = baseValidRequest();
         request.put("partner_contact_email", "");
         request.put("partner_case_reference", "");
-        request.putNull("partner_objection_workstream");
 
         postCreateObjection(request)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code").value("MISSING_REQUIRED_PARAMETER, MISSING_WORKSTREAM"));
+                .andExpect(jsonPath("$.error_code").value("MISSING_REQUIRED_PARAMETER"));
         verifyNoInteractions(strikeOffPartnerObjectionService);
     }
 
@@ -590,11 +578,7 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     private ResultActions performGetObjection(String companyNumber) throws Exception {
-        return performGetObjection(companyNumber, OBJECTION_ID);
-    }
-
-    private ResultActions performGetObjection(String companyNumber, String objectionId) throws Exception {
-        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, objectionId))
+        return mockMvc.perform(get(String.format(GET_OBJECTION_URL, companyNumber, OBJECTION_ID))
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
@@ -602,8 +586,8 @@ class StrikeOffObjectionPartnerControllerTest {
                 .header(ERIC_PARTNER_ORGANISATION_HEADER, PARTNER_ORGANISATION));
     }
     
-    private ResultActions patchUpdateObjectionStatus(String companyNumber, String payload) throws Exception {
-        return mockMvc.perform(patch(String.format(UPDATE_STATUS_URL, companyNumber, OBJECTION_ID))
+    private ResultActions patchUpdateObjectionStatus(String payload) throws Exception {
+        return mockMvc.perform(patch(String.format(UPDATE_STATUS_URL, COMPANY_NUMBER, OBJECTION_ID))
                 .contentType(APPLICATION_JSON)
                 .header("X-Request-Id", "test-request-id")
                 .header("ERIC-Identity-Type", "key")
@@ -646,14 +630,6 @@ class StrikeOffObjectionPartnerControllerTest {
         );
     }
 
-    private static Stream<Arguments> workstreamCases() {
-        return Stream.of(
-                Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_workstream"),
-                        MISSING_WORKSTREAM),
-                Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_workstream"),
-                        MISSING_WORKSTREAM)
-        );
-    }
 
     private void assertBadRequestWithoutServiceCall(JsonNode payload, String expectedErrorCode) throws Exception {
         postCreateObjection(payload)

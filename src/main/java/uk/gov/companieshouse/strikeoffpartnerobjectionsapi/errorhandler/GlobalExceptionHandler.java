@@ -7,6 +7,7 @@ import java.net.SocketTimeoutException;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -46,39 +47,48 @@ public class GlobalExceptionHandler {
     private static final String BAD_GATEWAY_CODE = "bad_gateway";
     private static final String BAD_GATEWAY_MESSAGE = "bad_gateway";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
+    private static final String COMPANY_NUMBER_NOT_EXIST = "COMPANY_NUMBER_NOT_EXIST";
+    private static final String SUBMISSION_COMPANY_NAME_MISMATCH = "SUBMISSION_COMPANY_NAME_MISMATCH";
+    private static final String INVALID_COMPANY_TYPE = "INVALID_COMPANY_TYPE";
+    private static final String INVALID_COMPANY_STATUS = "INVALID_COMPANY_STATUS";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
+    private static final String EMAIL_NOT_RECOGNISED = "EMAIL_NOT_RECOGNISED";
     private static final String MAX_LENGTH_EXCEEDED = "MAX_LENGTH_EXCEEDED";
-    private static final String INVALID_WORKSTREAM = "INVALID_WORKSTREAM";
-    private static final String MISSING_WORKSTREAM = "MISSING_WORKSTREAM";
+    private static final String MAX_LENGTH_EXCEEDED_MESSAGE = "Max length exceeded.";
+    private static final String CASE_REFERENCE_MAX_LENGTH_EXCEEDED_MESSAGE = "Case reference max length exceeded.";
     private static final String INVALID_REASON = "INVALID_REASON";
     private static final String SIZE = "Size";
     private static final String EMAIL = "Email";
     private static final String PARTNER_CONTACT_EMAIL = "partnerContactEmail";
     private static final String PARTNER_CASE_REFERENCE = "partnerCaseReference";
     private static final String SUBMISSION_COMPANY_NAME = "submissionCompanyName";
-    private static final String PARTNER_OBJECTION_WORKSTREAM = "partnerObjectionWorkstream";
     private static final String PARTNER_OBJECTION_REASON = "partnerObjectionReason";
-    private static final String PARTNER_OBJECTION_WORKSTREAM_SNAKE = "partner_objection_workstream";
     private static final String PARTNER_OBJECTION_REASON_SNAKE = "partner_objection_reason";
     private static final String REQUIRED_BODY_MISSING = "Required request body is missing";
-    private static final List<String> BLANK_WORKSTREAM_TOKENS = List.of(
-            "from string \"\"",
-            "from string ''",
-            "from value ''",
-            "unexpected value ''",
-            "unexpected value \"\"",
-            "coerce empty string",
-            "empty string",
-            "(\"\")");
     private static final List<String> ERROR_PRIORITY_ORDER = List.of(
             MISSING_REQUIRED_PARAMETER,
             EMAIL_INCORRECT_FORMAT,
             EMAIL_MAX_LENGTH,
             MAX_LENGTH_EXCEEDED,
-            INVALID_REASON,
-            INVALID_WORKSTREAM,
-            MISSING_WORKSTREAM);
+            INVALID_REASON);
+
+    private static final Map<String, String> MAX_LENGTH_MESSAGES_BY_FIELD = Map.of(
+            PARTNER_CASE_REFERENCE, CASE_REFERENCE_MAX_LENGTH_EXCEEDED_MESSAGE
+    );
+
+    private static final Map<String, String> ERROR_MESSAGES = Map.ofEntries(
+            Map.entry(MISSING_REQUIRED_PARAMETER, "The request is missing fields that are required."),
+            Map.entry(COMPANY_NUMBER_NOT_EXIST, "There is no company registered with this number."),
+            Map.entry(SUBMISSION_COMPANY_NAME_MISMATCH, "Company name does not match."),
+            Map.entry(INVALID_COMPANY_TYPE, "You cannot create an objection for this company type."),
+            Map.entry(INVALID_COMPANY_STATUS, "The company does not have an active proposal to strike off."),
+            Map.entry(EMAIL_INCORRECT_FORMAT, "Invalid partner_contact_email. Must be a valid email format."),
+            Map.entry(EMAIL_MAX_LENGTH, "Invalid partner_contact_email. Must not exceed 255 characters."),
+            Map.entry(MAX_LENGTH_EXCEEDED, MAX_LENGTH_EXCEEDED_MESSAGE),
+            Map.entry(EMAIL_NOT_RECOGNISED, "The email is not a recognised email address"),
+            Map.entry(INVALID_REASON, "partner_objection_reason is not recognised.")
+    );
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -93,7 +103,7 @@ public class GlobalExceptionHandler {
                 .sorted(Comparator.comparingInt(this::errorPriorityIndex))
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(MISSING_REQUIRED_PARAMETER);
-        return badRequest(allErrorCodes);
+        return badRequest(allErrorCodes, fieldErrors);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -202,7 +212,6 @@ public class GlobalExceptionHandler {
         return switch (fieldError.getField()) {
             case PARTNER_CONTACT_EMAIL -> mapEmailFieldError(fieldError);
             case PARTNER_CASE_REFERENCE, SUBMISSION_COMPANY_NAME -> mapLengthFieldError(fieldError);
-            case PARTNER_OBJECTION_WORKSTREAM -> mapWorkstreamFieldError(fieldError);
             case PARTNER_OBJECTION_REASON -> INVALID_REASON;
             default -> MISSING_REQUIRED_PARAMETER;
         };
@@ -217,9 +226,6 @@ public class GlobalExceptionHandler {
         String field = resolveUnreadableField(ex);
         if (isReasonField(field)) {
             return INVALID_REASON;
-        }
-        if (isWorkstreamField(field)) {
-            return isBlankWorkstreamValue(ex, message) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
         }
 
         String fromMessage = mapUnreadableMessageText(message);
@@ -255,12 +261,6 @@ public class GlobalExceptionHandler {
         return MISSING_REQUIRED_PARAMETER;
     }
 
-    private String mapWorkstreamFieldError(FieldError fieldError) {
-        if (toStringLength(fieldError.getRejectedValue()) == 0) {
-            return MISSING_WORKSTREAM;
-        }
-        return INVALID_WORKSTREAM;
-    }
 
     private boolean isRequiredBodyMissing(String message) {
         return message != null && message.contains(REQUIRED_BODY_MISSING);
@@ -302,27 +302,12 @@ public class GlobalExceptionHandler {
         return jsonMappingException.getPath().getLast().getFieldName();
     }
 
-    private boolean isBlankWorkstreamValue(HttpMessageNotReadableException ex, String message) {
-        String combinedMessage = combineMessages(message, ex.getMostSpecificCause());
-        InvalidFormatException invalidFormatException = findInvalidFormatCause(ex.getMostSpecificCause());
-        if (invalidFormatException != null) {
-            return StringUtils.isBlank(invalidFormatException.getValue() == null
-                    ? null
-                    : String.valueOf(invalidFormatException.getValue()))
-                    || isBlankWorkstreamText(combinedMessage);
-        }
-        return isBlankWorkstreamText(combinedMessage);
-    }
 
     private String mapUnreadableMessageText(String message) {
         String normalized = normalize(message);
         if (normalized.contains(PARTNER_OBJECTION_REASON_SNAKE)
                 || normalized.contains(PARTNER_OBJECTION_REASON.toLowerCase(Locale.ROOT))) {
             return INVALID_REASON;
-        }
-        if (normalized.contains(PARTNER_OBJECTION_WORKSTREAM_SNAKE)
-                || normalized.contains(PARTNER_OBJECTION_WORKSTREAM.toLowerCase(Locale.ROOT))) {
-            return isBlankWorkstreamText(normalized) ? MISSING_WORKSTREAM : INVALID_WORKSTREAM;
         }
         return null;
     }
@@ -331,26 +316,9 @@ public class GlobalExceptionHandler {
         return PARTNER_OBJECTION_REASON_SNAKE.equals(field) || PARTNER_OBJECTION_REASON.equals(field);
     }
 
-    private boolean isWorkstreamField(String field) {
-        return PARTNER_OBJECTION_WORKSTREAM_SNAKE.equals(field) || PARTNER_OBJECTION_WORKSTREAM.equals(field);
-    }
-
-    // Normalizes common Jackson parser text variants so blank-workstream inputs
-    // are consistently treated as missing workstream rather than invalid value.
-    private boolean isBlankWorkstreamText(String normalizedMessage) {
-        String unescapedQuotes = normalizedMessage.replace("\\\"\\\"", "\"\"");
-        return BLANK_WORKSTREAM_TOKENS.stream().anyMatch(unescapedQuotes::contains);
-    }
 
     private String normalize(String message) {
         return message == null ? "" : message.toLowerCase(Locale.ROOT);
-    }
-
-    private String combineMessages(String primaryMessage, Throwable cause) {
-        if (cause == null || cause.getMessage() == null) {
-            return normalize(primaryMessage);
-        }
-        return normalize(primaryMessage) + " " + normalize(cause.getMessage());
     }
 
     private int errorPriorityIndex(String errorCode) {
@@ -366,6 +334,41 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiError> badRequest(String errorCode) {
-        return new ResponseEntity<>(new ApiError(errorCode, VALIDATION_MESSAGE), HttpStatus.BAD_REQUEST);
+        return badRequest(errorCode, List.of());
+    }
+
+    private ResponseEntity<ApiError> badRequest(String errorCode, List<FieldError> fieldErrors) {
+        String primaryCode = extractPrimaryCode(errorCode);
+        String message = resolveValidationMessage(primaryCode, fieldErrors);
+        return new ResponseEntity<>(new ApiError(errorCode, message), HttpStatus.BAD_REQUEST);
+    }
+
+    private String extractPrimaryCode(String errorCode) {
+        int separatorIndex = errorCode.indexOf(", ");
+        if (separatorIndex < 0) {
+            return errorCode;
+        }
+        return errorCode.substring(0, separatorIndex);
+    }
+
+    private String resolveValidationMessage(String primaryCode, List<FieldError> fieldErrors) {
+        if (!MAX_LENGTH_EXCEEDED.equals(primaryCode)) {
+            return ERROR_MESSAGES.getOrDefault(primaryCode, VALIDATION_MESSAGE);
+        }
+
+        return resolveMaxLengthMessage(fieldErrors);
+    }
+
+    private String resolveMaxLengthMessage(List<FieldError> fieldErrors) {
+        return fieldErrors.stream()
+                .filter(this::isMaxLengthExceededFieldError)
+                .map(FieldError::getField)
+                .map(field -> MAX_LENGTH_MESSAGES_BY_FIELD.getOrDefault(field, MAX_LENGTH_EXCEEDED_MESSAGE))
+                .findFirst()
+                .orElse(MAX_LENGTH_EXCEEDED_MESSAGE);
+    }
+
+    private boolean isMaxLengthExceededFieldError(FieldError fieldError) {
+        return MAX_LENGTH_EXCEEDED.equals(mapFieldError(fieldError));
     }
 }
