@@ -74,6 +74,16 @@ class CompanyProfileServiceTest {
     }
 
     @Test
+    void getCompanyProfileReturnsNullWhenCompanyNotFound() throws Exception {
+        stubApiChain("12345678");
+        when(companyGet.execute()).thenThrow(apiErrorResponseException(404, "Not Found"));
+
+        CompanyProfileApi result = companyProfileService.getCompanyProfile("12345678");
+
+        assertNull(result);
+    }
+
+    @Test
     void getCompanyProfileWrapsApiErrorResponseException() throws Exception {
         ApiErrorResponseException apiError = apiErrorResponseException(502, "Bad Gateway");
         stubApiChain("12345678");

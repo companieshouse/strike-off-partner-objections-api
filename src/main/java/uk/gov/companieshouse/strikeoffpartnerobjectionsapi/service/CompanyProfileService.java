@@ -28,6 +28,10 @@ public class CompanyProfileService {
         try {
             return apiClientService.getInternalApiClient().company().get(uri).execute().getData();
         } catch (ApiErrorResponseException e) {
+            if (e.getStatusCode() == 404) {
+                LOGGER.debug(String.format("Company not found for company number %s", companyNumber));
+                return null;
+            }
             throw new ServiceException("Error retrieving company profile", e);
         } catch (URIValidationException e) {
             throw new ServiceException("Invalid URI for company resource", e);
