@@ -680,6 +680,10 @@
                   "pm.test(\"error code is COMPANY_NUMBER_NOT_EXIST\", function () {",
                   "  var body = pm.response.json();",
                   "  pm.expect(body.error_code).to.eql(\"COMPANY_NUMBER_NOT_EXIST\");",
+                  "});",
+                  "pm.test(\"message is 'There is no company registered with this number.'\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.message).to.eql(\"There is no company registered with this number.\");",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -1296,9 +1300,9 @@
                   "  var body = pm.response.json();",
                   "  pm.expect(body.error_code).to.eql(\"COMPANY_NUMBER_NOT_EXIST\");",
                   "});",
-                  "pm.test(\"error message indicates company not found\", function () {",
+                  "pm.test(\"error message is 'There is no company registered with this number.'\", function () {",
                   "  var body = pm.response.json();",
-                  "  pm.expect(body.message).to.include(\"Company not found\");",
+                  "  pm.expect(body.message).to.eql(\"There is no company registered with this number.\");",
                   "});"
                 ],
                 "type": "text/javascript",
