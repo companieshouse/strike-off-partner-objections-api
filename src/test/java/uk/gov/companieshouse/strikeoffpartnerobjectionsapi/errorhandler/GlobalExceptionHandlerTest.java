@@ -532,7 +532,7 @@ class GlobalExceptionHandlerTest {
                 Arguments.of("COMPANY_NUMBER_NOT_EXIST", "There is no company registered with this number."),
                 Arguments.of("SUBMISSION_COMPANY_NAME_MISMATCH", "Company name does not match."),
                 Arguments.of("INVALID_COMPANY_TYPE", "You cannot create an objection for this company type."),
-                Arguments.of("INVALID_COMPANY_STATUS", "The company does not have an active proposal to strike off"),
+                Arguments.of("INVALID_COMPANY_STATUS", "The company does not have an active proposal to strike off."),
                 Arguments.of("UNKNOWN_CODE", "Invalid Message")
         );
     }
