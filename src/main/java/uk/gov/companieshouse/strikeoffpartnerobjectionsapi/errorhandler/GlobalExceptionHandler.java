@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
             Map.entry(COMPANY_NUMBER_NOT_EXIST, "There is no company registered with this number."),
             Map.entry(SUBMISSION_COMPANY_NAME_MISMATCH, "Company name does not match."),
             Map.entry(INVALID_COMPANY_TYPE, "You cannot create an objection for this company type."),
-            Map.entry(INVALID_COMPANY_STATUS, "The company does not have an active proposal to strike off"),
+            Map.entry(INVALID_COMPANY_STATUS, "The company does not have an active proposal to strike off."),
             Map.entry(EMAIL_INCORRECT_FORMAT, "Invalid partner_contact_email. Must be a valid email format."),
             Map.entry(EMAIL_MAX_LENGTH, "Invalid partner_contact_email. Must not exceed 255 characters."),
             Map.entry(MAX_LENGTH_EXCEEDED, MAX_LENGTH_EXCEEDED_MESSAGE),
