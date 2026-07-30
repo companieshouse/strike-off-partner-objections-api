@@ -27,6 +27,8 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceExce
 @ExtendWith(MockitoExtension.class)
 class CompanyProfileServiceTest {
 
+    private static final String COMPANY_NUMBER = "12345678";
+
     @Mock
     private ApiClientService apiClientService;
 
@@ -53,32 +55,32 @@ class CompanyProfileServiceTest {
     void getCompanyProfileReturnsDataWhenRequestSucceeds() throws Exception {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("Test Company");
-        stubApiChain("12345678");
+        stubApiChain();
         when(companyGet.execute()).thenReturn(apiResponse);
         when(apiResponse.getData()).thenReturn(companyProfile);
 
-        CompanyProfileApi result = companyProfileService.getCompanyProfile("12345678");
+        CompanyProfileApi result = companyProfileService.getCompanyProfile(COMPANY_NUMBER);
 
         assertSame(companyProfile, result);
     }
 
     @Test
     void getCompanyProfileReturnsNullWhenApiReturnsNoData() throws Exception {
-        stubApiChain("12345678");
+        stubApiChain();
         when(companyGet.execute()).thenReturn(apiResponse);
         when(apiResponse.getData()).thenReturn(null);
 
-        CompanyProfileApi result = companyProfileService.getCompanyProfile("12345678");
+        CompanyProfileApi result = companyProfileService.getCompanyProfile(COMPANY_NUMBER);
 
         assertNull(result);
     }
 
     @Test
     void getCompanyProfileReturnsNullWhenCompanyNotFound() throws Exception {
-        stubApiChain("12345678");
+        stubApiChain();
         when(companyGet.execute()).thenThrow(apiErrorResponseException(404, "Not Found"));
 
-        CompanyProfileApi result = companyProfileService.getCompanyProfile("12345678");
+        CompanyProfileApi result = companyProfileService.getCompanyProfile(COMPANY_NUMBER);
 
         assertNull(result);
     }
@@ -86,12 +88,12 @@ class CompanyProfileServiceTest {
     @Test
     void getCompanyProfileWrapsApiErrorResponseException() throws Exception {
         ApiErrorResponseException apiError = apiErrorResponseException(502, "Bad Gateway");
-        stubApiChain("12345678");
+        stubApiChain();
         when(companyGet.execute()).thenThrow(apiError);
 
         ServiceException thrown = assertThrows(
                 ServiceException.class,
-                () -> companyProfileService.getCompanyProfile("12345678"));
+                () -> companyProfileService.getCompanyProfile(COMPANY_NUMBER));
 
         assertEquals("Error retrieving company profile", thrown.getMessage());
         assertSame(apiError, thrown.getCause());
@@ -100,21 +102,21 @@ class CompanyProfileServiceTest {
     @Test
     void getCompanyProfileWrapsUriValidationException() throws Exception {
         URIValidationException uriValidationException = new URIValidationException("invalid uri");
-        stubApiChain("12345678");
+        stubApiChain();
         when(companyGet.execute()).thenThrow(uriValidationException);
 
         ServiceException thrown = assertThrows(
                 ServiceException.class,
-                () -> companyProfileService.getCompanyProfile("12345678"));
+                () -> companyProfileService.getCompanyProfile(COMPANY_NUMBER));
 
         assertEquals("Invalid URI for company resource", thrown.getMessage());
         assertSame(uriValidationException, thrown.getCause());
     }
 
-    private void stubApiChain(String companyNumber) {
+    private void stubApiChain() {
         when(apiClientService.getInternalApiClient()).thenReturn(internalApiClient);
         when(internalApiClient.company()).thenReturn(companyResourceHandler);
-        when(companyResourceHandler.get("/company/" + companyNumber)).thenReturn(companyGet);
+        when(companyResourceHandler.get("/company/" + COMPANY_NUMBER)).thenReturn(companyGet);
     }
 
     private ApiErrorResponseException apiErrorResponseException(int statusCode, String statusMessage) {
