@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -46,6 +47,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapp
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 @Tag("unit-test")
@@ -63,6 +65,9 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     private WithdrawalMapper withdrawalMapper;
 
     @Mock
+    private ObjectionRepository objectionRepository;
+
+    @Mock
     private WithdrawalKafkaProducer withdrawalKafkaProducer;
 
     @Mock
@@ -75,8 +80,12 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             Validator validator = factory.getValidator();
             strikeOffPartnerWithdrawalsService =
-                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, objectionRepository, withdrawalMapper,
                             withdrawalKafkaProducer, companyValidator, validator);
+
+            // Default happy-path stub; overridden in specific tests for false/exception scenarios.
+            lenient().when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(
+                    COMPANY_NUMBER, PARTNER_ORGANISATION)).thenReturn(true);
         }
     }
 
@@ -189,6 +198,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(objectionRepository, withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -211,8 +221,47 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+    }
+
+    @Test
+    void withdrawAllObjections_whenObjectionRepositoryThrowsDataAccessException_throwsWithdrawalPersistenceException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        DataAccessResourceFailureException cause =
+                new DataAccessResourceFailureException("mongo query failed");
+
+        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
+                .thenThrow(cause);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to validate objections for withdrawal")
+                .hasCause(cause);
+
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
+    }
+
+    @Test
+    void withdrawAllObjections_whenNoObjectionsForPartner_throwsCompanyValidationException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
+                .thenReturn(false);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining(COMPANY_NUMBER)
+                .hasMessageContaining(PARTNER_ORGANISATION);
+
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
     // ===== POST Withdrawal Tests (Existing Tests) =====
@@ -616,4 +665,5 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         response.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         return response;
     }
+
 }

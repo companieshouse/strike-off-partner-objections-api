@@ -15,11 +15,13 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 import static java.lang.String.format;
@@ -28,7 +30,10 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
+    private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
+
     private final WithdrawalRepository withdrawalRepository;
+    private final ObjectionRepository objectionRepository;
     private final WithdrawalMapper withdrawalMapper;
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
@@ -37,11 +42,13 @@ public class StrikeOffPartnerWithdrawalsService {
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
             WithdrawalRepository withdrawalRepository,
+            ObjectionRepository objectionRepository,
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
             Validator validator) {
         this.withdrawalRepository = withdrawalRepository;
+        this.objectionRepository = objectionRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
@@ -93,8 +100,9 @@ public class StrikeOffPartnerWithdrawalsService {
         // Validate company before persistence and publishing.
         // This validator is intentionally exception-driven: it returns nothing on success
         // and throws a CompanyValidationException on failure to stop processing.
-        // Company type validation is excluded for withdrawals (per acceptance criteria).
+       // Company type validation is excluded for withdrawals (per acceptance criteria).
         companyValidator.validateCompanyForWithdrawal(companyNumber, request.getSubmissionCompanyName());
+        validatePartnerHasObjections(companyNumber, partnerOrganisation);
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, partnerOrganisation, withdrawalId, etag);
@@ -133,6 +141,24 @@ public class StrikeOffPartnerWithdrawalsService {
         } catch (DataAccessException saveEx) {
             LOGGER.error(format("Failed to update withdrawal event status: withdrawalId=%s",
                     persistedWithdrawal.getWithdrawalId()), saveEx);
+        }
+    }
+
+    private void validatePartnerHasObjections(String companyNumber, String partnerOrganisation) {
+        boolean hasObjectionsForPartner;
+        try {
+            hasObjectionsForPartner = objectionRepository
+                    .existsByCompanyNumberAndPartnerOrganisation(companyNumber, partnerOrganisation);
+        } catch (DataAccessException ex) {
+            throw new WithdrawalPersistenceException("Failed to validate objections for withdrawal", ex);
+        }
+        if (!hasObjectionsForPartner) {
+            LOGGER.info(format("No objections found for companyNumber=%s and partnerOrganisation=%s",
+                    companyNumber, partnerOrganisation));
+            throw new CompanyValidationException(
+                    format("No objections found for companyNumber=%s and partnerOrganisation=%s",
+                            companyNumber, partnerOrganisation),
+                    NO_OBJECTIONS_FOR_PARTNER_ORGANISATION);
         }
     }
 
