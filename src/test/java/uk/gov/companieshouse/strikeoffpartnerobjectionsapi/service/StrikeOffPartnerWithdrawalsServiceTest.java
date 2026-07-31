@@ -46,6 +46,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapp
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 @Tag("unit-test")
@@ -63,6 +64,9 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     private WithdrawalMapper withdrawalMapper;
 
     @Mock
+    private ObjectionRepository objectionRepository;
+
+    @Mock
     private WithdrawalKafkaProducer withdrawalKafkaProducer;
 
     @Mock
@@ -75,7 +79,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             Validator validator = factory.getValidator();
             strikeOffPartnerWithdrawalsService =
-                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, withdrawalMapper,
+                    new StrikeOffPartnerWithdrawalsService(withdrawalRepository, objectionRepository, withdrawalMapper,
                             withdrawalKafkaProducer, companyValidator, validator);
         }
     }
@@ -189,6 +193,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(objectionRepository, withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -198,6 +203,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
@@ -211,8 +217,27 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+    }
+
+    @Test
+    void withdrawAllObjections_whenNoObjectionsForPartner_throwsCompanyValidationException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
+                .thenReturn(false);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining(COMPANY_NUMBER)
+                .hasMessageContaining(PARTNER_ORGANISATION);
+
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
     // ===== POST Withdrawal Tests (Existing Tests) =====
@@ -222,6 +247,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
@@ -242,6 +268,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenRequestIsValid_persistsDocumentReturnedByMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
@@ -267,6 +294,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-2", new RuntimeException("boom"));
 
@@ -291,6 +319,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
         WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
         DataAccessResourceFailureException saveException =
                 new DataAccessResourceFailureException("mongo update failed");
@@ -315,6 +344,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-4", new RuntimeException("boom"));
         DataAccessResourceFailureException saveException =
@@ -337,6 +367,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenDocumentIsPersisted_returnsResponseFromMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
+        stubPartnerObjectionExists();
         WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
@@ -358,6 +389,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueWithdrawalId() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
+        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
@@ -386,6 +418,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueEtag() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
+        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
@@ -413,6 +446,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void withdrawAllObjections_whenRepositoryInsertFails_throwsWithdrawalPersistenceException() {
         WithdrawAllObjectionsRequest request = buildRequest();
+        stubPartnerObjectionExists();
         DataAccessResourceFailureException cause =
                 new DataAccessResourceFailureException("mongo insert failed");
 
@@ -615,5 +649,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         response.setWithdrawalId(doc.getWithdrawalId());
         response.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         return response;
+    }
+
+    private void stubPartnerObjectionExists() {
+        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
+                .thenReturn(true);
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "objections")
 @CompoundIndex(name = "company_number_objection_id_idx", def = "{'company_number': 1, 'objection_id': 1}", unique = true)
+@CompoundIndex(name = "company_number_partner_organisation_idx", def = "{'company_number': 1, 'partner_organisation': 1}")
 public class ObjectionDocument extends PartnerRequestDocument {
 
     @Field("company_number")

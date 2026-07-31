@@ -51,6 +51,7 @@ public class GlobalExceptionHandler {
     private static final String SUBMISSION_COMPANY_NAME_MISMATCH = "SUBMISSION_COMPANY_NAME_MISMATCH";
     private static final String INVALID_COMPANY_TYPE = "INVALID_COMPANY_TYPE";
     private static final String INVALID_COMPANY_STATUS = "INVALID_COMPANY_STATUS";
+    private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_NOT_RECOGNISED = "EMAIL_NOT_RECOGNISED";
@@ -83,6 +84,8 @@ public class GlobalExceptionHandler {
             Map.entry(SUBMISSION_COMPANY_NAME_MISMATCH, "Company name does not match."),
             Map.entry(INVALID_COMPANY_TYPE, "You cannot create an objection for this company type."),
             Map.entry(INVALID_COMPANY_STATUS, "The company does not have an active proposal to strike off."),
+            Map.entry(NO_OBJECTIONS_FOR_PARTNER_ORGANISATION,
+                    "There are no objections for this partner organisation."),
             Map.entry(EMAIL_INCORRECT_FORMAT, "Invalid partner_contact_email. Must be a valid email format."),
             Map.entry(EMAIL_MAX_LENGTH, "Invalid partner_contact_email. Must not exceed 255 characters."),
             Map.entry(MAX_LENGTH_EXCEEDED, MAX_LENGTH_EXCEEDED_MESSAGE),

@@ -17,14 +17,18 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,6 +41,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
     private static final String SECOND_COMPANY_NUMBER = "87654321";
+    private static final String THIRD_COMPANY_NUMBER = "11223344";
+    private static final String OTHER_PARTNER_ORGANISATION = "home-office";
     private static final String DEBT_MANAGEMENT_WORKSTREAM = "debt-management";
 
     @Autowired
@@ -45,10 +51,14 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Autowired
     private WithdrawalRepository withdrawalRepository;
 
+    @Autowired
+    private ObjectionRepository objectionRepository;
+
 
     @BeforeEach
     void setUp() throws Exception {
         withdrawalRepository.deleteAll();
+        objectionRepository.deleteAll();
         // Drain any leftover messages from previous tests
         testConsumer.poll(Duration.ofMillis(100));
 
@@ -57,6 +67,12 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
                 .thenReturn(buildValidCompanyProfile());
         when(internalApiClient.company().get("/company/" + SECOND_COMPANY_NUMBER).execute().getData())
                 .thenReturn(buildValidCompanyProfile());
+        when(internalApiClient.company().get("/company/" + THIRD_COMPANY_NUMBER).execute().getData())
+                .thenReturn(buildValidCompanyProfile());
+
+        seedObjection(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        seedObjection(SECOND_COMPANY_NUMBER, PARTNER_ORGANISATION);
+        seedObjection(SECOND_COMPANY_NUMBER, OTHER_PARTNER_ORGANISATION);
     }
 
     // ===== Company Validation Tests =====
@@ -75,6 +91,21 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(response).isNotNull();
         assertThat(response.getWithdrawalId()).isNotBlank();
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+    }
+
+    @Test
+    void withdrawAllObjections_whenOnlyOtherPartnerObjectionsExist_throwsCompanyValidationException() {
+        objectionRepository.deleteAll();
+        seedObjection(THIRD_COMPANY_NUMBER, OTHER_PARTNER_ORGANISATION);
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(THIRD_COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining(THIRD_COMPANY_NUMBER)
+                .hasMessageContaining(PARTNER_ORGANISATION);
+
+        assertThat(withdrawalRepository.findAll()).isEmpty();
     }
 
 
@@ -400,5 +431,18 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         companyProfile.setType("llp");
         companyProfile.setCompanyStatus("active-proposal-to-strike-off");
         return companyProfile;
+    }
+
+    private void seedObjection(String companyNumber, String partnerOrganisation) {
+        ObjectionDocument objection = new ObjectionDocument();
+        objection.setCompanyNumber(companyNumber);
+        objection.setObjectionId(UUID.randomUUID().toString());
+        objection.setSubmissionCompanyName("Acme Limited");
+        objection.setPartnerOrganisation(partnerOrganisation);
+        objection.setPartnerContactEmail("test@example.com");
+        objection.setPartnerCaseReference("CASE-123");
+        objection.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
+        objection.setPartnerObjectionReason("debt-management");
+        objectionRepository.insert(objection);
     }
 }

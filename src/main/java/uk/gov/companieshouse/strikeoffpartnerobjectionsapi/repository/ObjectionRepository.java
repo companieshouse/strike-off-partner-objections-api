@@ -5,5 +5,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocume
 
 public interface ObjectionRepository extends MongoRepository<ObjectionDocument, String> {
     ObjectionDocument findByCompanyNumberAndObjectionId(String companyNumber, String objectionId);
+
+    boolean existsByCompanyNumberAndPartnerOrganisation(String companyNumber, String partnerOrganisation);
 }
 
