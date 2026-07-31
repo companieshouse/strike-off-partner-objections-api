@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -81,6 +82,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
             strikeOffPartnerWithdrawalsService =
                     new StrikeOffPartnerWithdrawalsService(withdrawalRepository, objectionRepository, withdrawalMapper,
                             withdrawalKafkaProducer, companyValidator, validator);
+
+            // Default happy-path stub; overridden in specific tests for false/exception scenarios.
+            lenient().when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(
+                    COMPANY_NUMBER, PARTNER_ORGANISATION)).thenReturn(true);
         }
     }
 
@@ -203,7 +208,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
@@ -220,6 +224,26 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
+    }
+
+    @Test
+    void withdrawAllObjections_whenObjectionRepositoryThrowsDataAccessException_throwsWithdrawalPersistenceException() {
+        WithdrawAllObjectionsRequest request = buildRequest();
+        DataAccessResourceFailureException cause =
+                new DataAccessResourceFailureException("mongo query failed");
+
+        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
+                .thenThrow(cause);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to validate objections for withdrawal")
+                .hasCause(cause);
+
+        verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
     @Test
@@ -247,7 +271,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(
                 eq(request), eq(COMPANY_NUMBER), eq("hmrc"), any(), any()))
@@ -268,7 +291,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenRequestIsValid_persistsDocumentReturnedByMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(mappedDocument);
@@ -294,7 +316,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-2", new RuntimeException("boom"));
 
@@ -319,7 +340,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
         WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
         DataAccessResourceFailureException saveException =
                 new DataAccessResourceFailureException("mongo update failed");
@@ -344,7 +364,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument mappedDocument = buildSavedDocument();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
         KafkaPublishException kafkaException =
                 new KafkaPublishException("publish failed", "event-id-4", new RuntimeException("boom"));
         DataAccessResourceFailureException saveException =
@@ -367,7 +386,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenDocumentIsPersisted_returnsResponseFromMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
-        stubPartnerObjectionExists();
         WithdrawAllObjectionsResponse expectedResponse = buildResponse(savedDocument);
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
@@ -389,7 +407,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueWithdrawalId() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
-        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
@@ -418,7 +435,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     void withdrawAllObjections_whenCalledMultipleTimes_generatesUniqueEtag() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument doc = buildSavedDocument();
-        stubPartnerObjectionExists();
 
         when(withdrawalMapper.toWithdrawalDocument(any(), any(), any(), any(), any()))
                 .thenReturn(doc);
@@ -446,7 +462,6 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Test
     void withdrawAllObjections_whenRepositoryInsertFails_throwsWithdrawalPersistenceException() {
         WithdrawAllObjectionsRequest request = buildRequest();
-        stubPartnerObjectionExists();
         DataAccessResourceFailureException cause =
                 new DataAccessResourceFailureException("mongo insert failed");
 
@@ -651,8 +666,4 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         return response;
     }
 
-    private void stubPartnerObjectionExists() {
-        when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION))
-                .thenReturn(true);
-    }
 }

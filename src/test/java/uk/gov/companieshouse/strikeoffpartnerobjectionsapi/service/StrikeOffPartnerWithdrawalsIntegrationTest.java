@@ -72,7 +72,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
         seedObjection(COMPANY_NUMBER, PARTNER_ORGANISATION);
         seedObjection(SECOND_COMPANY_NUMBER, PARTNER_ORGANISATION);
-        seedObjection(SECOND_COMPANY_NUMBER, OTHER_PARTNER_ORGANISATION);
+        seedObjection(THIRD_COMPANY_NUMBER, OTHER_PARTNER_ORGANISATION);
     }
 
     // ===== Company Validation Tests =====
