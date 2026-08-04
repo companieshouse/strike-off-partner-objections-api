@@ -27,16 +27,16 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
     private final HttpServletRequest httpServletRequest;
 
     public StrikeOffObjectionPartnerController(
-            final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService,
-            final HttpServletRequest httpServletRequest) {
+            StrikeOffPartnerObjectionService strikeOffPartnerObjectionService,
+            HttpServletRequest httpServletRequest) {
         this.strikeOffPartnerObjectionService = strikeOffPartnerObjectionService;
         this.httpServletRequest = httpServletRequest;
     }
 
     @Override
     public ResponseEntity<BaseObjectionResponse> createObjection(
-            @Size(min = 1) @PathVariable("company_number") final String companyNumber,
-            @Valid @RequestBody final CreateObjectionRequest createObjectionRequest) {
+            @Size(min = 1) @PathVariable("company_number") String companyNumber,
+            @Valid @RequestBody CreateObjectionRequest createObjectionRequest) {
         String partnerOrganisation = resolvePartnerOrganisation();
         BaseObjectionResponse response =
                 strikeOffPartnerObjectionService.createObjection(companyNumber, createObjectionRequest, partnerOrganisation);
@@ -45,8 +45,8 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
 
     @Override
     public ResponseEntity<BaseObjectionResponse> getObjection(
-            @Size(min = 1) @PathVariable("company_number") final String companyNumber,
-            @Size(min = 1) @PathVariable("objection_id") final String objectionId) {
+            @Size(min = 1) @PathVariable("company_number") String companyNumber,
+            @Size(min = 1) @PathVariable("objection_id") String objectionId) {
         String partnerOrganisation = resolvePartnerOrganisation();
         try {
             BaseObjectionResponse response =
@@ -60,9 +60,9 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
 
     @Override
     public ResponseEntity<Void> updateObjectionStatus(
-            @Size(min = 1) @PathVariable("company_number") final String companyNumber,
-            @Size(min = 1) @PathVariable("objection_id") final String objectionId,
-            @Valid @RequestBody final UpdateObjectionStatusRequest updateStatusRequest) {
+            @Size(min = 1) @PathVariable("company_number") String companyNumber,
+            @Size(min = 1) @PathVariable("objection_id") String objectionId,
+            @Valid @RequestBody UpdateObjectionStatusRequest updateStatusRequest) {
         try {
             strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
                     companyNumber,

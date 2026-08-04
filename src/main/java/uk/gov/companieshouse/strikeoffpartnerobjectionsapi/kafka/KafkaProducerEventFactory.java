@@ -9,6 +9,8 @@ import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObject
 import java.time.Instant;
 import java.util.UUID;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.APPLICATION_NAMESPACE;
+
 @Component
 public class KafkaProducerEventFactory {
 
@@ -27,7 +29,7 @@ public class KafkaProducerEventFactory {
         StrikeOffPartnerObjections message = StrikeOffPartnerObjections.newBuilder()
                 .setEventId(UUID.randomUUID().toString())
                 .setEventTime(Instant.now().toString())
-                .setSource("strike-off-partner-objections-api")
+                .setSource(APPLICATION_NAMESPACE)
                 .setEventType(type)
                 .setCompanyNumber(companyNumber)
                 .setPartnerOrganisation(partnerOrganisation)
