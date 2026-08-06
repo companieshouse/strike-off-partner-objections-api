@@ -51,16 +51,16 @@ public class StrikeOffPartnerObjectionService {
         this.companyValidator = companyValidator;
     }
 
-    public BaseObjectionResponse createObjection(final String companyNumber,
-                                                 final CreateObjectionRequest createObjectionRequest,
-                                                 final String partnerOrganisation) {
+    public BaseObjectionResponse createObjection(String companyNumber,
+                                                 CreateObjectionRequest createObjectionRequest,
+                                                 String partnerOrganisation) {
 
         // Validate company before persistence and publishing.
         // This validator is intentionally exception-driven: it returns nothing on success
         // and throws a CompanyValidationException on failure to stop processing.
         companyValidator.validateCompany(companyNumber, createObjectionRequest.getSubmissionCompanyName());
 
-        final String objectionId = UUID.randomUUID().toString();
+        String objectionId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
                 companyNumber, partnerOrganisation, objectionId));
@@ -109,9 +109,9 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-    public BaseObjectionResponse getObjection(final String companyNumber,
-                                                 final String objectionId,
-                                                 final String partnerOrganisation) throws ObjectionNotFoundException {
+    public BaseObjectionResponse getObjection(String companyNumber,
+                                              String objectionId,
+                                              String partnerOrganisation) throws ObjectionNotFoundException {
 
         LOGGER.info(format("Attempting to fetch objection with ID=%s and company number=%s",
                 objectionId, companyNumber));
@@ -136,9 +136,9 @@ public class StrikeOffPartnerObjectionService {
     }
 
     public void updateObjectionProcessingStatus(
-            final String companyNumber,
-            final String objectionId,
-            final UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
+            String companyNumber,
+            String objectionId,
+            UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
 
         LOGGER.info(format("Attempting to update objection processing status: objectionId=%s, companyNumber=%s",
                 objectionId, companyNumber));

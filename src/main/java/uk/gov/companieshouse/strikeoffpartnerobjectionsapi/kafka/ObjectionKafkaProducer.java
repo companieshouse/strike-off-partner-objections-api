@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -19,11 +20,11 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
         this.kafkaProducerEventFactory = kafkaProducerEventFactory;
     }
 
-    public StrikeOffPartnerObjections publishObjectionEvent(ObjectionDocument objectionDocument) {
-        var objectionRecord = kafkaProducerEventFactory.createProducerRecord(
-                objectionDocument.getObjectionId(),
-                objectionDocument.getCompanyNumber(),
-                objectionDocument.getPartnerOrganisation(),
+    public StrikeOffPartnerObjections publishObjectionEvent(ObjectionDocument objection) {
+        ProducerRecord<String, StrikeOffPartnerObjections> objectionRecord = kafkaProducerEventFactory.createProducerRecord(
+                objection.getObjectionId(),
+                objection.getCompanyNumber(),
+                objection.getPartnerOrganisation(),
                 EventType.OBJECTION
         );
 

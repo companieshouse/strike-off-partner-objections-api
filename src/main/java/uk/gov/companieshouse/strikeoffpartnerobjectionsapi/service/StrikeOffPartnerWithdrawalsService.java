@@ -56,9 +56,9 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     public WithdrawAllObjectionsResponse getWithdrawal(
-            final String companyNumber,
-            final String withdrawalId,
-            final String partnerOrganisation) {
+            String companyNumber,
+            String withdrawalId,
+            String partnerOrganisation) {
 
         LOGGER.info(format("Retrieving withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
@@ -87,12 +87,12 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     public WithdrawAllObjectionsResponse withdrawAllObjections(
-            final String companyNumber,
-            final WithdrawAllObjectionsRequest request,
-            final String partnerOrganisation) {
+            String companyNumber,
+            WithdrawAllObjectionsRequest request,
+            String partnerOrganisation) {
 
-        final String withdrawalId = UUID.randomUUID().toString();
-        final String etag = UUID.randomUUID().toString();
+        String withdrawalId = UUID.randomUUID().toString();
+        String etag = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
@@ -163,9 +163,9 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     public void updateWithdrawalProcessingStatus(
-            final String companyNumber,
-            final String withdrawalId,
-            final UpdateWithdrawalStatusRequest updateStatusRequest) {
+            String companyNumber,
+            String withdrawalId,
+            UpdateWithdrawalStatusRequest updateStatusRequest) {
 
         LOGGER.info(format("Attempting to update withdrawal processing status: withdrawalId=%s, companyNumber=%s",
                 withdrawalId, companyNumber));

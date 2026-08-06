@@ -39,8 +39,8 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
      * @param httpServletRequest the current HTTP request used to resolve the partner organisation header
      */
     public StrikeOffPartnerWithdrawalsController(
-            final StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService,
-            final HttpServletRequest httpServletRequest) {
+            StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService,
+            HttpServletRequest httpServletRequest) {
         this.strikeOffPartnerWithdrawalsService = strikeOffPartnerWithdrawalsService;
         this.httpServletRequest = httpServletRequest;
     }
@@ -54,7 +54,7 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
      */
     @Override
     public ResponseEntity<WithdrawAllObjectionsResponse> getAllWithdrawals(
-            final String companyNumber, final String withdrawalId) {
+            String companyNumber, String withdrawalId) {
         String partnerOrganisation = resolvePartnerOrganisation();
         WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService
                 .getWithdrawal(companyNumber, withdrawalId, partnerOrganisation);
@@ -70,8 +70,8 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
      */
     @Override
     public ResponseEntity<WithdrawAllObjectionsResponse> withdrawAllObjections(
-            final String companyNumber,
-            final WithdrawAllObjectionsRequest withdrawAllObjectionsRequest) {
+            String companyNumber,
+            WithdrawAllObjectionsRequest withdrawAllObjectionsRequest) {
         String partnerOrganisation = resolvePartnerOrganisation();
         WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(
                 companyNumber, withdrawAllObjectionsRequest, partnerOrganisation);
@@ -80,9 +80,9 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
 
     @Override
     public ResponseEntity<Void> updateWithdrawalStatus(
-            @Size(min = 1) @PathVariable("company_number") final String companyNumber,
-            @Size(min = 1) @PathVariable("withdrawal_id") final String withdrawalId,
-            @Valid @RequestBody final UpdateWithdrawalStatusRequest updateStatusRequest) {
+            @Size(min = 1) @PathVariable("company_number") String companyNumber,
+            @Size(min = 1) @PathVariable("withdrawal_id") String withdrawalId,
+            @Valid @RequestBody UpdateWithdrawalStatusRequest updateStatusRequest) {
         try {
             strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                     companyNumber,
