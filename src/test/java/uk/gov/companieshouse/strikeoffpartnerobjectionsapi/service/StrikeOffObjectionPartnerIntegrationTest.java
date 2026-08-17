@@ -193,8 +193,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
 
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, created.getObjectionId(), updateRequest);
 
-        ObjectionDocument updated = objectionRepository.findByCompanyNumberAndObjectionId(COMPANY_NUMBER, created.getObjectionId());
-        assertThat(updated).isNotNull();
+        ObjectionDocument updated = objectionRepository
+                .findByCompanyNumberAndObjectionId(COMPANY_NUMBER, created.getObjectionId())
+                .orElseThrow();
         assertThat(updated.getProcessingStatus()).isEqualTo("objection-processing");
         assertThat(updated.getProcessingStatusChangedAt()).isNotNull();
         assertThat(updated.getEtag()).isNotBlank();
@@ -223,7 +224,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
                 strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest))
                 .doesNotThrowAnyException();
 
-        ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(COMPANY_NUMBER, objectionId);
+        ObjectionDocument document = objectionRepository
+                .findByCompanyNumberAndObjectionId(COMPANY_NUMBER, objectionId)
+                .orElseThrow();
         assertThat(document.getProcessingStatus()).isEqualTo("objection-submitted");
     }
 

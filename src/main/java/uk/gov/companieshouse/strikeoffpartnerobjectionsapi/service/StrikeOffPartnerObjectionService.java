@@ -116,11 +116,9 @@ public class StrikeOffPartnerObjectionService {
         LOGGER.info(format("Attempting to fetch objection with ID=%s and company number=%s",
                 objectionId, companyNumber));
 
-        ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
-        if (document == null) {
-            throw new ObjectionNotFoundException(
-                    format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
-        }
+        ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)
+                .orElseThrow(() -> new ObjectionNotFoundException(
+                        format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId)));
 
         if (!partnerOrganisation.equals(document.getPartnerOrganisation())) {
             LOGGER.error(format("Organisation mismatch: caller=%s, document=%s, objectionId=%s",
@@ -143,11 +141,9 @@ public class StrikeOffPartnerObjectionService {
         LOGGER.info(format("Attempting to update objection processing status: objectionId=%s, companyNumber=%s",
                 objectionId, companyNumber));
 
-        ObjectionDocument existingDocument = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId);
-        if (existingDocument == null) {
-            throw new ObjectionNotFoundException(
-                    format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId));
-        }
+        ObjectionDocument existingDocument = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)
+                .orElseThrow(() -> new ObjectionNotFoundException(
+                        format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId)));
 
         String requestedStatusValue = updateStatusRequest.getProcessingStatus().getValue().trim();
         ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);

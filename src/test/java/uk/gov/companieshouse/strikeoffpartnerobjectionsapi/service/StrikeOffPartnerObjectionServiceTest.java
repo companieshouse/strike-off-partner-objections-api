@@ -15,6 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.doThrow;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -237,7 +238,8 @@ class StrikeOffPartnerObjectionServiceTest {
         document.setPartnerOrganisation(PARTNER_ORGANISATION);
         BaseObjectionResponse expectedResponse = new BaseObjectionResponse();
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(document));
         when(objectionResponseMapper.toObjectionApiResponse(document)).thenReturn(expectedResponse);
 
         BaseObjectionResponse result = strikeOffPartnerObjectionService.getObjection(companyNumber, objectionId, PARTNER_ORGANISATION);
@@ -249,7 +251,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
     @Test
     void getObjection_whenObjectionDoesNotExist_throwsObjectionNotFoundExceptionWithMessage() {
-        when(objectionRepository.findByCompanyNumberAndObjectionId("1", "2")).thenReturn(null);
+        when(objectionRepository.findByCompanyNumberAndObjectionId("1", "2")).thenReturn(Optional.empty());
         ObjectionNotFoundException ex = assertThrows(
                 ObjectionNotFoundException.class,
                 () -> strikeOffPartnerObjectionService.getObjection("1", "2", PARTNER_ORGANISATION));
@@ -306,7 +308,8 @@ class StrikeOffPartnerObjectionServiceTest {
         existing.setObjectionId(objectionId);
         existing.setCompanyNumber(companyNumber);
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
         when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
 
@@ -328,7 +331,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-processing");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
 
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
@@ -345,7 +349,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-rejected");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
                 companyNumber,
@@ -388,7 +393,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-processing");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
         when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
 
@@ -408,7 +414,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-processing");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
         when(objectionRequestMapper.getEtag()).thenReturn("etag-4");
         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
 
@@ -426,7 +433,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument document = new ObjectionDocument();
         document.setPartnerOrganisation("different-organisation");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(document);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(document));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.getObjection(companyNumber, objectionId, PARTNER_ORGANISATION))
                 .isInstanceOf(ResponseStatusException.class)
@@ -444,7 +452,8 @@ class StrikeOffPartnerObjectionServiceTest {
         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(null);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
                 .isInstanceOf(ObjectionNotFoundException.class)
@@ -462,7 +471,8 @@ class StrikeOffPartnerObjectionServiceTest {
         existing.setProcessingStatus("objection-submitted");
         DataAccessResourceFailureException cause = new DataAccessResourceFailureException("mongo update failed");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
         when(objectionRequestMapper.getEtag()).thenReturn("etag-save-fail");
         when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(cause);
 
@@ -481,7 +491,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("unknown-status-value");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
                 .isInstanceOf(ResponseStatusException.class)
@@ -498,7 +509,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-accepted");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
                 .isInstanceOf(ResponseStatusException.class)
@@ -515,7 +527,8 @@ class StrikeOffPartnerObjectionServiceTest {
         ObjectionDocument existing = new ObjectionDocument();
         existing.setProcessingStatus("objection-submitted");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)).thenReturn(existing);
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
                 .isInstanceOf(ResponseStatusException.class)
