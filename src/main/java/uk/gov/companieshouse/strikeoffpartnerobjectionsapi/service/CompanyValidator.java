@@ -22,7 +22,8 @@ public class CompanyValidator {
     private static final String INVALID_COMPANY_STATUS = "INVALID_COMPANY_STATUS";
     private static final String INVALID_COMPANY_TYPE = "INVALID_COMPANY_TYPE";
 
-    // Status indicating a strike-off proposal exists for the company
+    // Company status values required to indicate an active proposal to strike off
+    private static final String ACTIVE_STATUS = "active";
     private static final String ACTIVE_PROPOSAL_TO_STRIKE_OFF = "active-proposal-to-strike-off";
 
     // Allowed company types for strike-off withdrawals
@@ -137,14 +138,19 @@ public class CompanyValidator {
 
     /**
      * Checks if the company has an active proposal to strike off.
-     * This is determined by checking the companyStatus field.
+     * This is determined by checking both companyStatus and companyStatusDetail.
      *
      * @param companyProfile the company profile from the API
      * @return true if the company has an active proposal to strike off, false otherwise
      */
     private boolean hasActiveProposalToStrikeOff(CompanyProfileApi companyProfile) {
         String status = companyProfile.getCompanyStatus();
-        return status != null && status.equals(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
+        if (!ACTIVE_STATUS.equals(status)) {
+            return false;
+        }
+
+        String statusDetail = companyProfile.getCompanyStatusDetail();
+        return ACTIVE_PROPOSAL_TO_STRIKE_OFF.equals(statusDetail);
     }
 }
 
