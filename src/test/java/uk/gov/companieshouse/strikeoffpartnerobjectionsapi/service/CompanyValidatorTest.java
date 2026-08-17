@@ -181,6 +181,23 @@ class CompanyValidatorTest {
     }
 
     @Test
+    void validateCompany_whenCompanyStatusAndCompanyStatusDetailAreNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus(null);
+        companyProfile.setCompanyStatusDetail(null);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+    }
+
+    @Test
     void validateCompany_whenCompanyStatusIsNotActiveAndStatusDetailIsExpected_throwsCompanyValidationException() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);

@@ -144,13 +144,8 @@ public class CompanyValidator {
      * @return true if the company has an active proposal to strike off, false otherwise
      */
     private boolean hasActiveProposalToStrikeOff(CompanyProfileApi companyProfile) {
-        String status = companyProfile.getCompanyStatus();
-        if (!ACTIVE_STATUS.equals(status)) {
-            return false;
-        }
-
-        String statusDetail = companyProfile.getCompanyStatusDetail();
-        return ACTIVE_PROPOSAL_TO_STRIKE_OFF.equals(statusDetail);
+        return ACTIVE_STATUS.equals(companyProfile.getCompanyStatus()) &&
+                ACTIVE_PROPOSAL_TO_STRIKE_OFF.equals(companyProfile.getCompanyStatusDetail());
     }
 }
 
