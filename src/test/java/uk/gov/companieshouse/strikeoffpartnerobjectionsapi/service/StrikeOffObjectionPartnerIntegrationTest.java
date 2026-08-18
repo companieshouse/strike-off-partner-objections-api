@@ -18,6 +18,7 @@ import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
@@ -74,6 +75,21 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         assertThat(response).isNotNull();
         assertThat(response.getObjectionId()).isNotBlank();
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
+    }
+
+    @Test
+    void createObjections_whenCompanyStatusDetailIsNotActiveProposal_throwsCompanyValidationException() throws Exception {
+        CompanyProfileApi invalidCompany = buildValidCompanyProfile();
+        invalidCompany.setCompanyStatusDetail("insolvency-proceedings");
+        CreateObjectionRequest request = buildValidRequest();
+
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(invalidCompany);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining("invalid company_status_detail");
     }
 
     @Test
@@ -292,7 +308,8 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("Acme Limited");
         companyProfile.setType("llp");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus("active");
+        companyProfile.setCompanyStatusDetail("active-proposal-to-strike-off");
         return companyProfile;
     }
 }

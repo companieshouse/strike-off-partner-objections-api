@@ -26,6 +26,8 @@ class CompanyValidatorTest {
 
     private static final String COMPANY_NUMBER = "12345678";
     private static final String COMPANY_NAME = "ACME Ltd";
+    private static final String ACTIVE_STATUS = "active";
+    private static final String ACTIVE_PROPOSAL_TO_STRIKE_OFF = "active-proposal-to-strike-off";
 
     @Mock
     private CompanyProfileService companyProfileService;
@@ -83,7 +85,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("acme ltd");
         companyProfile.setType("llp");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -99,7 +102,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType(validType);
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -113,7 +117,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType(invalidType);
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -130,6 +135,7 @@ class CompanyValidatorTest {
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("llp");
         companyProfile.setCompanyStatus("active");
+        companyProfile.setCompanyStatusDetail("dissolution-proposal-active");
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -146,6 +152,64 @@ class CompanyValidatorTest {
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("llp");
         companyProfile.setCompanyStatus(null);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+        assertEquals(
+                "Company has invalid company_status: companyNumber=12345678, company_status=null, expected=active",
+                thrown.getMessage());
+    }
+
+    @Test
+    void validateCompany_whenCompanyStatusDetailIsNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(null);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+        assertEquals(
+                "Company has invalid company_status_detail: companyNumber=12345678, company_status_detail=null, expected=active-proposal-to-strike-off",
+                thrown.getMessage());
+    }
+
+    @Test
+    void validateCompany_whenCompanyStatusAndCompanyStatusDetailAreNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus(null);
+        companyProfile.setCompanyStatusDetail(null);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompany_whenCompanyStatusIsNotActiveAndStatusDetailIsExpected_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus("dissolved");
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -161,7 +225,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("llp");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -216,6 +281,7 @@ class CompanyValidatorTest {
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("invalid-type");
         companyProfile.setCompanyStatus("active");
+        companyProfile.setCompanyStatusDetail("insolvency-proceedings");
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -231,7 +297,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("sole-trader");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -244,7 +311,8 @@ class CompanyValidatorTest {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("llp");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -255,7 +323,8 @@ class CompanyValidatorTest {
     void validateCompanyForWithdrawal_whenCompanyNameIsNull_throwsCompanyValidationException() {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName(null);
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 
@@ -272,6 +341,25 @@ class CompanyValidatorTest {
         companyProfile.setCompanyName(COMPANY_NAME);
         companyProfile.setType("llp");
         companyProfile.setCompanyStatus(null);
+        companyProfile.setCompanyStatusDetail(ACTIVE_PROPOSAL_TO_STRIKE_OFF);
+
+        when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
+
+        CompanyValidationException thrown = assertThrows(
+                CompanyValidationException.class,
+                () -> companyValidator.validateCompanyForWithdrawal(COMPANY_NUMBER, COMPANY_NAME));
+
+        assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+    }
+
+    @Test
+    void validateCompanyForWithdrawal_whenCompanyStatusDetailIsNull_throwsCompanyValidationException() {
+        CompanyProfileApi companyProfile = new CompanyProfileApi();
+        companyProfile.setCompanyName(COMPANY_NAME);
+        companyProfile.setType("llp");
+        companyProfile.setCompanyStatus(ACTIVE_STATUS);
+        companyProfile.setCompanyStatusDetail(null);
+
 
         when(companyProfileService.getCompanyProfile(COMPANY_NUMBER)).thenReturn(companyProfile);
 

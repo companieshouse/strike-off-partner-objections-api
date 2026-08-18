@@ -94,6 +94,36 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     }
 
     @Test
+    void withdrawAllObjections_whenCompanyStatusIsNotActive_throwsCompanyValidationException() throws Exception {
+        CompanyProfileApi companyProfile = buildValidCompanyProfile();
+        companyProfile.setCompanyStatus("dissolved");
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(companyProfile);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining("invalid company_status");
+    }
+
+    @Test
+    void withdrawAllObjections_whenCompanyStatusDetailIsNotActiveProposal_throwsCompanyValidationException() throws Exception {
+        CompanyProfileApi companyProfile = buildValidCompanyProfile();
+        companyProfile.setCompanyStatusDetail("insolvency-proceedings");
+        WithdrawAllObjectionsRequest request = buildRequest();
+
+        when(internalApiClient.company().get("/company/" + COMPANY_NUMBER).execute().getData())
+                .thenReturn(companyProfile);
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
+                .isInstanceOf(CompanyValidationException.class)
+                .hasMessageContaining("invalid company_status_detail");
+    }
+
+    @Test
     void withdrawAllObjections_whenOnlyOtherPartnerObjectionsExist_throwsCompanyValidationException() {
         objectionRepository.deleteAll();
         seedObjection(THIRD_COMPANY_NUMBER, OTHER_PARTNER_ORGANISATION);
@@ -429,7 +459,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         CompanyProfileApi companyProfile = new CompanyProfileApi();
         companyProfile.setCompanyName("Acme Limited");
         companyProfile.setType("llp");
-        companyProfile.setCompanyStatus("active-proposal-to-strike-off");
+        companyProfile.setCompanyStatus("active");
+        companyProfile.setCompanyStatusDetail("active-proposal-to-strike-off");
         return companyProfile;
     }
 
