@@ -89,7 +89,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         assertThatThrownBy(() ->
                 strikeOffPartnerObjectionService.createObjection(COMPANY_NUMBER, request, PARTNER_ORGANISATION))
                 .isInstanceOf(CompanyValidationException.class)
-                .hasMessageContaining("active proposal to strike off");
+                .hasMessageContaining("invalid company_status_detail");
     }
 
     @Test

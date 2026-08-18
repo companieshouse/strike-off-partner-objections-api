@@ -116,10 +116,20 @@ public class CompanyValidator {
     }
 
     private void validateCompanyStatus(CompanyProfileApi companyProfile, String companyNumber) {
-        if (!hasActiveProposalToStrikeOff(companyProfile)) {
+        String companyStatus = companyProfile.getCompanyStatus();
+        if (!ACTIVE_STATUS.equals(companyStatus)) {
             throw new CompanyValidationException(
-                    format("Company does not have an active proposal to strike off: companyNumber=%s",
-                            companyNumber),
+                    format("Company has invalid company_status: companyNumber=%s, company_status=%s, expected=%s",
+                            companyNumber, companyStatus, ACTIVE_STATUS),
+                    INVALID_COMPANY_STATUS);
+        }
+
+        String companyStatusDetail = companyProfile.getCompanyStatusDetail();
+        if (!ACTIVE_PROPOSAL_TO_STRIKE_OFF.equals(companyStatusDetail)) {
+            throw new CompanyValidationException(
+                    format("Company has invalid company_status_detail: companyNumber=%s, company_status_detail=%s, "
+                                    + "expected=%s",
+                            companyNumber, companyStatusDetail, ACTIVE_PROPOSAL_TO_STRIKE_OFF),
                     INVALID_COMPANY_STATUS);
         }
     }
@@ -135,17 +145,4 @@ public class CompanyValidator {
         String type = companyProfile.getType();
         return type != null && ALLOWED_COMPANY_TYPES.contains(type);
     }
-
-    /**
-     * Checks if the company has an active proposal to strike off.
-     * This is determined by checking both companyStatus and companyStatusDetail.
-     *
-     * @param companyProfile the company profile from the API
-     * @return true if the company has an active proposal to strike off, false otherwise
-     */
-    private boolean hasActiveProposalToStrikeOff(CompanyProfileApi companyProfile) {
-        return ACTIVE_STATUS.equals(companyProfile.getCompanyStatus()) &&
-                ACTIVE_PROPOSAL_TO_STRIKE_OFF.equals(companyProfile.getCompanyStatusDetail());
-    }
 }
-

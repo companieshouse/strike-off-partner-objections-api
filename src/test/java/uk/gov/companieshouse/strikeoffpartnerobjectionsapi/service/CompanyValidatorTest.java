@@ -161,6 +161,9 @@ class CompanyValidatorTest {
                 () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
 
         assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+        assertEquals(
+                "Company has invalid company_status: companyNumber=12345678, company_status=null, expected=active",
+                thrown.getMessage());
     }
 
     @Test
@@ -178,6 +181,9 @@ class CompanyValidatorTest {
                 () -> companyValidator.validateCompany(COMPANY_NUMBER, COMPANY_NAME));
 
         assertEquals("INVALID_COMPANY_STATUS", thrown.getErrorCode());
+        assertEquals(
+                "Company has invalid company_status_detail: companyNumber=12345678, company_status_detail=null, expected=active-proposal-to-strike-off",
+                thrown.getMessage());
     }
 
     @Test
