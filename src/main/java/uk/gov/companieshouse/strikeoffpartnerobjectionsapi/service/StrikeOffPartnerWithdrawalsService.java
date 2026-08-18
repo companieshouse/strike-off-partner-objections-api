@@ -91,18 +91,18 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawAllObjectionsRequest request,
             String partnerOrganisation) {
 
+        // Validate company before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a CompanyValidationException on failure to stop processing.
+        // Company type validation is excluded for withdrawals (per acceptance criteria).
+        companyValidator.validateCompanyForWithdrawal(companyNumber, request.getSubmissionCompanyName());
+        validatePartnerHasObjections(companyNumber, partnerOrganisation);
+
         String withdrawalId = UUID.randomUUID().toString();
         String etag = UUID.randomUUID().toString();
 
         LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
                 companyNumber, withdrawalId));
-
-        // Validate company before persistence and publishing.
-        // This validator is intentionally exception-driven: it returns nothing on success
-        // and throws a CompanyValidationException on failure to stop processing.
-       // Company type validation is excluded for withdrawals (per acceptance criteria).
-        companyValidator.validateCompanyForWithdrawal(companyNumber, request.getSubmissionCompanyName());
-        validatePartnerHasObjections(companyNumber, partnerOrganisation);
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, partnerOrganisation, withdrawalId, etag);
