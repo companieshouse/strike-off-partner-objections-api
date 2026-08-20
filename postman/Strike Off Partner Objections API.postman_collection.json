@@ -1004,7 +1004,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Host",
@@ -1014,6 +1014,78 @@
               {
                 "key": "X-Request-Id",
                 "value": "test-request-status-001",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections",
+                "{{objection_id}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "204 - Update Objection Processing Status (Idempotent Repeat)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 204 No Content for repeated update\", function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-001-repeat",
                 "type": "text"
               },
               {
@@ -1080,7 +1152,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Host",
@@ -1156,7 +1228,7 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Host",
@@ -1204,6 +1276,87 @@
                 "{{companyNumber}}",
                 "strike-off-partner-objections",
                 "non-existent-id",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "500 - Invalid Persisted Processing Status (Seeded Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 500 Internal Server Error\", function () {",
+                  "  pm.response.to.have.status(500);",
+                  "});",
+                  "pm.test(\"error code is internal_server_error\", function () {",
+                  "  var body = pm.response.json();",
+                  "  var errorCode = body.error_code || body.errorCode;",
+                  "  pm.expect(errorCode).to.eql(\"internal_server_error\");",
+                  "});",
+                  "pm.test(\"message remains generic\", function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.message).to.eql(\"Unable to process objection status update\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-500",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{corrupted_objection_id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections",
+                "{{corrupted_objection_id}}",
                 "status"
               ]
             }
@@ -1715,11 +1868,15 @@
     },
     {
       "key": "objection_id",
-      "value": "objection-123"
+      "value": "seed-objection-processing-id"
+    },
+    {
+      "key": "corrupted_objection_id",
+      "value": "seed-invalid-status-objection-id"
     },
     {
       "key": "withdrawal_id",
-      "value": "replace-with-created-withdrawal-id"
+      "value": "seed-withdrawal-requested-id"
     },
     {
       "key": "localhostUrl",

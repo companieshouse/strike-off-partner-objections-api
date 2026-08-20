@@ -148,8 +148,13 @@ public class StrikeOffPartnerObjectionService {
         String requestedStatusValue = updateStatusRequest.getProcessingStatus().getValue().trim();
         ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);
 
-        ObjectionProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
+        ObjectionProcessingStatus currentStatus = parseCurrentStatus(
+                existingDocument.getProcessingStatus(),
+                companyNumber,
+                objectionId);
         if (currentStatus == requestedStatus) {
+            LOGGER.debug(format("Objection processing status unchanged: objectionId=%s, companyNumber=%s, status=%s",
+                    objectionId, companyNumber, currentStatus.getValue()));
             return;
         }
 
@@ -181,12 +186,19 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-    private ObjectionProcessingStatus parseCurrentStatus(String currentStatusValue) {
+    private ObjectionProcessingStatus parseCurrentStatus(String currentStatusValue,
+                                                         String companyNumber,
+                                                         String objectionId) {
         try {
             return ObjectionProcessingStatus.fromValue(currentStatusValue);
         } catch (IllegalArgumentException | NullPointerException ex) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    format("Invalid current processing status=%s", currentStatusValue), ex);
+            LOGGER.error(format(
+                    "Invalid persisted objection processing status: companyNumber=%s, objectionId=%s, currentStatus=%s",
+                    companyNumber,
+                    objectionId,
+                    currentStatusValue), ex);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Unable to process objection status update");
         }
     }
 

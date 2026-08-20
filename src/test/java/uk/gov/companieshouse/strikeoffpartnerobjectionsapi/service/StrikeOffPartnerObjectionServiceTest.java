@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -337,6 +338,7 @@ class StrikeOffPartnerObjectionServiceTest {
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
         verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        verify(objectionRepository, never()).save(any(ObjectionDocument.class));
         verifyNoInteractions(objectionRequestMapper);
     }
 
@@ -483,7 +485,7 @@ class StrikeOffPartnerObjectionServiceTest {
     }
 
     @Test
-    void parseCurrentStatus_whenCurrentStatusIsInvalid_throwsConflict() {
+    void parseCurrentStatus_whenCurrentStatusIsInvalid_throwsInternalServerError() {
         String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
@@ -497,7 +499,7 @@ class StrikeOffPartnerObjectionServiceTest {
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode.value")
-                .isEqualTo(409);
+                .isEqualTo(500);
     }
 
     @Test
