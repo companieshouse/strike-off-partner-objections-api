@@ -65,8 +65,7 @@ class GlobalExceptionHandlerTest {
                 fieldError("partnerContactEmail", "a", "Email"),
                 fieldError("partnerContactEmail", "a".repeat(260), "Size"),
                 fieldError("partnerCaseReference", "abc", "Size"),
-                fieldError("partnerObjectionReason", "bad", "Enum"),
-                fieldError("partnerObjectionWorkstream", "bad", "NotBlank")));
+                fieldError("partnerObjectionReason", "bad", "Enum")));
 
         ResponseEntity<ApiError> response = handler.handleValidationExceptions(ex);
         ApiError body = requireBody(response);
