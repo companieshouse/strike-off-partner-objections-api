@@ -1435,7 +1435,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1443,13 +1443,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections-withdrawals",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "company",
-                "{{inactiveProposalCompanyNumber}}",
+                "{{companyNumber}}",
                 "strike-off-partner-objections-withdrawals"
               ]
             }
@@ -1506,7 +1506,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1514,13 +1514,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections-withdrawals",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "company",
-                "{{inactiveProposalCompanyNumber}}",
+                "{{companyNumber}}",
                 "strike-off-partner-objections-withdrawals"
               ]
             }
@@ -1578,7 +1578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1722,7 +1722,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1730,13 +1730,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections-withdrawals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "company",
-                "{{companyNumber}}",
+                "{{inactiveProposalCompanyNumber}}",
                 "strike-off-partner-objections-withdrawals"
               ]
             }
