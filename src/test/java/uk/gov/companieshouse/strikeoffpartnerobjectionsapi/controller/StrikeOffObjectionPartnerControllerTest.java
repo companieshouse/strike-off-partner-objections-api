@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -106,6 +107,34 @@ class StrikeOffObjectionPartnerControllerTest {
     }
 
     @Test
+    void createObjection_whenWorkstreamIsMissing_returnsCreated() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.remove("partner_objection_workstream");
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture(),
+                eq(PARTNER_ORGANISATION));
+        assertNull(requestCaptor.getValue().getPartnerObjectionWorkstream());
+    }
+
+    @Test
+    void createObjection_whenWorkstreamIsNull_returnsCreated() throws Exception {
+        ObjectNode request = baseValidRequest();
+        request.putNull("partner_objection_workstream");
+
+        postCreateObjection(request)
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<CreateObjectionRequest> requestCaptor = ArgumentCaptor.forClass(CreateObjectionRequest.class);
+        verify(strikeOffPartnerObjectionService).createObjection(eq(COMPANY_NUMBER), requestCaptor.capture(),
+                eq(PARTNER_ORGANISATION));
+        assertNull(requestCaptor.getValue().getPartnerObjectionWorkstream());
+    }
+
+    @Test
     void getObjection_whenRequestIsValid_callsServiceWithCompanyNumberAndObjectionId() throws Exception {
         performGetObjection(COMPANY_NUMBER)
                 .andExpect(status().isOk());
@@ -177,6 +206,18 @@ class StrikeOffObjectionPartnerControllerTest {
         for (String field : expectedFields) {
             assertTrue(responseBody.has(field), "Missing field in response body: " + field);
         }
+    }
+
+    @Test
+    void getObjection_whenWorkstreamIsNotPresent_omitsWorkstreamFromResponse() throws Exception {
+        BaseObjectionResponse responseWithoutWorkstream = defaultCreatedResponse();
+        responseWithoutWorkstream.setPartnerObjectionWorkstream(null);
+        when(strikeOffPartnerObjectionService.getObjection(COMPANY_NUMBER, OBJECTION_ID, PARTNER_ORGANISATION))
+                .thenReturn(responseWithoutWorkstream);
+
+        performGetObjection(COMPANY_NUMBER)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.partner_objection_workstream").doesNotExist());
     }
 
     @Test

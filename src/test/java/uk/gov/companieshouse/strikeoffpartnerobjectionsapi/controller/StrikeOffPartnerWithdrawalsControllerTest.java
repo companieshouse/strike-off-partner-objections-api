@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -102,6 +103,21 @@ class StrikeOffPartnerWithdrawalsControllerTest {
                 .getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION);
     }
 
+    @Test
+    void getAllWithdrawals_whenWorkstreamIsNotPresent_omitsWorkstreamFromResponse() throws Exception {
+        WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
+        response.setWithdrawalId(WITHDRAWAL_ID);
+        response.setPartnerObjectionWorkstream(null);
+
+        when(strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
+                .thenReturn(response);
+
+        getWithdrawal()
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID))
+                .andExpect(jsonPath("$.partner_objection_workstream").doesNotExist());
+    }
+
     // ===== POST Withdrawal Tests (Existing Tests) =====
 
     @Test
@@ -124,6 +140,56 @@ class StrikeOffPartnerWithdrawalsControllerTest {
         assertEquals(201, response.getStatusCode().value());
         assertSame(serviceResponse, response.getBody());
         verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
+    }
+
+    @Test
+    void withdrawAllObjections_whenWorkstreamIsMissing_returnsCreatedAndPassesNullWorkstream() throws Exception {
+        WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
+        serviceResponse.setWithdrawalId(WITHDRAWAL_ID);
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                eq(COMPANY_NUMBER),
+                any(),
+                eq(PARTNER_ORGANISATION))).thenReturn(serviceResponse);
+
+        ObjectNode request = baseValidRequest();
+        request.remove("partner_objection_workstream");
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
+
+        ArgumentCaptor<WithdrawAllObjectionsRequest> requestCaptor =
+                ArgumentCaptor.forClass(WithdrawAllObjectionsRequest.class);
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                eq(COMPANY_NUMBER),
+                requestCaptor.capture(),
+                eq(PARTNER_ORGANISATION));
+        assertNull(requestCaptor.getValue().getPartnerObjectionWorkstream());
+    }
+
+    @Test
+    void withdrawAllObjections_whenWorkstreamIsNull_returnsCreatedAndPassesNullWorkstream() throws Exception {
+        WithdrawAllObjectionsResponse serviceResponse = new WithdrawAllObjectionsResponse();
+        serviceResponse.setWithdrawalId(WITHDRAWAL_ID);
+        when(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                eq(COMPANY_NUMBER),
+                any(),
+                eq(PARTNER_ORGANISATION))).thenReturn(serviceResponse);
+
+        ObjectNode request = baseValidRequest();
+        request.putNull("partner_objection_workstream");
+
+        postWithdrawals(request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.withdrawal_id").value(WITHDRAWAL_ID));
+
+        ArgumentCaptor<WithdrawAllObjectionsRequest> requestCaptor =
+                ArgumentCaptor.forClass(WithdrawAllObjectionsRequest.class);
+        verify(strikeOffPartnerWithdrawalsService).withdrawAllObjections(
+                eq(COMPANY_NUMBER),
+                requestCaptor.capture(),
+                eq(PARTNER_ORGANISATION));
+        assertNull(requestCaptor.getValue().getPartnerObjectionWorkstream());
     }
 
     @Test

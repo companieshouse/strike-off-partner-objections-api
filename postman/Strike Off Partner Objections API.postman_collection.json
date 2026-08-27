@@ -87,6 +87,81 @@
           "response": []
         },
         {
+          "name": "201 - Create Objection (Without Workstream)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 201 when workstream is omitted\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"stores objection_id for follow-up GET\", function () {",
+                  "  var body = pm.response.json();",
+                  "  var objection_id = body.objection_id || body.objectionId;",
+                  "  pm.expect(objection_id).to.exist;",
+                  "  pm.collectionVariables.set(\"objection_id\", objection_id);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-001-no-workstream",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
+                "strike-off-partner-objections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "403 - Missing ERIC-Identity-Type",
           "event": [
             {
@@ -551,65 +626,7 @@
           "response": []
         },
         {
-          "name": "400 - Missing Workstream",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"returns 400\", function () {",
-                  "  pm.response.to.have.status(400);",
-                  "});",
-                  "pm.test(\"error code includes MISSING_WORKSTREAM\", function () {",
-                  "  var body = pm.response.json();",
-                  "  pm.expect(body.error_code).to.include(\"MISSING_WORKSTREAM\");",
-                  "});"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Host",
-                "value": "{{hostHeader}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "{{contentTypeJson}}",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "company",
-                "{{companyNumber}}",
-                "strike-off-partner-objections"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "400 - Multiple Errors (blank email + missing workstream)",
+          "name": "400 - Multiple Errors (blank email + max case reference length)",
           "event": [
             {
               "listen": "test",
@@ -621,7 +638,7 @@
                   "pm.test(\"error code contains both expected errors\", function () {",
                   "  var body = pm.response.json();",
                   "  pm.expect(body.error_code).to.include(\"MISSING_REQUIRED_PARAMETER\");",
-                  "  pm.expect(body.error_code).to.include(\"MISSING_WORKSTREAM\");",
+                  "  pm.expect(body.error_code).to.include(\"MAX_LENGTH_EXCEEDED\");",
                   "});"
                 ],
                 "type": "text/javascript",
@@ -646,7 +663,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1418,7 +1435,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1426,13 +1443,84 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections-withdrawals",
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "company",
-                "{{inactiveProposalCompanyNumber}}",
+                "{{companyNumber}}",
+                "strike-off-partner-objections-withdrawals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "201 - Create Withdrawal (Without Workstream)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"returns 201 when workstream is omitted\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"stores withdrawal_id for follow-up GET\", function () {",
+                  "  var body = pm.response.json();",
+                  "  var withdrawalId = body.withdrawal_id || body.withdrawalId;",
+                  "  pm.expect(withdrawalId).to.exist;",
+                  "  pm.collectionVariables.set(\"withdrawal_id\", withdrawalId);",
+                  "  pm.collectionVariables.set(\"withdrawalId\", withdrawalId);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{auth_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "company",
+                "{{companyNumber}}",
                 "strike-off-partner-objections-withdrawals"
               ]
             }
@@ -1490,7 +1578,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1634,7 +1722,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"ACME LTD\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{inactiveProposalSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"wealthy-and-mid-sized-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1642,13 +1730,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/company/{{companyNumber}}/strike-off-partner-objections-withdrawals",
+              "raw": "{{baseUrl}}/company/{{inactiveProposalCompanyNumber}}/strike-off-partner-objections-withdrawals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "company",
-                "{{companyNumber}}",
+                "{{inactiveProposalCompanyNumber}}",
                 "strike-off-partner-objections-withdrawals"
               ]
             }
