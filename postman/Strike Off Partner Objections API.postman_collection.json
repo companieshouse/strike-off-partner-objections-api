@@ -65,7 +65,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
+              "raw": "{\n  \"submission_company_name\": \"{{validSubmissionCompanyName}}\",\n  \"partner_case_reference\": \"CASE-123\",\n  \"partner_objection_workstream\": \"individuals-and-small-business-compliance\",\n  \"partner_contact_email\": \"case.owner@example.com\",\n  \"partner_objection_reason\": \"compliance-issue-outstanding\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
