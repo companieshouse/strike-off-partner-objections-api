@@ -101,9 +101,9 @@ public class GlobalExceptionHandler {
         }
 
         String allErrorCodes = fieldErrors.stream()
-                .map(this::mapFieldError)
+                .map(GlobalExceptionHandler::mapFieldError)
                 .distinct()
-                .sorted(Comparator.comparingInt(this::errorPriorityIndex))
+                .sorted(Comparator.comparingInt(GlobalExceptionHandler::errorPriorityIndex))
                 .reduce((a, b) -> a + ", " + b)
                 .orElse(MISSING_REQUIRED_PARAMETER);
         return badRequest(allErrorCodes, fieldErrors);
@@ -140,7 +140,7 @@ public class GlobalExceptionHandler {
         };
     }
 
-    private String resolveMessage(ResponseStatusException ex, String defaultMessage) {
+    private static String resolveMessage(ResponseStatusException ex, String defaultMessage) {
         String reason = ex.getReason();
         return reason == null || reason.isBlank() ? defaultMessage : reason;
     }
@@ -203,7 +203,7 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private String toErrorCode(HttpStatusCode statusCode) {
+    private static String toErrorCode(HttpStatusCode statusCode) {
         HttpStatus resolvedStatus = HttpStatus.resolve(statusCode.value());
         if (resolvedStatus == null) {
             return ERROR_CODE;
@@ -211,7 +211,7 @@ public class GlobalExceptionHandler {
         return resolvedStatus.name().toLowerCase(Locale.ROOT);
     }
 
-    private String mapFieldError(FieldError fieldError) {
+    private static String mapFieldError(FieldError fieldError) {
         return switch (fieldError.getField()) {
             case PARTNER_CONTACT_EMAIL -> mapEmailFieldError(fieldError);
             case PARTNER_CASE_REFERENCE, SUBMISSION_COMPANY_NAME -> mapLengthFieldError(fieldError);
@@ -220,7 +220,7 @@ public class GlobalExceptionHandler {
         };
     }
 
-    private String mapUnreadableMessage(HttpMessageNotReadableException ex) {
+    private static String mapUnreadableMessage(HttpMessageNotReadableException ex) {
         String message = ex.getMessage();
         if (isRequiredBodyMissing(message)) {
             return MISSING_REQUIRED_PARAMETER;
@@ -239,7 +239,7 @@ public class GlobalExceptionHandler {
         return MISSING_REQUIRED_PARAMETER;
     }
 
-    private String mapEmailFieldError(FieldError fieldError) {
+    private static String mapEmailFieldError(FieldError fieldError) {
         if (StringUtils.isBlank(fieldError.getRejectedValue() == null
                 ? null
                 : String.valueOf(fieldError.getRejectedValue()))) {
@@ -257,7 +257,7 @@ public class GlobalExceptionHandler {
         return MISSING_REQUIRED_PARAMETER;
     }
 
-    private String mapLengthFieldError(FieldError fieldError) {
+    private static String mapLengthFieldError(FieldError fieldError) {
         if (SIZE.equals(fieldError.getCode()) && toStringLength(fieldError.getRejectedValue()) > 0) {
             return MAX_LENGTH_EXCEEDED;
         }
@@ -265,11 +265,11 @@ public class GlobalExceptionHandler {
     }
 
 
-    private boolean isRequiredBodyMissing(String message) {
+    private static boolean isRequiredBodyMissing(String message) {
         return message != null && message.contains(REQUIRED_BODY_MISSING);
     }
 
-    private InvalidFormatException findInvalidFormatCause(Throwable cause) {
+    private static InvalidFormatException findInvalidFormatCause(Throwable cause) {
         Throwable current = cause;
         while (current != null) {
             if (current instanceof InvalidFormatException invalidFormatException) {
@@ -280,7 +280,7 @@ public class GlobalExceptionHandler {
         return null;
     }
 
-    private JsonMappingException findJsonMappingCause(Throwable cause) {
+    private static JsonMappingException findJsonMappingCause(Throwable cause) {
         Throwable current = cause;
         while (current != null) {
             if (current instanceof JsonMappingException jsonMappingException) {
@@ -291,7 +291,7 @@ public class GlobalExceptionHandler {
         return null;
     }
 
-    private String resolveUnreadableField(HttpMessageNotReadableException ex) {
+    private static String resolveUnreadableField(HttpMessageNotReadableException ex) {
         Throwable cause = ex.getMostSpecificCause();
         InvalidFormatException invalidFormatException = findInvalidFormatCause(cause);
         if (invalidFormatException != null && !invalidFormatException.getPath().isEmpty()) {
@@ -306,7 +306,7 @@ public class GlobalExceptionHandler {
     }
 
 
-    private String mapUnreadableMessageText(String message) {
+    private static String mapUnreadableMessageText(String message) {
         String normalized = normalize(message);
         if (normalized.contains(PARTNER_OBJECTION_REASON_SNAKE)
                 || normalized.contains(PARTNER_OBJECTION_REASON.toLowerCase(Locale.ROOT))) {
@@ -315,38 +315,38 @@ public class GlobalExceptionHandler {
         return null;
     }
 
-    private boolean isReasonField(String field) {
+    private static boolean isReasonField(String field) {
         return PARTNER_OBJECTION_REASON_SNAKE.equals(field) || PARTNER_OBJECTION_REASON.equals(field);
     }
 
 
-    private String normalize(String message) {
+    private static String normalize(String message) {
         return message == null ? "" : message.toLowerCase(Locale.ROOT);
     }
 
-    private int errorPriorityIndex(String errorCode) {
+    private static int errorPriorityIndex(String errorCode) {
         int index = ERROR_PRIORITY_ORDER.indexOf(errorCode);
         return index < 0 ? Integer.MAX_VALUE : index;
     }
 
-    private int toStringLength(Object value) {
+    private static int toStringLength(Object value) {
         if (value == null) {
             return 0;
         }
         return String.valueOf(value).length();
     }
 
-    private ResponseEntity<ApiError> badRequest(String errorCode) {
+    private static ResponseEntity<ApiError> badRequest(String errorCode) {
         return badRequest(errorCode, List.of());
     }
 
-    private ResponseEntity<ApiError> badRequest(String errorCode, List<FieldError> fieldErrors) {
+    private static ResponseEntity<ApiError> badRequest(String errorCode, List<FieldError> fieldErrors) {
         String primaryCode = extractPrimaryCode(errorCode);
         String message = resolveValidationMessage(primaryCode, fieldErrors);
         return new ResponseEntity<>(new ApiError(errorCode, message), HttpStatus.BAD_REQUEST);
     }
 
-    private String extractPrimaryCode(String errorCode) {
+    private static String extractPrimaryCode(String errorCode) {
         int separatorIndex = errorCode.indexOf(", ");
         if (separatorIndex < 0) {
             return errorCode;
@@ -354,7 +354,7 @@ public class GlobalExceptionHandler {
         return errorCode.substring(0, separatorIndex);
     }
 
-    private String resolveValidationMessage(String primaryCode, List<FieldError> fieldErrors) {
+    private static String resolveValidationMessage(String primaryCode, List<FieldError> fieldErrors) {
         if (!MAX_LENGTH_EXCEEDED.equals(primaryCode)) {
             return ERROR_MESSAGES.getOrDefault(primaryCode, VALIDATION_MESSAGE);
         }
@@ -362,16 +362,16 @@ public class GlobalExceptionHandler {
         return resolveMaxLengthMessage(fieldErrors);
     }
 
-    private String resolveMaxLengthMessage(List<FieldError> fieldErrors) {
+    private static String resolveMaxLengthMessage(List<FieldError> fieldErrors) {
         return fieldErrors.stream()
-                .filter(this::isMaxLengthExceededFieldError)
+                .filter(GlobalExceptionHandler::isMaxLengthExceededFieldError)
                 .map(FieldError::getField)
                 .map(field -> MAX_LENGTH_MESSAGES_BY_FIELD.getOrDefault(field, MAX_LENGTH_EXCEEDED_MESSAGE))
                 .findFirst()
                 .orElse(MAX_LENGTH_EXCEEDED_MESSAGE);
     }
 
-    private boolean isMaxLengthExceededFieldError(FieldError fieldError) {
+    private static boolean isMaxLengthExceededFieldError(FieldError fieldError) {
         return MAX_LENGTH_EXCEEDED.equals(mapFieldError(fieldError));
     }
 }

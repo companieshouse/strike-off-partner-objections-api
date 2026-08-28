@@ -65,7 +65,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    private void sendForbiddenResponse(HttpServletResponse response, String requestId, String message) {
+    private static void sendForbiddenResponse(HttpServletResponse response, String requestId, String message) {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/json");
         try {
@@ -80,7 +80,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         }
     }
 
-    private void sendUnauthorizedResponse(HttpServletResponse response, String requestId) {
+    private static void sendUnauthorizedResponse(HttpServletResponse response, String requestId) {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         try {
@@ -95,7 +95,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         }
     }
 
-    private boolean hasRequiredPermission(HttpServletRequest request) {
+    private static boolean hasRequiredPermission(HttpServletRequest request) {
         String permissions = request.getHeader(ERIC_PERMISSIONS_HEADER);
         if (permissions == null || permissions.isBlank()) {
             return false;
@@ -103,7 +103,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         return Arrays.asList(permissions.trim().split("\\s+")).contains(StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION);
     }
 
-    private String getPartnerOrganisation(HttpServletRequest request) {
+    private static String getPartnerOrganisation(HttpServletRequest request) {
         String value = request.getHeader(ERIC_PARTNER_ORGANISATION_HEADER);
         if (value == null || value.isBlank()) {
             return null;

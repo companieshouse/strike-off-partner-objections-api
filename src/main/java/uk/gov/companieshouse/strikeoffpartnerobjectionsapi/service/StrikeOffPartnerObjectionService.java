@@ -177,7 +177,7 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-    private ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
+    private static ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
         try {
             return ObjectionProcessingStatus.fromValue(requestedStatusValue);
         } catch (IllegalArgumentException | NullPointerException ex) {
@@ -186,9 +186,9 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-    private ObjectionProcessingStatus parseCurrentStatus(String currentStatusValue,
-                                                         String companyNumber,
-                                                         String objectionId) {
+    private static ObjectionProcessingStatus parseCurrentStatus(String currentStatusValue,
+                                                                String companyNumber,
+                                                                String objectionId) {
         try {
             return ObjectionProcessingStatus.fromValue(currentStatusValue);
         } catch (IllegalArgumentException | NullPointerException ex) {
@@ -202,8 +202,8 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
-    private boolean isAllowedTransition(ObjectionProcessingStatus currentStatus,
-                                        ObjectionProcessingStatus requestedStatus) {
+    private static boolean isAllowedTransition(ObjectionProcessingStatus currentStatus,
+                                               ObjectionProcessingStatus requestedStatus) {
         return switch (currentStatus) {
             case OBJECTION_SUBMITTED -> requestedStatus == OBJECTION_PROCESSING;
             case OBJECTION_PROCESSING -> requestedStatus == OBJECTION_ACCEPTED || requestedStatus == OBJECTION_REJECTED;

@@ -75,6 +75,25 @@ class CreateObjectionRequestBodyAdviceTest {
     }
 
     @Test
+    void afterBodyRead_whenCreateObjectionRequestContainsWhitespaceOnlyValues_trimsToEmptyString() {
+        CreateObjectionRequest request = new CreateObjectionRequest();
+        request.setPartnerContactEmail("   ");
+        request.setPartnerCaseReference("\t");
+        request.setSubmissionCompanyName("\n");
+
+        advice.afterBodyRead(
+                request,
+                new MockHttpInputMessage(new byte[0]),
+                mock(MethodParameter.class),
+                CreateObjectionRequest.class,
+                StringHttpMessageConverter.class);
+
+        assertEquals("", request.getPartnerContactEmail());
+        assertEquals("", request.getPartnerCaseReference());
+        assertEquals("", request.getSubmissionCompanyName());
+    }
+
+    @Test
     void afterBodyRead_whenCreateObjectionRequestContainsNullValues_leavesNullValuesAsNull() {
         CreateObjectionRequest request = new CreateObjectionRequest();
 
