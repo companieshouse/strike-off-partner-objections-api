@@ -5,7 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.logging.Logger;
 import uk.gov.companieshouse.logging.LoggerFactory;
 
-public class StrikeoffPartnerObjectionsUtils {
+public final class StrikeoffPartnerObjectionsUtils {
 
     private StrikeoffPartnerObjectionsUtils() {
         /* This utility class should not be instantiated */

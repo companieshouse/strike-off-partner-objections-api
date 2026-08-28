@@ -8,7 +8,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerRequestD
  * Simple utility to track event status for retry and error diagnostics.
  * Tracks: event status, correlation ID for message tracking, timestamps, and failure reasons.
  */
-public class EventTracker {
+public final class EventTracker {
 
     private EventTracker() {
         // Private constructor to hide the implicit public one

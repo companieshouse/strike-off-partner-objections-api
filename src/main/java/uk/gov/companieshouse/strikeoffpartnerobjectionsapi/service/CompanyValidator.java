@@ -106,7 +106,7 @@ public class CompanyValidator {
         return companyProfile;
     }
 
-    private void validateCompanyType(CompanyProfileApi companyProfile, String companyNumber) {
+    private static void validateCompanyType(CompanyProfileApi companyProfile, String companyNumber) {
         if (!hasValidCompanyType(companyProfile)) {
             throw new CompanyValidationException(
                     format("Company has invalid type: companyNumber=%s, type=%s",
@@ -115,7 +115,7 @@ public class CompanyValidator {
         }
     }
 
-    private void validateCompanyStatus(CompanyProfileApi companyProfile, String companyNumber) {
+    private static void validateCompanyStatus(CompanyProfileApi companyProfile, String companyNumber) {
         String companyStatus = companyProfile.getCompanyStatus();
         if (!ACTIVE_STATUS.equals(companyStatus)) {
             throw new CompanyValidationException(
@@ -141,7 +141,7 @@ public class CompanyValidator {
      * @param companyProfile the company profile from the API
      * @return true if the company type is in the allowed list, false otherwise
      */
-    private boolean hasValidCompanyType(CompanyProfileApi companyProfile) {
+    private static boolean hasValidCompanyType(CompanyProfileApi companyProfile) {
         String type = companyProfile.getType();
         return type != null && ALLOWED_COMPANY_TYPES.contains(type);
     }

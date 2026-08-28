@@ -199,7 +199,7 @@ public class StrikeOffPartnerWithdrawalsService {
         }
     }
 
-    private WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
+    private static WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
         if (currentStatusValue == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue));

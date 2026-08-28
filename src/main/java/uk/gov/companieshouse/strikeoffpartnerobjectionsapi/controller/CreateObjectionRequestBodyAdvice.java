@@ -1,8 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 
-import static org.apache.commons.lang3.StringUtils.trim;
-
 import org.jspecify.annotations.NullMarked;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -39,33 +38,20 @@ public class CreateObjectionRequestBodyAdvice extends RequestBodyAdviceAdapter {
         return body;
     }
 
-    private void trimObjectionRequestFields(CreateObjectionRequest request) {
-        trimRequestFields(request.getPartnerContactEmail(),
-                request.getPartnerCaseReference(),
-                request.getSubmissionCompanyName(),
-                request::setPartnerContactEmail,
-                request::setPartnerCaseReference,
-                request::setSubmissionCompanyName);
+    private static void trimObjectionRequestFields(CreateObjectionRequest request) {
+        trimRequestField(request.getPartnerContactEmail(), request::setPartnerContactEmail);
+        trimRequestField(request.getPartnerCaseReference(), request::setPartnerCaseReference);
+        trimRequestField(request.getSubmissionCompanyName(), request::setSubmissionCompanyName);
     }
 
-    private void trimWithdrawalRequestFields(WithdrawAllObjectionsRequest request) {
-        trimRequestFields(request.getPartnerContactEmail(),
-                request.getPartnerCaseReference(),
-                request.getSubmissionCompanyName(),
-                request::setPartnerContactEmail,
-                request::setPartnerCaseReference,
-                request::setSubmissionCompanyName);
+    private static void trimWithdrawalRequestFields(WithdrawAllObjectionsRequest request) {
+        trimRequestField(request.getPartnerContactEmail(), request::setPartnerContactEmail);
+        trimRequestField(request.getPartnerCaseReference(), request::setPartnerCaseReference);
+        trimRequestField(request.getSubmissionCompanyName(), request::setSubmissionCompanyName);
     }
 
-    private void trimRequestFields(String partnerContactEmail,
-                                   String partnerCaseReference,
-                                   String submissionCompanyName,
-                                   Consumer<String> emailSetter,
-                                   Consumer<String> caseReferenceSetter,
-                                   Consumer<String> companyNameSetter) {
-        emailSetter.accept(trim(partnerContactEmail));
-        caseReferenceSetter.accept(trim(partnerCaseReference));
-        companyNameSetter.accept(trim(submissionCompanyName));
+    private static void trimRequestField(String value, Consumer<String> setter) {
+        setter.accept(StringUtils.trim(value));
     }
 
 }
