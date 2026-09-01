@@ -12,7 +12,7 @@
     <version>unversioned</version>
     <properties>
         <java.version>21</java.version>
-        <structured-logging.version>3.0.57</structured-logging.version>
+        <structured-logging.version>4.0.3</structured-logging.version>
         <spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -25,7 +25,7 @@
         <maven-build-helper-plugin.version>3.6.1</maven-build-helper-plugin.version>
         <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
         <!-- Override vulnerable Tomcat version -->
-        <tomcat.version>11.0.24</tomcat.version>
+        <tomcat.version>11.0.25</tomcat.version>
         <private-api-sdk-java.version>7.2.21</private-api-sdk-java.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <api-security-java.version>2.0.27</api-security-java.version>
