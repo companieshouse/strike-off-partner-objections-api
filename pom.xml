@@ -16,7 +16,7 @@
         <spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <spring-framework.version>7.0.8</spring-framework.version>
+        <spring-framework.version>7.0.9</spring-framework.version>
         <!-- plugins properties-->
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
