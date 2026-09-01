@@ -38,7 +38,7 @@ public class WithdrawalKafkaProducer extends AbstractKafkaProducer {
      *
      * @param withdrawal the withdrawal document containing the identifiers and metadata for the event
      * @return the published {@link StrikeOffPartnerObjections} message, including the assigned event ID
-     * @throws KafkaPublishException if the event cannot be sent within the configured timeout
+     * @throws uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException if the event cannot be sent within the configured timeout
      */
     public StrikeOffPartnerObjections publishWithdrawalEvent(WithdrawalDocument withdrawal) {
         ProducerRecord<String, StrikeOffPartnerObjections> withdrawalRecord = kafkaProducerEventFactory.createProducerRecord(

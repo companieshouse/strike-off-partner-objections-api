@@ -38,7 +38,7 @@ public class ObjectionKafkaProducer extends AbstractKafkaProducer {
      *
      * @param objection the objection document containing the identifiers and metadata for the event
      * @return the published {@link StrikeOffPartnerObjections} message, including the assigned event ID
-     * @throws KafkaPublishException if the event cannot be sent within the configured timeout
+     * @throws uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException if the event cannot be sent within the configured timeout
      */
     public StrikeOffPartnerObjections publishObjectionEvent(ObjectionDocument objection) {
         ProducerRecord<String, StrikeOffPartnerObjections> objectionRecord = kafkaProducerEventFactory.createProducerRecord(
