@@ -15,6 +15,7 @@ import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
@@ -28,6 +29,13 @@ import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStat
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_REJECTED;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
+/**
+ * Service responsible for managing strike-off partner objection lifecycle.
+ *
+ * <p>Handles creation, retrieval, and processing status updates for objection records.
+ * On creation, the objection is persisted to MongoDB and a Kafka event is published.
+ * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.</p>
+ */
 @Service
 public class StrikeOffPartnerObjectionService {
 
@@ -51,6 +59,20 @@ public class StrikeOffPartnerObjectionService {
         this.companyValidator = companyValidator;
     }
 
+    /**
+     * Creates and persists a new objection, then publishes a Kafka event.
+     *
+     * <p>Validates the company before persisting. On successful persistence, a Kafka event
+     * is published and the event status is updated to PUBLISHED or FAILED accordingly.</p>
+     *
+     * @param companyNumber          the company number the objection is being raised against
+     * @param createObjectionRequest request payload containing the objection details
+     * @param partnerOrganisation    the partner organisation submitting the objection
+     * @return the created objection as an API response model
+     * @throws CompanyValidationException      if company validation fails
+     * @throws ObjectionPersistenceException   if the objection cannot be persisted to MongoDB
+     * @throws KafkaPublishException           if the Kafka event fails to publish
+     */
     public BaseObjectionResponse createObjection(String companyNumber,
                                                  CreateObjectionRequest createObjectionRequest,
                                                  String partnerOrganisation) {
@@ -109,6 +131,16 @@ public class StrikeOffPartnerObjectionService {
         }
     }
 
+    /**
+     * Retrieves a single objection by company number and objection ID, enforcing organisation ownership.
+     *
+     * @param companyNumber       the company number the objection belongs to
+     * @param objectionId         the unique objection identifier
+     * @param partnerOrganisation the partner organisation making the request; must match the document's organisation
+     * @return the objection as an API response model
+     * @throws ObjectionNotFoundException if no objection is found for the given company number and objection ID
+     * @throws ResponseStatusException    with HTTP 403 if the caller's organisation does not match the document
+     */
     public BaseObjectionResponse getObjection(String companyNumber,
                                               String objectionId,
                                               String partnerOrganisation) throws ObjectionNotFoundException {
@@ -133,6 +165,23 @@ public class StrikeOffPartnerObjectionService {
         return objectionResponseMapper.toObjectionApiResponse(document);
     }
 
+    /**
+     * Updates the processing status of an existing objection, enforcing allowed state transitions.
+     *
+     * <p>Only the following transitions are permitted:
+     * <ul>
+     *   <li>OBJECTION_SUBMITTED → OBJECTION_PROCESSING</li>
+     *   <li>OBJECTION_PROCESSING → OBJECTION_ACCEPTED or OBJECTION_REJECTED</li>
+     * </ul>
+     * Terminal statuses (ACCEPTED, REJECTED) cannot be changed.</p>
+     *
+     * @param companyNumber       the company number the objection belongs to
+     * @param objectionId         the unique objection identifier
+     * @param updateStatusRequest request payload containing the desired processing status
+     * @throws ObjectionNotFoundException if no objection is found for the given identifiers
+     * @throws ResponseStatusException    with HTTP 409 if the status transition is not allowed
+     * @throws ObjectionPersistenceException if the updated document cannot be persisted
+     */
     public void updateObjectionProcessingStatus(
             String companyNumber,
             String objectionId,

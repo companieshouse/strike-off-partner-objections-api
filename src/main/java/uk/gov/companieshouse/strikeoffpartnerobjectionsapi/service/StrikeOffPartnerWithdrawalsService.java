@@ -27,6 +27,14 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.Withdrawal
 import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
+/**
+ * Service responsible for managing strike-off partner withdrawal lifecycle.
+ *
+ * <p>Handles creation, retrieval, and processing status updates for withdrawal records.
+ * On creation, a check is made that the partner has at least one active objection for
+ * the company before the withdrawal is persisted to MongoDB and a Kafka event is published.
+ * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.</p>
+ */
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
@@ -39,6 +47,16 @@ public class StrikeOffPartnerWithdrawalsService {
     private final CompanyValidator companyValidator;
     private final Validator validator;
 
+    /**
+     * Constructs the service with its required dependencies.
+     *
+     * @param withdrawalRepository    repository for persisting and retrieving withdrawal documents
+     * @param objectionRepository     repository used to verify partner objections exist before withdrawal
+     * @param withdrawalMapper        mapper for converting API request/response models and MongoDB documents
+     * @param withdrawalKafkaProducer Kafka producer for publishing withdrawal events
+     * @param companyValidator        validator for company details
+     * @param validator               Jakarta Bean Validation validator for request payloads
+     */
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
             WithdrawalRepository withdrawalRepository,
@@ -55,6 +73,17 @@ public class StrikeOffPartnerWithdrawalsService {
         this.validator = validator;
     }
 
+    /**
+     * Retrieves a single withdrawal by company number and withdrawal ID, enforcing organisation ownership.
+     *
+     * @param companyNumber       the company number the withdrawal belongs to
+     * @param withdrawalId        the unique withdrawal identifier
+     * @param partnerOrganisation the partner organisation making the request; must match the document's organisation
+     * @return the withdrawal as an API response model
+     * @throws ResponseStatusException    with HTTP 404 if no withdrawal is found for the given identifiers
+     * @throws ResponseStatusException    with HTTP 403 if the caller's organisation does not match the document
+     * @throws WithdrawalPersistenceException if a database error occurs during retrieval
+     */
     public WithdrawAllObjectionsResponse getWithdrawal(
             String companyNumber,
             String withdrawalId,
@@ -86,6 +115,22 @@ public class StrikeOffPartnerWithdrawalsService {
         }
     }
 
+    /**
+     * Creates and persists a new withdrawal for all objections belonging to the partner, then publishes a Kafka event.
+     *
+     * <p>Validates the company and confirms the partner has at least one active objection for the company
+     * before persisting. On successful persistence, a Kafka event is published and the event status
+     * is updated to PUBLISHED or FAILED accordingly.</p>
+     *
+     * @param companyNumber       the company number to apply the withdrawal against
+     * @param request             request payload describing the withdrawal details
+     * @param partnerOrganisation the partner organisation submitting the withdrawal
+     * @return the created withdrawal as an API response model
+     * @throws CompanyValidationException     if company validation fails
+     * @throws CompanyValidationException     if the partner has no existing objections for the company
+     * @throws WithdrawalPersistenceException if the withdrawal cannot be persisted to MongoDB
+     * @throws KafkaPublishException          if the Kafka event fails to publish
+     */
     public WithdrawAllObjectionsResponse withdrawAllObjections(
             String companyNumber,
             WithdrawAllObjectionsRequest request,
@@ -162,6 +207,20 @@ public class StrikeOffPartnerWithdrawalsService {
         }
     }
 
+    /**
+     * Updates the processing status of an existing withdrawal.
+     *
+     * <p>If the requested status matches the current status, the update is silently ignored.
+     * No state-transition enforcement is applied for withdrawal status updates.</p>
+     *
+     * @param companyNumber       the company number the withdrawal belongs to
+     * @param withdrawalId        the unique withdrawal identifier
+     * @param updateStatusRequest request payload containing the desired processing status
+     * @throws WithdrawalNotFoundException    if no withdrawal is found for the given identifiers
+     * @throws ResponseStatusException        with HTTP 400 if the request payload fails validation
+     * @throws ResponseStatusException        with HTTP 409 if the current status value is invalid
+     * @throws WithdrawalPersistenceException if the updated document cannot be persisted
+     */
     public void updateWithdrawalProcessingStatus(
             String companyNumber,
             String withdrawalId,

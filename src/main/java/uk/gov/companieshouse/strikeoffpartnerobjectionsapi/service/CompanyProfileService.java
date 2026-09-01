@@ -10,16 +10,35 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceExce
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
+/**
+ * Service for fetching company profile information from the internal Companies House API.
+ *
+ * <p>Returns {@code null} when the company is not found (HTTP 404) so that callers can
+ * apply their own not-found handling. All other API errors are wrapped in a
+ * {@link ServiceException}.</p>
+ */
 @Service
 public class CompanyProfileService {
 
     private static final UriTemplate GET_COMPANY_URI = new UriTemplate("/company/{companyNumber}");
     private final ApiClientService apiClientService;
     
+    /**
+     * Constructs the service with the API client wrapper.
+     *
+     * @param apiClientService the service providing the internal API client
+     */
     public CompanyProfileService(ApiClientService apiClientService) {
         this.apiClientService = apiClientService;
     }
 
+    /**
+     * Retrieves the company profile for the given company number.
+     *
+     * @param companyNumber the Companies House company number to look up
+     * @return the company profile, or {@code null} if the company is not found
+     * @throws ServiceException if the API call fails for any reason other than a 404 response
+     */
     public CompanyProfileApi getCompanyProfile(String companyNumber) {
         LOGGER.debug(String.format("Get company profile for %s", companyNumber));
 

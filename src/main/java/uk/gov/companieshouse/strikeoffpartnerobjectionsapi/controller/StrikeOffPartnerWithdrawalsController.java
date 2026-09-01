@@ -53,7 +53,7 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
      * @return a response entity containing the matched withdrawal and HTTP 200 status
      */
     @Override
-    public ResponseEntity<WithdrawAllObjectionsResponse> getAllWithdrawals(
+    public ResponseEntity<WithdrawAllObjectionsResponse> getWithdrawal(
             String companyNumber, String withdrawalId) {
         String partnerOrganisation = resolvePartnerOrganisation();
         WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService
@@ -78,6 +78,15 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    /**
+     * Updates the processing status of an existing withdrawal (internal endpoint).
+     *
+     * @param companyNumber       the company number the withdrawal belongs to
+     * @param withdrawalId        the unique withdrawal identifier
+     * @param updateStatusRequest request payload containing the new processing status
+     * @return a response entity with HTTP 204 on success
+     * @throws ResponseStatusException with HTTP 404 if the withdrawal is not found
+     */
     @Override
     public ResponseEntity<Void> updateWithdrawalStatus(
             @Size(min = 1) @PathVariable("company_number") String companyNumber,

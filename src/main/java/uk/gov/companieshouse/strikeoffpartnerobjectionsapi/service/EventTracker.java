@@ -5,8 +5,11 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerRequestDocument;
 
 /**
- * Simple utility to track event status for retry and error diagnostics.
- * Tracks: event status, correlation ID for message tracking, timestamps, and failure reasons.
+ * Utility for tracking Kafka event status against a {@link PartnerRequestDocument}.
+ *
+ * <p>Records the event status (PENDING, PUBLISHED, FAILED), correlation ID for message
+ * traceability, timestamp of last status change, and failure reason where applicable.
+ * This information supports retry logic and error diagnostics.</p>
  */
 public final class EventTracker {
 
@@ -15,7 +18,9 @@ public final class EventTracker {
     }
 
     /**
-     * Mark a document as pending (initial state before publishing).
+     * Marks a document as pending — the initial state before a Kafka event is published.
+     *
+     * @param document the partner request document to update
      */
     public static void markPending(PartnerRequestDocument document) {
         document.setEventStatus(EventStatus.PENDING);
@@ -23,7 +28,10 @@ public final class EventTracker {
     }
 
     /**
-     * Mark a document as successfully published with the given event correlation ID.
+     * Marks a document as successfully published and records the Kafka event correlation ID.
+     *
+     * @param document             the partner request document to update
+     * @param eventCorrelationId   the unique event ID assigned by the Kafka producer upon successful send
      */
     public static void markPublished(PartnerRequestDocument document, String eventCorrelationId) {
         document.setEventCorrelationId(eventCorrelationId);
@@ -33,7 +41,11 @@ public final class EventTracker {
     }
 
     /**
-     * Mark a document as failed with the given event correlation ID and failure reason.
+     * Marks a document as failed and records the correlation ID and failure reason.
+     *
+     * @param document             the partner request document to update
+     * @param eventCorrelationId   the unique event ID associated with the failed publish attempt
+     * @param failureReason        a human-readable description of why the event failed to publish
      */
     public static void markFailed(PartnerRequestDocument document, String eventCorrelationId, String failureReason) {
         document.setEventCorrelationId(eventCorrelationId);
@@ -42,4 +54,3 @@ public final class EventTracker {
         document.setEventFailureReason(failureReason);
     }
 }
-
