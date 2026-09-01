@@ -80,8 +80,8 @@ public class StrikeOffPartnerWithdrawalsService {
      * @param withdrawalId        the unique withdrawal identifier
      * @param partnerOrganisation the partner organisation making the request; must match the document's organisation
      * @return the withdrawal as an API response model
-     * @throws ResponseStatusException    with HTTP 404 if no withdrawal is found for the given identifiers
-     * @throws ResponseStatusException    with HTTP 403 if the caller's organisation does not match the document
+     * @throws ResponseStatusException    with HTTP 404 if no withdrawal is found for the given identifiers or with HTTP
+     * 403 if the caller's organisation does not match the document
      * @throws WithdrawalPersistenceException if a database error occurs during retrieval
      */
     public WithdrawAllObjectionsResponse getWithdrawal(
@@ -126,8 +126,8 @@ public class StrikeOffPartnerWithdrawalsService {
      * @param request             request payload describing the withdrawal details
      * @param partnerOrganisation the partner organisation submitting the withdrawal
      * @return the created withdrawal as an API response model
-     * @throws CompanyValidationException     if company validation fails
-     * @throws CompanyValidationException     if the partner has no existing objections for the company
+     * @throws CompanyValidationException     if company validation fails or the partner has no existing objections
+     * for the company
      * @throws WithdrawalPersistenceException if the withdrawal cannot be persisted to MongoDB
      * @throws KafkaPublishException          if the Kafka event fails to publish
      */

@@ -15,7 +15,6 @@ import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
@@ -69,7 +68,8 @@ public class StrikeOffPartnerObjectionService {
      * @param createObjectionRequest request payload containing the objection details
      * @param partnerOrganisation    the partner organisation submitting the objection
      * @return the created objection as an API response model
-     * @throws CompanyValidationException      if company validation fails
+     * @throws uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException if company
+     * validation fails
      * @throws ObjectionPersistenceException   if the objection cannot be persisted to MongoDB
      * @throws KafkaPublishException           if the Kafka event fails to publish
      */
