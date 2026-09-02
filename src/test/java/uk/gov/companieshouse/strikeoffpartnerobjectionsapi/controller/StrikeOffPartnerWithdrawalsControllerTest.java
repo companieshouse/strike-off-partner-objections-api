@@ -88,7 +88,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     // ===== GET Withdrawal Tests =====
 
     @Test
-    void getAllWithdrawals_whenWithdrawalIdIsValid_returnsOkAndDelegatesToService() throws Exception {
+    void getWithdrawal_whenWithdrawalIdIsValid_returnsOkAndDelegatesToService() throws Exception {
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
         response.setWithdrawalId(WITHDRAWAL_ID);
 
@@ -104,7 +104,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     }
 
     @Test
-    void getAllWithdrawals_whenWorkstreamIsNotPresent_omitsWorkstreamFromResponse() throws Exception {
+    void getWithdrawal_whenWorkstreamIsNotPresent_omitsWorkstreamFromResponse() throws Exception {
         WithdrawAllObjectionsResponse response = new WithdrawAllObjectionsResponse();
         response.setWithdrawalId(WITHDRAWAL_ID);
         response.setPartnerObjectionWorkstream(null);

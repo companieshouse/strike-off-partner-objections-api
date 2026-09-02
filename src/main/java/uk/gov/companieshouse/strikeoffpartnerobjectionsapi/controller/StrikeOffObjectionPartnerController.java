@@ -20,12 +20,25 @@ import jakarta.validation.constraints.Size;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.validatePartnerOrganisation;
 
+/**
+ * REST controller for strike off partner objection operations.
+ *
+ * <p>Implements {@link StrikeOffPartnerObjectionsInterface} to expose endpoints
+ * for creating, retrieving, and updating processing status of objections
+ * against a company's strike-off proposal.</p>
+ */
 @RestController
 public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObjectionsInterface {
 
     private final StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
     private final HttpServletRequest httpServletRequest;
 
+    /**
+     * Constructs the controller with the service and request used to process objection operations.
+     *
+     * @param strikeOffPartnerObjectionService service handling objection creation, retrieval, and status updates
+     * @param httpServletRequest               the current HTTP request used to resolve the partner organisation header
+     */
     public StrikeOffObjectionPartnerController(
             StrikeOffPartnerObjectionService strikeOffPartnerObjectionService,
             HttpServletRequest httpServletRequest) {
@@ -33,6 +46,13 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
         this.httpServletRequest = httpServletRequest;
     }
 
+    /**
+     * Creates a new strike-off objection for the specified company.
+     *
+     * @param companyNumber          the company number to raise an objection against
+     * @param createObjectionRequest request payload containing the objection details
+     * @return a response entity containing the created objection record and HTTP 201 status
+     */
     @Override
     public ResponseEntity<BaseObjectionResponse> createObjection(
             @Size(min = 1) @PathVariable("company_number") String companyNumber,
@@ -43,6 +63,14 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    /**
+     * Retrieves a single objection for the provided company and objection identifiers.
+     *
+     * @param companyNumber the company number the objection belongs to
+     * @param objectionId   the unique objection identifier
+     * @return a response entity containing the matched objection and HTTP 200 status
+     * @throws ResponseStatusException with HTTP 404 if the objection is not found
+     */
     @Override
     public ResponseEntity<BaseObjectionResponse> getObjection(
             @Size(min = 1) @PathVariable("company_number") String companyNumber,
@@ -58,6 +86,15 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
         }
     }
 
+    /**
+     * Updates the processing status of an existing objection.
+     *
+     * @param companyNumber       the company number the objection belongs to
+     * @param objectionId         the unique objection identifier
+     * @param updateStatusRequest request payload containing the new processing status
+     * @return a response entity with HTTP 204 on success
+     * @throws ResponseStatusException with HTTP 404 if the objection is not found
+     */
     @Override
     public ResponseEntity<Void> updateObjectionStatus(
             @Size(min = 1) @PathVariable("company_number") String companyNumber,
