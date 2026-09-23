@@ -561,12 +561,12 @@ class StrikeOffPartnerObjectionServiceTest {
 
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
-        ArgumentCaptor<String> callbackIdCaptor = ArgumentCaptor.forClass(String.class);
-        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
-                eq(objectionId),
-                eq(companyNumber),
-                callbackIdCaptor.capture(),
-                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
+         ArgumentCaptor<String> callbackIdCaptor = ArgumentCaptor.forClass(String.class);
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 callbackIdCaptor.capture(),
+                 ArgumentMatchers.any());
 
         String callbackUri = callbackIdCaptor.getValue();
         assertEquals(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId), callbackUri);
@@ -590,11 +590,11 @@ class StrikeOffPartnerObjectionServiceTest {
 
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
-        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
-                eq(objectionId),
-                eq(companyNumber),
-                eq(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId)),
-                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 eq(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId)),
+                 ArgumentMatchers.any());
     }
 
     @Test
@@ -617,12 +617,12 @@ class StrikeOffPartnerObjectionServiceTest {
         // The test just verifies the method completes successfully
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
-        verify(objectionRepository).save(any(ObjectionDocument.class));
-        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
-                eq(objectionId),
-                eq(companyNumber),
-                anyString(),
-                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
+         verify(objectionRepository).save(any(ObjectionDocument.class));
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 anyString(),
+                 ArgumentMatchers.any());
     }
 
     @Test
