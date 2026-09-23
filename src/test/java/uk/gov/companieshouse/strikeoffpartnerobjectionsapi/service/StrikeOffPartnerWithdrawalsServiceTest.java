@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessException;
@@ -639,7 +638,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 eq(WITHDRAWAL_ID),
                 eq(COMPANY_NUMBER),
                 callbackIdCaptor.capture(),
-                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
+                any());
 
         String callbackUri = callbackIdCaptor.getValue();
         assertEquals(String.format("/company/%s/strike-off/withdrawals/%s", COMPANY_NUMBER, WITHDRAWAL_ID), callbackUri);
@@ -666,7 +665,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 eq(WITHDRAWAL_ID),
                 eq(COMPANY_NUMBER),
                 anyString(),
-                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
+                any());
     }
 
     @Test
