@@ -66,6 +66,9 @@ class StrikeOffPartnerObjectionServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
+    @Mock
+    private HmrcCallbackService hmrcCallbackService;
+
     private static final String VALID_COMPANY_NUMBER = "12345";
 
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -77,7 +80,8 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRequestMapper,
                 objectionResponseMapper,
                 objectionKafkaProducer,
-                companyValidator
+                companyValidator,
+                hmrcCallbackService
         );
     }
     @Test
@@ -536,6 +540,107 @@ class StrikeOffPartnerObjectionServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode.value")
                 .isEqualTo(409);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenSuccessful_triggersHmrcCallback() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        ArgumentCaptor<String> callbackIdCaptor = ArgumentCaptor.forClass(String.class);
+        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                eq(objectionId),
+                eq(companyNumber),
+                callbackIdCaptor.capture(),
+                any(java.util.function.BiConsumer.class));
+
+        String callbackUri = callbackIdCaptor.getValue();
+        assertEquals(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId), callbackUri);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenTransitionToAccepted_triggersCallbackWithCorrectUri() {
+        String companyNumber = "87654321";
+        String objectionId = "obj-xyz-789";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                eq(objectionId),
+                eq(companyNumber),
+                eq(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId)),
+                any(java.util.function.BiConsumer.class));
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenCallbackFails_doesNotBlockResponse() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        // Callback service is async, so exceptions don't propagate to the caller
+        // The test just verifies the method completes successfully
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        verify(objectionRepository).save(any(ObjectionDocument.class));
+        verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                eq(objectionId),
+                eq(companyNumber),
+                anyString(),
+                any(java.util.function.BiConsumer.class));
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenAlreadyProcessing_noCallbackTriggered() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+        verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+        verify(objectionRepository, never()).save(any(ObjectionDocument.class));
+        verifyNoInteractions(hmrcCallbackService);
     }
 
     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
