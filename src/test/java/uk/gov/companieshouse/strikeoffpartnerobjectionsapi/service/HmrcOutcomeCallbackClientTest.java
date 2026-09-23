@@ -59,6 +59,7 @@ class HmrcOutcomeCallbackClientTest {
 
         assertEquals(36, correlationId.length()); // UUID length
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<HttpEntity<HmrcCallbackPayload>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
         verify(restTemplate).postForEntity(eq(CALLBACK_ENDPOINT_URL), entityCaptor.capture(), eq(Void.class));
 

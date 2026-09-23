@@ -220,7 +220,6 @@ public class StrikeOffPartnerWithdrawalsService {
      *
      * <p>If the requested status matches the current status, the update is silently ignored.
      * No state-transition enforcement is applied for withdrawal status updates.
-     *
      * After successful status update, an HMRC callback notification is triggered
      * asynchronously. Callback failures do not block the API response.</p>
      *
