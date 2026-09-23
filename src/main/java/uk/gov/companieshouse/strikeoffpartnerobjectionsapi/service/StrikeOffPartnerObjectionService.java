@@ -182,7 +182,6 @@ public class StrikeOffPartnerObjectionService {
      *   <li>OBJECTION_PROCESSING → OBJECTION_ACCEPTED or OBJECTION_REJECTED</li>
      * </ul>
      * Terminal statuses (ACCEPTED, REJECTED) cannot be changed.
-     *
      * After successful status update, an HMRC callback notification is triggered
      * asynchronously. Callback failures do not block the API response.</p>
      *
