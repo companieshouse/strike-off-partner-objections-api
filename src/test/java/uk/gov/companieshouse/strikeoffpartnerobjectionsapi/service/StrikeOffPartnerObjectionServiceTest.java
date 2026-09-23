@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -565,7 +566,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 eq(objectionId),
                 eq(companyNumber),
                 callbackIdCaptor.capture(),
-                any(java.util.function.BiConsumer.class));
+                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
 
         String callbackUri = callbackIdCaptor.getValue();
         assertEquals(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId), callbackUri);
@@ -593,7 +594,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 eq(objectionId),
                 eq(companyNumber),
                 eq(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId)),
-                any(java.util.function.BiConsumer.class));
+                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
     }
 
     @Test
@@ -621,7 +622,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 eq(objectionId),
                 eq(companyNumber),
                 anyString(),
-                any(java.util.function.BiConsumer.class));
+                ArgumentMatchers.<java.util.function.BiConsumer<String, String>>any());
     }
 
     @Test
