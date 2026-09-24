@@ -762,6 +762,7 @@ class StrikeOffPartnerObjectionServiceTest {
      }
 
      @Test
+     @SuppressWarnings("ConstantConditions")
      void parseRequestedStatus_whenStatusIsNull_throwsBadRequest() {
          ResponseStatusException ex = assertThrows(
                  ResponseStatusException.class,
