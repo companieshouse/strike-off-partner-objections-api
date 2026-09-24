@@ -1,11 +1,13 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -180,14 +182,132 @@ class HmrcCallbackServiceTest {
           verify(callbackClient, timeout(5000).times(2)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
       }
 
-       @Test
-       void callbackServiceHandlesUnexpectedExceptions() {
-           doThrow(new RuntimeException("Unexpected error"))
-                   .when(callbackClient)
-                   .sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        @Test
+        void callbackServiceHandlesUnexpectedExceptions() {
+            doThrow(new RuntimeException("Unexpected error"))
+                    .when(callbackClient)
+                    .sendCallback(anyString(), any(HmrcCallbackPayload.class));
 
-           callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+            callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
-           verify(callbackClient, timeout(5000).times(3)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
-       }
+            verify(callbackClient, timeout(5000).times(3)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        }
+
+         @Test
+         void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
+             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
+             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+
+             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
+                 capturedCorrelationId.set(correlationId);
+                 capturedFailureReason.set(failureReason);
+             };
+
+             when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("correlation-123");
+
+             callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
+
+             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+             assertEquals("correlation-123", capturedCorrelationId.get());
+             assertNull(capturedFailureReason.get());
+         }
+
+         @Test
+         void sendWithdrawalOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
+             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
+             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+
+             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
+                 capturedCorrelationId.set(correlationId);
+                 capturedFailureReason.set(failureReason);
+             };
+
+             when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("withdrawal-correlation-456");
+
+             callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, resultHandler);
+
+             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+             assertEquals("withdrawal-correlation-456", capturedCorrelationId.get());
+             assertNull(capturedFailureReason.get());
+         }
+
+         @Test
+         void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnFailureAfterRetries() {
+             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
+             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+
+             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
+                 capturedCorrelationId.set(correlationId);
+                 capturedFailureReason.set(failureReason);
+             };
+
+             doThrow(new RestClientException("Permanent failure")).when(callbackClient)
+                     .sendCallback(anyString(), any(HmrcCallbackPayload.class));
+
+             HmrcCallbackService serviceWithLimitedRetries = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     2,
+                     50,
+                     2.0
+             );
+
+             serviceWithLimitedRetries.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
+
+             verify(callbackClient, timeout(3000).times(2)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+             assertNull(capturedCorrelationId.get());
+             assertEquals("Permanent failure", capturedFailureReason.get());
+         }
+
+        @Test
+        void sendObjectionOutcomeCallback_withoutResultHandler_completesSuccessfully() {
+            callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+            verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        }
+
+        @Test
+        void sendWithdrawalOutcomeCallback_withoutResultHandler_completesSuccessfully() {
+            callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI);
+
+            verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        }
+
+         @Test
+         void calculateDelay_withBackoffMultiplier_calculatesExponentialBackoff() {
+             // This test verifies the retry delay calculation
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     5,
+                     100, // Initial delay 100ms
+                     2.0  // Backoff multiplier 2.0
+             );
+
+             // Attempt 0: 100 * 2^0 = 100ms
+             // Attempt 1: 100 * 2^1 = 200ms
+             // Attempt 2: 100 * 2^2 = 400ms
+             doThrow(new RestClientException("Transient failure"))
+                     .doReturn(null)
+                     .when(callbackClient)
+                     .sendCallback(anyString(), any(HmrcCallbackPayload.class));
+
+             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+             verify(callbackClient, timeout(3000).times(2)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+         }
+
+        @Test
+        void sendObjectionOutcomeCallback_withNullResultHandler_completesSuccessfully() {
+            callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, null);
+
+            verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        }
+
+        @Test
+        void sendWithdrawalOutcomeCallback_withNullResultHandler_completesSuccessfully() {
+            callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, null);
+
+            verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+        }
 }

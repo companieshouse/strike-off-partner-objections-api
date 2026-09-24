@@ -13,6 +13,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
@@ -21,6 +22,7 @@ import jakarta.validation.Validator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -668,24 +670,117 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 any());
     }
 
-    @Test
-    void updateWithdrawalProcessingStatus_whenSameStatus_noCallbackTriggered() {
-        UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
-        request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
-        WithdrawalDocument existing = buildSavedDocument();
-        existing.setProcessingStatus("withdrawal-requested");
+     @Test
+     void updateWithdrawalProcessingStatus_whenSameStatus_noCallbackTriggered() {
+         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
+         WithdrawalDocument existing = buildSavedDocument();
+         existing.setProcessingStatus("withdrawal-requested");
 
-        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
-                .thenReturn(Optional.of(existing));
+         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                 .thenReturn(Optional.of(existing));
 
-        strikeOffPartnerWithdrawalsService
-                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
+         strikeOffPartnerWithdrawalsService
+                 .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
 
-        verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
-        verifyNoInteractions(hmrcCallbackService);
-    }
+         verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
+         verifyNoInteractions(hmrcCallbackService);
+     }
 
-    private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
+     @Test
+     void updateWithdrawalProcessingStatus_callbackResultHandlerSuccessPath() {
+         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+         WithdrawalDocument existing = buildSavedDocument();
+         existing.setProcessingStatus("withdrawal-requested");
+
+         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                 .thenReturn(Optional.of(existing));
+         when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenReturn(existing);
+
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
+                 ArgumentCaptor.forClass(BiConsumer.class);
+
+         strikeOffPartnerWithdrawalsService
+                 .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
+
+         verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
+                 eq(WITHDRAWAL_ID),
+                 eq(COMPANY_NUMBER),
+                 anyString(),
+                 handlerCaptor.capture());
+
+         // Test the result handler with success scenario
+         java.util.function.BiConsumer<String, String> handler = handlerCaptor.getValue();
+         handler.accept("correlation-withdrawal-success", null);
+
+         ArgumentCaptor<WithdrawalDocument> documentCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+         verify(withdrawalRepository, times(2)).save(documentCaptor.capture());
+     }
+
+     @Test
+     void updateWithdrawalProcessingStatus_callbackResultHandlerFailurePath() {
+         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+         WithdrawalDocument existing = buildSavedDocument();
+         existing.setProcessingStatus("withdrawal-requested");
+
+         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                 .thenReturn(Optional.of(existing));
+         when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenReturn(existing);
+
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
+                 ArgumentCaptor.forClass(BiConsumer.class);
+
+         strikeOffPartnerWithdrawalsService
+                 .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request);
+
+         verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
+                 eq(WITHDRAWAL_ID),
+                 eq(COMPANY_NUMBER),
+                 anyString(),
+                 handlerCaptor.capture());
+
+         // Test the result handler with failure scenario
+         BiConsumer<String, String> handler = handlerCaptor.getValue();
+         handler.accept("correlation-withdrawal-fail", "Service unavailable");
+
+         ArgumentCaptor<WithdrawalDocument> documentCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
+         verify(withdrawalRepository, times(2)).save(documentCaptor.capture());
+     }
+
+     @Test
+     void parseCurrentStatus_whenStatusIsNull_throwsConflict() {
+         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
+         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+         WithdrawalDocument existing = buildSavedDocument();
+         existing.setProcessingStatus(null);
+
+         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                 .thenReturn(Optional.of(existing));
+
+         assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService
+                 .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                 .isInstanceOf(ResponseStatusException.class)
+                 .extracting("statusCode.value")
+                 .isEqualTo(409);
+     }
+
+     @Test
+     void getWithdrawal_repositoryThrows_DataAccessException_throwsWithdrawalPersistenceException() {
+         DataAccessException cause = new DataAccessResourceFailureException("mongo query failed");
+         when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                 .thenThrow(cause);
+
+         assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.getWithdrawal(COMPANY_NUMBER, WITHDRAWAL_ID, PARTNER_ORGANISATION))
+                 .isInstanceOf(WithdrawalPersistenceException.class)
+                 .hasMessage("Failed to retrieve withdrawal")
+                 .hasCause(cause);
+     }
+
+     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
         return StrikeOffPartnerObjections.newBuilder()
                 .setEventId(eventId)
                 .setEventType(EventType.WITHDRAWAL)
