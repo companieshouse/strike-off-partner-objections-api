@@ -117,10 +117,6 @@ class InternalUserInterceptorTest {
         when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
     }
 
-    static Stream<String> missingPrivilegeHeaders() {
-        return Stream.of(null, "", "   ");
-    }
-
 
     static Stream<String> allInvalidPrivileges() {
         return Stream.of(
