@@ -44,6 +44,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler.GlobalExceptionHandler;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.InternalUserInterceptor;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerWithdrawalsService;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +77,9 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     @Mock
     private HttpServletRequest httpServletRequest;
 
+    @Mock
+    private InternalUserInterceptor internalUserInterceptor;
+
     @InjectMocks
     private StrikeOffPartnerWithdrawalsController strikeOffPartnerWithdrawalsController;
 
@@ -83,6 +87,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     void setUp() {
         lenient().when(httpServletRequest.getHeader(ERIC_PARTNER_ORGANISATION_HEADER))
                 .thenReturn(PARTNER_ORGANISATION);
+        lenient().when(internalUserInterceptor.preHandle(any(), any(), any())).thenReturn(true);
     }
 
     // ===== GET Withdrawal Tests =====
@@ -579,6 +584,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     private MockMvc mockMvc() {
         return MockMvcBuilders.standaloneSetup(strikeOffPartnerWithdrawalsController)
+                .addInterceptors(internalUserInterceptor)
                 .setControllerAdvice(new CreateObjectionRequestBodyAdvice(), new GlobalExceptionHandler())
                 .build();
     }

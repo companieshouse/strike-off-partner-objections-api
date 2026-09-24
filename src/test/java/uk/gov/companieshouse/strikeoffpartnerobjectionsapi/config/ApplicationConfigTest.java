@@ -14,13 +14,14 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import uk.gov.companieshouse.api.InternalApiClient;
 import uk.gov.companieshouse.environment.exception.EnvironmentVariableException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.InternalUserInterceptor;
 
 @Tag("unit-test")
 class ApplicationConfigTest {
 
     @Test
     void internalApiClient_whenInvoked_createsBean() {
-        ApplicationConfig config = new ApplicationConfig(null);
+        ApplicationConfig config = new ApplicationConfig(null, null);
 
         try {
             InternalApiClient apiClient = config.internalApiClient();
@@ -32,25 +33,83 @@ class ApplicationConfigTest {
 
     @Test
     void addInterceptors_whenInvoked_registersAuthenticationInterceptorForAllPaths() {
-        AuthenticationInterceptor interceptor = Mockito.mock(AuthenticationInterceptor.class);
+        AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
         InterceptorRegistration registration = Mockito.mock(InterceptorRegistration.class);
-        ApplicationConfig config = new ApplicationConfig(interceptor);
+        ApplicationConfig config = new ApplicationConfig(authInterceptor, null);
 
-        when(registry.addInterceptor(interceptor)).thenReturn(registration);
+        when(registry.addInterceptor(authInterceptor)).thenReturn(registration);
         when(registration.addPathPatterns("/**")).thenReturn(registration);
         when(registration.excludePathPatterns("/healthcheck")).thenReturn(registration);
 
         config.addInterceptors(registry);
 
-        verify(registry).addInterceptor(interceptor);
+        verify(registry).addInterceptor(authInterceptor);
         verify(registration).addPathPatterns("/**");
         verify(registration).excludePathPatterns("/healthcheck");
     }
 
     @Test
-    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNothing() {
-        ApplicationConfig config = new ApplicationConfig(null);
+    void addInterceptors_whenBothInterceptorsAreProvided_registersBothInterceptors() {
+        AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
+        InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
+        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
+        InterceptorRegistration authRegistration = Mockito.mock(InterceptorRegistration.class);
+        InterceptorRegistration internalRegistration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(authInterceptor, internalInterceptor);
+
+        when(registry.addInterceptor(authInterceptor)).thenReturn(authRegistration);
+        when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
+        when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
+        when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status")).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status")).thenReturn(internalRegistration);
+
+        config.addInterceptors(registry);
+
+        verify(registry).addInterceptor(authInterceptor);
+        verify(registry).addInterceptor(internalInterceptor);
+        verify(authRegistration).addPathPatterns("/**");
+        verify(authRegistration).excludePathPatterns("/healthcheck");
+        verify(internalRegistration).addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status");
+        verify(internalRegistration).addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status");
+    }
+
+    @Test
+    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNotRegisterIt() {
+        InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
+        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
+        InterceptorRegistration internalRegistration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(null, internalInterceptor);
+
+        when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status")).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status")).thenReturn(internalRegistration);
+
+        config.addInterceptors(registry);
+
+        verify(registry).addInterceptor(internalInterceptor);
+    }
+
+    @Test
+    void addInterceptors_whenInternalUserInterceptorIsNull_doesNotRegisterIt() {
+        AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
+        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
+        InterceptorRegistration authRegistration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(authInterceptor, null);
+
+        when(registry.addInterceptor(authInterceptor)).thenReturn(authRegistration);
+        when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
+        when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
+
+        config.addInterceptors(registry);
+
+        verify(registry).addInterceptor(authInterceptor);
+    }
+
+    @Test
+    void addInterceptors_whenBothInterceptorsAreNull_doesNothing() {
+        ApplicationConfig config = new ApplicationConfig(null, null);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
 
         config.addInterceptors(registry);
