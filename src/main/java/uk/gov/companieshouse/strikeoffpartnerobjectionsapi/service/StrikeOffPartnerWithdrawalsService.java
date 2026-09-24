@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -33,12 +34,15 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * <p>Handles creation, retrieval, and processing status updates for withdrawal records.
  * On creation, a check is made that the partner has at least one active objection for
  * the company before the withdrawal is persisted to MongoDB and a Kafka event is published.
- * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.</p>
+ * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
+ * On status update, an HMRC callback notification is triggered asynchronously after
+ * the record is successfully updated in MongoDB.</p>
  */
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
     private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
+    private static final String WITHDRAWAL_URI_TEMPLATE = "/company/%s/strike-off/withdrawals/%s";
 
     private final WithdrawalRepository withdrawalRepository;
     private final ObjectionRepository objectionRepository;
@@ -46,6 +50,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
+    private final HmrcCallbackService hmrcCallbackService;
 
     /**
      * Constructs the service with its required dependencies.
@@ -56,6 +61,7 @@ public class StrikeOffPartnerWithdrawalsService {
      * @param withdrawalKafkaProducer Kafka producer for publishing withdrawal events
      * @param companyValidator        validator for company details
      * @param validator               Jakarta Bean Validation validator for request payloads
+     * @param hmrcCallbackService     service for triggering HMRC outcome callbacks
      */
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
@@ -64,13 +70,15 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
-            Validator validator) {
+            Validator validator,
+            HmrcCallbackService hmrcCallbackService) {
         this.withdrawalRepository = withdrawalRepository;
         this.objectionRepository = objectionRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
+        this.hmrcCallbackService = hmrcCallbackService;
     }
 
     /**
@@ -211,7 +219,9 @@ public class StrikeOffPartnerWithdrawalsService {
      * Updates the processing status of an existing withdrawal.
      *
      * <p>If the requested status matches the current status, the update is silently ignored.
-     * No state-transition enforcement is applied for withdrawal status updates.</p>
+     * No state-transition enforcement is applied for withdrawal status updates.
+     * After successful status update, an HMRC callback notification is triggered
+     * asynchronously. Callback failures do not block the API response.</p>
      *
      * @param companyNumber       the company number the withdrawal belongs to
      * @param withdrawalId        the unique withdrawal identifier
@@ -253,9 +263,42 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalDocument updatedWithdrawal = withdrawalRepository.save(existingDocument);
             LOGGER.info(format("Withdrawal processing status updated successfully: withdrawalId=%s, companyNumber=%s",
                     updatedWithdrawal.getWithdrawalId(), updatedWithdrawal.getCompanyNumber()));
+
+            // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
+            String withdrawalUri = format(WITHDRAWAL_URI_TEMPLATE, companyNumber, withdrawalId);
+            BiConsumer<String, String> resultHandler = createWithdrawalCallbackResultHandler(updatedWithdrawal);
+            hmrcCallbackService.sendWithdrawalOutcomeCallback(withdrawalId, companyNumber, withdrawalUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
         }
+    }
+
+    /**
+     * Creates a result handler for withdrawal callbacks that persists the callback status to MongoDB.
+     *
+     * @param document the withdrawal document to update
+     * @return a BiConsumer that updates and persists callback status
+     */
+    private BiConsumer<String, String> createWithdrawalCallbackResultHandler(WithdrawalDocument document) {
+        return (correlationId, failureReason) -> {
+            try {
+                if (failureReason == null) {
+                    // Callback succeeded
+                    CallbackStatusTracker.markCallbackSuccess(document, correlationId);
+                    LOGGER.info(format("HMRC callback succeeded: withdrawalId=%s, correlationId=%s",
+                            document.getWithdrawalId(), correlationId));
+                } else {
+                    // Callback failed after all retries
+                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason);
+                    LOGGER.error(format("HMRC callback failed permanently: withdrawalId=%s, reason=%s",
+                            document.getWithdrawalId(), failureReason));
+                }
+                withdrawalRepository.save(document);
+            } catch (DataAccessException ex) {
+                LOGGER.error(format("Failed to persist callback status for withdrawal: withdrawalId=%s",
+                        document.getWithdrawalId()), ex);
+            }
+        };
     }
 
     private static WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {

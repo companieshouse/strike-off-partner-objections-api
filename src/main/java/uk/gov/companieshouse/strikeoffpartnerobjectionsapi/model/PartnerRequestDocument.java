@@ -49,6 +49,19 @@ public abstract class PartnerRequestDocument {
     @Field("event_failure_reason")
     private String eventFailureReason;
 
+    @Field("callback_status")
+    private CallbackStatus callbackStatus;
+
+    @Field("callback_status_changed_at")
+    private Instant callbackStatusChangedAt;
+
+    @Field("callback_correlation_id")
+    @Indexed
+    private String callbackCorrelationId;
+
+    @Field("callback_failure_reason")
+    private String callbackFailureReason;
+
     public String getId() {
         return id;
     }
@@ -160,5 +173,36 @@ public abstract class PartnerRequestDocument {
     public void setEventFailureReason(String eventFailureReason) {
         this.eventFailureReason = eventFailureReason;
     }
-}
 
+    public CallbackStatus getCallbackStatus() {
+        return callbackStatus;
+    }
+
+    public void setCallbackStatus(CallbackStatus callbackStatus) {
+        this.callbackStatus = callbackStatus;
+    }
+
+    public Instant getCallbackStatusChangedAt() {
+        return callbackStatusChangedAt;
+    }
+
+    public void setCallbackStatusChangedAt(Instant callbackStatusChangedAt) {
+        this.callbackStatusChangedAt = callbackStatusChangedAt;
+    }
+
+    public String getCallbackCorrelationId() {
+        return callbackCorrelationId;
+    }
+
+    public void setCallbackCorrelationId(String callbackCorrelationId) {
+        this.callbackCorrelationId = callbackCorrelationId;
+    }
+
+    public String getCallbackFailureReason() {
+        return callbackFailureReason;
+    }
+
+    public void setCallbackFailureReason(String callbackFailureReason) {
+        this.callbackFailureReason = callbackFailureReason;
+    }
+}
