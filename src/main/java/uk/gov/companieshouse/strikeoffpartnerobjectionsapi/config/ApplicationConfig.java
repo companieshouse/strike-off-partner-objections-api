@@ -36,11 +36,9 @@ public class ApplicationConfig implements WebMvcConfigurer {
                     .addPathPatterns("/**")
                     .excludePathPatterns("/healthcheck");
         }
-
         if (internalUserInterceptor != null) {
             registry.addInterceptor(internalUserInterceptor)
-                    .addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status")
-                    .addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status");
+                    .addPathPatterns("/internal/**");
         }
     }
 }

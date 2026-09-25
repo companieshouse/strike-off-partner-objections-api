@@ -1,34 +1,32 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
 
 import java.util.stream.Stream;
 
-@Tag("unit-test")
-@ExtendWith(MockitoExtension.class)
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_AUTHORISED_KEY_PRIVILEGES;
+
+/**
+ * Unit tests for the InternalUserInterceptor.
+ *
+ * <p>Tests the interceptor's validation of the internal-app privilege in the
+ * ERIC-Authorised-Key-Privileges header for internal endpoint access.</p>
+ */
 class InternalUserInterceptorTest {
 
-    private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
-    private static final String ERIC_INTERNAL_APP_PRIVILEGES = "ERIC-Authorised-Application-Privileges";
-    private static final String REQUEST_ID = "test-request-id-456";
+    private InternalUserInterceptor interceptor;
 
     @Mock
     private HttpServletRequest request;
@@ -36,111 +34,52 @@ class InternalUserInterceptorTest {
     @Mock
     private HttpServletResponse response;
 
-    private InternalUserInterceptor internalUserInterceptor;
-    private Object handler;
-
     @BeforeEach
     void setUp() {
-        internalUserInterceptor = new InternalUserInterceptor();
-        handler = new Object();
-    }
-
-    @Test
-    void preHandle_whenInternalAppPrivilegesIsTrueAndHeaderIsValid_allowsRequest() {
-        setupValidInternalPrivileges();
-
-        boolean result = internalUserInterceptor.preHandle(request, response, handler);
-
-        assertTrue(result);
-    }
-
-    @Test
-    void preHandle_whenInternalAppPrivilegesIsFalse_returns403() throws IOException {
-        setupInternalPrivilegesFalse();
-        stubResponseWriter();
-
-        boolean result = internalUserInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
-    }
-
-
-    @ParameterizedTest
-    @MethodSource("allInvalidPrivileges")
-    void preHandle_whenPrivilegeHeaderIsInvalid_returns403(String privilegeHeader) throws IOException {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES)).thenReturn(privilegeHeader);
-        stubResponseWriter();
-
-        boolean result = internalUserInterceptor.preHandle(request, response, handler);
-
-        assertFalse(result);
-        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        @SuppressWarnings("unused")
+        var mockitoCloseable = MockitoAnnotations.openMocks(this);
+        try (mockitoCloseable) {
+            interceptor = new InternalUserInterceptor();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @ParameterizedTest
-    @MethodSource("allValidPrivileges")
-    void preHandle_whenPrivilegeHeaderIsValid_allowsRequest(String privilegeHeader) {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES)).thenReturn(privilegeHeader);
+    @ValueSource(strings = {
+            "internal-app",
+            "internal-app,payment",
+            "payment, internal-app, sensitive-data"
+    })
+    void preHandle_WithInternalAppPrivilege_AllowsRequest(String privileges) {
+        when(request.getHeader(ERIC_AUTHORISED_KEY_PRIVILEGES)).thenReturn(privileges);
 
-        boolean result = internalUserInterceptor.preHandle(request, response, handler);
+        boolean result = interceptor.preHandle(request, response, null);
 
-        assertTrue(result);
+        assertTrue(result, "Request with internal-app privilege should be allowed");
     }
 
-    @Test
-    void preHandle_whenPrivilegeCheckFailsAndWriterThrowsIOException_returnsFalse() throws IOException {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES)).thenReturn(null);
-        doThrow(new IOException("stream closed")).when(response).getWriter();
+    @ParameterizedTest
+    @MethodSource("invalidPrivilegesProvider")
+    void preHandle_WithoutInternalAppPrivilege_ReturnsForbidden(String privileges) {
+        when(request.getHeader(ERIC_AUTHORISED_KEY_PRIVILEGES)).thenReturn(privileges);
 
-        boolean result = internalUserInterceptor.preHandle(request, response, handler);
+        boolean result = interceptor.preHandle(request, response, null);
 
-        assertFalse(result);
+        assertFalse(result, "Request without internal-app privilege should be rejected");
+        verify(response).setStatus(HttpStatus.FORBIDDEN.value());
     }
 
-
-    private void setupValidInternalPrivileges() {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES))
-                .thenReturn("{\"internal_app_privileges\":true}");
-    }
-
-    private void setupInternalPrivilegesFalse() throws IOException {
-        when(request.getHeader(X_REQUEST_ID_HEADER)).thenReturn(REQUEST_ID);
-        when(request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES))
-                .thenReturn("{\"internal_app_privileges\":false}");
-        stubResponseWriter();
-    }
-
-
-    private void stubResponseWriter() throws IOException {
-        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
-    }
-
-
-    static Stream<String> allInvalidPrivileges() {
+    private static Stream<String> invalidPrivilegesProvider() {
         return Stream.of(
-            // Missing/blank headers
-            null, "", "   ",
-            // Invalid JSON
-            "{invalid json}", "{\"internal_app_privileges\":}", "not-json-at-all", "[1,2,3]",
-            // Missing privilege flag
-            "{}", "{\"other_field\":true}", "{\"another_field\":false}", "{\"internal_app_privileges_extra\":true}",
-            // Invalid types
-            "{\"internal_app_privileges\":\"true\"}", "{\"internal_app_privileges\":1}"
-        );
-    }
-
-    static Stream<String> allValidPrivileges() {
-        return Stream.of(
-            "{\"internal_app_privileges\":true}",
-            "  {\"internal_app_privileges\":true}  ",
-            "{\"internal_app_privileges\":true,\"other_field\":\"value\"}",
-            "{\"other_field\":\"value\",\"internal_app_privileges\":true}",
-            "{\"internal_app_privileges\":true,\"nested\":{\"key\":\"value\"}}"
+                "payment",
+                null,
+                "",
+                "   ",
+                "internal",
+                "sensitive-data",
+                "user-data",
+                "payment,sensitive-data"
         );
     }
 }

@@ -50,7 +50,33 @@ class ApplicationConfigTest {
     }
 
     @Test
-    void addInterceptors_whenBothInterceptorsAreProvided_registersBothInterceptors() {
+    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNotRegisterAuthInterceptor() {
+        ApplicationConfig config = new ApplicationConfig(null, null);
+        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
+
+        config.addInterceptors(registry);
+
+        verifyNoInteractions(registry);
+    }
+
+    @Test
+    void addInterceptors_whenInvoked_registersInternalUserInterceptorForInternalPaths() {
+        InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
+        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
+        InterceptorRegistration registration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(null, internalInterceptor);
+
+        when(registry.addInterceptor(internalInterceptor)).thenReturn(registration);
+        when(registration.addPathPatterns("/internal/**")).thenReturn(registration);
+
+        config.addInterceptors(registry);
+
+        verify(registry).addInterceptor(internalInterceptor);
+        verify(registration).addPathPatterns("/internal/**");
+    }
+
+    @Test
+    void addInterceptors_whenBothInterceptorsPresent_registersBoth() {
         AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
         InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
@@ -62,58 +88,11 @@ class ApplicationConfigTest {
         when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
         when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
         when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
-        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status")).thenReturn(internalRegistration);
-        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status")).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/**")).thenReturn(internalRegistration);
 
         config.addInterceptors(registry);
 
         verify(registry).addInterceptor(authInterceptor);
         verify(registry).addInterceptor(internalInterceptor);
-        verify(authRegistration).addPathPatterns("/**");
-        verify(authRegistration).excludePathPatterns("/healthcheck");
-        verify(internalRegistration).addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status");
-        verify(internalRegistration).addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status");
-    }
-
-    @Test
-    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNotRegisterIt() {
-        InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
-        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-        InterceptorRegistration internalRegistration = Mockito.mock(InterceptorRegistration.class);
-        ApplicationConfig config = new ApplicationConfig(null, internalInterceptor);
-
-        when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
-        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections/*/status")).thenReturn(internalRegistration);
-        when(internalRegistration.addPathPatterns("/internal/company/*/strike-off-partner-objections-withdrawals/*/withdrawal-status")).thenReturn(internalRegistration);
-
-        config.addInterceptors(registry);
-
-        verify(registry).addInterceptor(internalInterceptor);
-    }
-
-    @Test
-    void addInterceptors_whenInternalUserInterceptorIsNull_doesNotRegisterIt() {
-        AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
-        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-        InterceptorRegistration authRegistration = Mockito.mock(InterceptorRegistration.class);
-        ApplicationConfig config = new ApplicationConfig(authInterceptor, null);
-
-        when(registry.addInterceptor(authInterceptor)).thenReturn(authRegistration);
-        when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
-        when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
-
-        config.addInterceptors(registry);
-
-        verify(registry).addInterceptor(authInterceptor);
-    }
-
-    @Test
-    void addInterceptors_whenBothInterceptorsAreNull_doesNothing() {
-        ApplicationConfig config = new ApplicationConfig(null, null);
-        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-
-        config.addInterceptors(registry);
-
-        verifyNoInteractions(registry);
     }
 }

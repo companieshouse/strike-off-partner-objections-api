@@ -1020,51 +1020,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-status-001",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-001",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1097,51 +1092,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-status-001-repeat",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-001-repeat",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1178,51 +1168,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-status-002",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-002",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1259,51 +1244,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-status-003",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/non-existent-id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-003",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/non-existent-id/status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1345,51 +1325,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-status-500",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{corrupted_objection_id}}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-status-500",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{corrupted_objection_id}}/status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1846,51 +1821,46 @@
               }
             }
           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-request-withdrawal-status-001",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"withdrawal-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}/withdrawal-status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Host",
+                "value": "{{hostHeader}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Request-Id",
+                "value": "test-request-withdrawal-status-001",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "{{contentTypeJson}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity-Type",
+                "value": "{{ericIdentityType}}",
+                "type": "text"
+              },
+              {
+                "key": "ERIC-Identity",
+                "value": "{{ericIdentity}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"processing_status\": \"withdrawal-processing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}/withdrawal-status",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1906,572 +1876,9 @@
           },
           "response": []
         }
-       ]
-     },
-     {
-       "name": "Internal User Interceptor Tests",
-       "item": [
-         {
-           "name": "204 - Valid Internal Privileges (Objection Status)",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 204 No Content with valid privileges\", function () {",
-                   "  pm.response.to.have.status(204);",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-001",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "403 - Missing Privilege Header",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 403 Forbidden\", function () {",
-                   "  pm.response.to.have.status(403);",
-                   "});",
-                   "pm.test(\"error is Forbidden\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.error).to.eql(\"Forbidden\");",
-                   "});",
-                   "pm.test(\"message indicates internal app privileges required\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.message).to.include(\"internal app privileges\");",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-002",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "403 - Privilege Flag False",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 403 Forbidden\", function () {",
-                   "  pm.response.to.have.status(403);",
-                   "});",
-                   "pm.test(\"message indicates missing or invalid privileges\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.message).to.include(\"internal app privileges\");",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-003",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": false}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "403 - Malformed JSON Header",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 403 Forbidden\", function () {",
-                   "  pm.response.to.have.status(403);",
-                   "});",
-                   "pm.test(\"treats malformed JSON as unauthorised\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.error).to.eql(\"Forbidden\");",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-004",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "invalid json here",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "403 - Missing internal_app_privileges Flag in JSON",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 403 Forbidden\", function () {",
-                   "  pm.response.to.have.status(403);",
-                   "});",
-                   "pm.test(\"rejects when privilege flag is missing\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.message).to.include(\"internal app privileges\");",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-005",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"some_other_flag\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "403 - Blank Privilege Header",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 403 Forbidden\", function () {",
-                   "  pm.response.to.have.status(403);",
-                   "});",
-                   "pm.test(\"treats blank header as unauthorised\", function () {",
-                   "  var body = pm.response.json();",
-                   "  pm.expect(body.error).to.eql(\"Forbidden\");",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-006",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"objection-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections/{{objection_id}}/status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections",
-                 "{{objection_id}}",
-                 "status"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "204 - Valid Privileges (Withdrawal Status)",
-           "event": [
-             {
-               "listen": "test",
-               "script": {
-                 "exec": [
-                   "pm.test(\"returns 204 No Content with valid privileges\", function () {",
-                   "  pm.response.to.have.status(204);",
-                   "});"
-                 ],
-                 "type": "text/javascript",
-                 "packages": {},
-                 "requests": {}
-               }
-             }
-           ],
-           "request": {
-             "method": "PATCH",
-             "header": [
-               {
-                 "key": "Host",
-                 "value": "{{hostHeader}}",
-                 "type": "text"
-               },
-               {
-                 "key": "X-Request-Id",
-                 "value": "test-interceptor-007",
-                 "type": "text"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "{{contentTypeJson}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity-Type",
-                 "value": "{{ericIdentityType}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Identity",
-                 "value": "{{ericIdentity}}",
-                 "type": "text"
-               },
-               {
-                 "key": "ERIC-Authorised-Application-Privileges",
-                 "value": "{\"internal_app_privileges\": true}",
-                 "type": "text"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"processing_status\": \"withdrawal-processing\"\n}",
-               "options": {
-                 "raw": {
-                   "language": "json"
-                 }
-               }
-             },
-             "url": {
-               "raw": "{{baseUrl}}/internal/company/{{companyNumber}}/strike-off-partner-objections-withdrawals/{{withdrawal_id}}/withdrawal-status",
-               "host": [
-                 "{{baseUrl}}"
-               ],
-               "path": [
-                 "internal",
-                 "company",
-                 "{{companyNumber}}",
-                 "strike-off-partner-objections-withdrawals",
-                 "{{withdrawal_id}}",
-                 "withdrawal-status"
-               ]
-             }
-           },
-           "response": []
-         }
-       ]
-     }
-   ],
+      ]
+    }
+  ],
   "auth": {
     "type": "basic",
     "basic": [
