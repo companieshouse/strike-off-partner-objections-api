@@ -49,9 +49,12 @@ public class InternalUserInterceptor implements HandlerInterceptor {
 
         try {
             Map<String, Object> privileges = objectMapper.readValue(privilegesHeader, new TypeReference<>() {});
+            if (privileges == null) {
+                return false;
+            }
             Object privilegeFlag = privileges.get(INTERNAL_PRIVILEGE_FLAG);
             return privilegeFlag instanceof Boolean booleanValue && booleanValue;
-        } catch (Exception e) {
+        } catch (IOException | IllegalArgumentException e) {
             LOGGER.debug("Failed to parse internal app privileges header: " + e.getMessage());
             return false;
         }
