@@ -546,6 +546,7 @@ class StrikeOffPartnerWithdrawalsControllerTest {
     private ResultActions postUpdateWithdrawalStatus(String payload) throws Exception {
         return mockMvc().perform(patch(String.format(UPDATE_WITHDRAWAL_STATUS_PATH, COMPANY_NUMBER, WITHDRAWAL_ID))
                 .contentType(APPLICATION_JSON)
+                .header("ERIC-Authorised-Key-Privileges", "internal-app")
                 .content(payload));
     }
 
