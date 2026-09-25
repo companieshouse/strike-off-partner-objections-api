@@ -23,13 +23,16 @@ public class InternalUserInterceptor implements HandlerInterceptor {
     private static final String ERIC_INTERNAL_APP_PRIVILEGES = "ERIC-Authorised-Application-Privileges";
     private static final String INTERNAL_PRIVILEGE_FLAG = "internal_app_privileges";
     private static final String AUTHORIZATION_FAILED_PREFIX = "Authorization failed: requestId=";
-    private static final String FORBIDDEN_MESSAGE = "Access denied: internal app privileges required";
+    private static final String FORBIDDEN = "Forbidden";
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public boolean preHandle(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
         String requestId = request.getHeader(X_REQUEST_ID_HEADER);
+        if (requestId == null || requestId.isBlank()) {
+            requestId = "unknown";
+        }
 
         if (!hasInternalAppPrivileges(request)) {
             LOGGER.error(AUTHORIZATION_FAILED_PREFIX + requestId + ", reason=Missing or invalid internal app privileges flag");
@@ -43,9 +46,6 @@ public class InternalUserInterceptor implements HandlerInterceptor {
 
     private static boolean hasInternalAppPrivileges(HttpServletRequest request) {
         String privilegesHeader = request.getHeader(ERIC_INTERNAL_APP_PRIVILEGES);
-        if (privilegesHeader == null || privilegesHeader.isBlank()) {
-            return false;
-        }
 
         try {
             Map<String, Object> privileges = objectMapper.readValue(privilegesHeader, new TypeReference<>() {});
@@ -63,8 +63,8 @@ public class InternalUserInterceptor implements HandlerInterceptor {
         try {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.FORBIDDEN);
-            errorResponse.put("error", "Forbidden");
-            errorResponse.put("message", FORBIDDEN_MESSAGE);
+            errorResponse.put("error", FORBIDDEN);
+            errorResponse.put("message", FORBIDDEN);
             errorResponse.put("requestId", requestId);
             response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
         } catch (IOException e) {

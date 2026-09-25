@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -61,6 +62,7 @@ class InternalUserInterceptorTest {
         boolean result = internalUserInterceptor.preHandle(request, response, handler);
 
         assertFalse(result);
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
     }
 
 
@@ -74,6 +76,7 @@ class InternalUserInterceptorTest {
         boolean result = internalUserInterceptor.preHandle(request, response, handler);
 
         assertFalse(result);
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
     }
 
     @ParameterizedTest
@@ -141,11 +144,3 @@ class InternalUserInterceptorTest {
         );
     }
 }
-
-
-
-
-
-
-
-
