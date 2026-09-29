@@ -33,11 +33,11 @@ public class ApplicationConfig implements WebMvcConfigurer {
         if (authenticationInterceptor != null) {
             registry.addInterceptor(authenticationInterceptor)
                     .addPathPatterns("/**")
-                    .excludePathPatterns("/healthcheck");
+                    .excludePathPatterns("/healthcheck").order(1);
         }
         if (internalUserInterceptor != null) {
             registry.addInterceptor(internalUserInterceptor)
-                    .addPathPatterns("/internal/**");
+                    .addPathPatterns("/internal/**").order(2);
         }
     }
 }
