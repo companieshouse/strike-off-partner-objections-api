@@ -28,7 +28,7 @@
         <tomcat.version>11.0.25</tomcat.version>
         <private-api-sdk-java.version>7.2.24</private-api-sdk-java.version>
         <testcontainers.version>1.20.4</testcontainers.version>
-        <api-security-java.version>2.0.27</api-security-java.version>
+        <api-security-java.version>2.0.29</api-security-java.version>
 
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
         <api-helper-java.version>3.0.4</api-helper-java.version>

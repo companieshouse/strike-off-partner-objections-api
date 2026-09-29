@@ -21,6 +21,8 @@ public final class StrikeoffPartnerObjectionsUtils {
     public static final Logger LOGGER = LoggerFactory.getLogger(APPLICATION_NAMESPACE);
     public static final String REQUIRED_ERIC_PERMISSION = "strike-off-partner-objections";
     public static final String ERIC_PARTNER_ORGANISATION_HEADER = "ERIC-Authorised-Application-Partner-Organisation";
+    public static final String ERIC_AUTHORISED_KEY_PRIVILEGES = "ERIC-Authorised-Key-Privileges";
+    public static final String INTERNAL_APP_PRIVILEGE = "internal-app";
     // For use within test files only
     public static final String PARTNER_ORGANISATION = "hmrc";
 
