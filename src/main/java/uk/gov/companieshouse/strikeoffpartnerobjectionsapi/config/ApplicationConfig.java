@@ -1,6 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -16,6 +17,7 @@ public class ApplicationConfig implements WebMvcConfigurer {
     private final AuthenticationInterceptor authenticationInterceptor;
     private final InternalUserInterceptor internalUserInterceptor;
 
+    @Autowired(required = false)
     public ApplicationConfig(
             AuthenticationInterceptor authenticationInterceptor,
             InternalUserInterceptor internalUserInterceptor) {
