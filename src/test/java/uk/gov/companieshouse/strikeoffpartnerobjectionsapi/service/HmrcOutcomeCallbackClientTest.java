@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResourceKind;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 @Tag("unit-test")

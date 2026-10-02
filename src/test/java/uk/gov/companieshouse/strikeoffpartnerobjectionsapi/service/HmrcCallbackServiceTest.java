@@ -19,7 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResourceKind;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 import java.util.stream.Stream;

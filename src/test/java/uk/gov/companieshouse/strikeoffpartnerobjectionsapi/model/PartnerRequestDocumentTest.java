@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 
 import java.time.Instant;
 

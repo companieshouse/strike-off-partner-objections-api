@@ -2,7 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
 import java.time.Instant;

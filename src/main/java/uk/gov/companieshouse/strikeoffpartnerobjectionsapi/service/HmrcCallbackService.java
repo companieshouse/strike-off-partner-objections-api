@@ -7,7 +7,7 @@ import java.util.function.BiConsumer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResourceKind;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 import static java.lang.String.format;

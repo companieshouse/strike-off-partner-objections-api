@@ -1,7 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import java.time.Instant;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerRequestDocument;
 
 /**
