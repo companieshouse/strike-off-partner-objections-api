@@ -191,7 +191,7 @@ public class HmrcCallbackService implements DisposableBean {
      private void submitCallbackWithRetry(HmrcCallbackPayload payload, int attemptNumber,
                                          BiConsumer<String, String> resultHandler) {
          synchronized (executorLock) {
-             if (!isExecutorAvailable()) {
+             if (isExecutorUnavailable()) {
                  notifyShutdown(payload, resultHandler);
                  return;
              }
@@ -250,12 +250,12 @@ public class HmrcCallbackService implements DisposableBean {
     }
 
     /**
-     * Checks if executor is available for task submission.
+     * Checks if executor is unavailable for task submission.
      *
-     * @return true if executor is available, false otherwise
+     * @return true if executor is unavailable, false otherwise
      */
-    private boolean isExecutorAvailable() {
-        return !isShuttingDown.get() && executorService.get() != null && !executorService.get().isShutdown();
+    private boolean isExecutorUnavailable() {
+        return isShuttingDown.get() || executorService.get() == null || executorService.get().isShutdown();
     }
 
     /**
@@ -320,7 +320,7 @@ public class HmrcCallbackService implements DisposableBean {
                 payload.getResourceId(), attemptNumber + 2, delayMillis));
 
         synchronized (executorLock) {
-            if (!isExecutorAvailable()) {
+            if (isExecutorUnavailable()) {
                 notifyShutdown(payload, resultHandler);
                 return;
             }
