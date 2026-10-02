@@ -58,7 +58,7 @@ public class HmrcOutcomeCallbackClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        // TODO: Add HMRC authentication headers once authentication mechanism is finalised
+        // Add HMRC authentication headers once authentication mechanism is finalised
 
         HttpEntity<HmrcCallbackPayload> request = new HttpEntity<>(payload, headers);
 
