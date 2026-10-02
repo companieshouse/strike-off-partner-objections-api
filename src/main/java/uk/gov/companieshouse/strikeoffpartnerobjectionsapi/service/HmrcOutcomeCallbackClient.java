@@ -39,7 +39,11 @@ public class HmrcOutcomeCallbackClient {
      *
      * <p>Generates a correlation ID for traceability and logs the request and response.
      * Exceptions from HTTP communication or serialisation failures are propagated to
-     * allow the caller to implement retry logic.</p>
+     * allow the caller to implement retry logic.
+     *
+     * Note: HMRC authentication mechanism is still being finalised. Once finalised,
+     * authentication headers (e.g., ERIC headers, API key, Bearer token) must be added
+     * to the HTTP request headers here.</p>
      *
      * @param callbackEndpointUrl the HMRC callback endpoint URL
      * @param payload the callback payload containing resource details
@@ -54,6 +58,7 @@ public class HmrcOutcomeCallbackClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        // TODO: Add HMRC authentication headers once authentication mechanism is finalised
 
         HttpEntity<HmrcCallbackPayload> request = new HttpEntity<>(payload, headers);
 
