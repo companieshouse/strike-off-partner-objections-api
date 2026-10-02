@@ -78,11 +78,9 @@ public class HmrcCallbackService implements DisposableBean {
     /**
      * Gracefully shuts down the executor service.
      * Invoked by Spring when the application context is closing.
-     *
-     * @throws Exception if an error occurs during shutdown
      */
     @Override
-    public void destroy() throws Exception {
+    public void destroy() {
         synchronized (executorLock) {
             if (isShuttingDown.get() || executorService.get() == null) {
                 return;
@@ -193,44 +191,86 @@ public class HmrcCallbackService implements DisposableBean {
      private void submitCallbackWithRetry(HmrcCallbackPayload payload, int attemptNumber,
                                          BiConsumer<String, String> resultHandler) {
          synchronized (executorLock) {
-             if (isShuttingDown.get() || executorService.get() == null || executorService.get().isShutdown()) {
-                 LOGGER.error(format("Cannot submit callback task: resourceId=%s, isShuttingDown=%s",
-                         payload.getResourceId(), isShuttingDown.get()));
-                 if (resultHandler != null) {
-                     resultHandler.accept(null, SHUTDOWN_MESSAGE);
-                 }
+             if (!isExecutorAvailable()) {
+                 notifyShutdown(payload, resultHandler);
                  return;
              }
 
             try {
-                executorService.get().execute(() -> {
-                    try {
-                        LOGGER.debug(format("Attempting HMRC callback: resourceId=%s, attempt=%d",
-                                payload.getResourceId(), attemptNumber + 1));
-
-                        String correlationId = callbackClient.sendCallback(callbackEndpointUrl, payload);
-
-                        // Callback succeeded - invoke handler with success
-                        if (resultHandler != null) {
-                            resultHandler.accept(correlationId, null);
-                        }
-                    } catch (RestClientException ex) {
-                        handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
-                    } catch (Exception ex) {
-                        LOGGER.error(format("Unexpected error during HMRC callback: resourceId=%s, attempt=%d",
-                                payload.getResourceId(), attemptNumber + 1), ex);
-                        handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
-                    }
-                 });
+                executeCallback(payload, attemptNumber, resultHandler);
             } catch (RejectedExecutionException ex) {
-                LOGGER.error(format("Failed to submit HMRC callback task (executor rejected): resourceId=%s, attempt=%d",
-                        payload.getResourceId(), attemptNumber + 1), ex);
-                if (resultHandler != null) {
-                    resultHandler.accept(null, ex.getMessage());
-                }
+                handleCallbackExecutionRejection(payload, attemptNumber, ex, resultHandler);
             }
         }
      }
+
+    /**
+     * Executes the callback task asynchronously.
+     *
+     * @param payload the callback payload to send
+     * @param attemptNumber the current attempt number (0-based)
+     * @param resultHandler optional handler to invoke with callback result
+     */
+    private void executeCallback(HmrcCallbackPayload payload, int attemptNumber, BiConsumer<String, String> resultHandler) {
+        executorService.get().execute(() -> {
+            try {
+                LOGGER.debug(format("Attempting HMRC callback: resourceId=%s, attempt=%d",
+                        payload.getResourceId(), attemptNumber + 1));
+
+                String correlationId = callbackClient.sendCallback(callbackEndpointUrl, payload);
+                if (resultHandler != null) {
+                    resultHandler.accept(correlationId, null);
+                }
+            } catch (RestClientException ex) {
+                handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
+            } catch (Exception ex) {
+                LOGGER.error(format("Unexpected error during HMRC callback: resourceId=%s, attempt=%d",
+                        payload.getResourceId(), attemptNumber + 1), ex);
+                handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
+            }
+        });
+    }
+
+    /**
+     * Handles rejection when submitting callback task to executor.
+     *
+     * @param payload the callback payload that failed to submit
+     * @param attemptNumber the current attempt number (0-based)
+     * @param ex the rejection exception
+     * @param resultHandler optional handler to invoke with failure reason
+     */
+    private void handleCallbackExecutionRejection(HmrcCallbackPayload payload, int attemptNumber,
+                                                   RejectedExecutionException ex, BiConsumer<String, String> resultHandler) {
+        LOGGER.error(format("Failed to submit HMRC callback task (executor rejected): resourceId=%s, attempt=%d",
+                payload.getResourceId(), attemptNumber + 1), ex);
+        if (resultHandler != null) {
+            String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            resultHandler.accept(null, failureMessage);
+        }
+    }
+
+    /**
+     * Checks if executor is available for task submission.
+     *
+     * @return true if executor is available, false otherwise
+     */
+    private boolean isExecutorAvailable() {
+        return !isShuttingDown.get() && executorService.get() != null && !executorService.get().isShutdown();
+    }
+
+    /**
+     * Notifies handler that service is shutting down.
+     *
+     * @param payload the callback payload being rejected
+     * @param resultHandler optional handler to invoke with shutdown message
+     */
+    private void notifyShutdown(HmrcCallbackPayload payload, BiConsumer<String, String> resultHandler) {
+        LOGGER.error(format("Cannot submit callback task: resourceId=%s, isShuttingDown=%s",
+                payload.getResourceId(), isShuttingDown.get()));
+        if (resultHandler != null) {
+            resultHandler.accept(null, SHUTDOWN_MESSAGE);
+        }
+    }
 
      /**
       * Handles a failed callback by logging and potentially scheduling a retry.
@@ -250,46 +290,87 @@ public class HmrcCallbackService implements DisposableBean {
         LOGGER.error(format("HMRC callback failed: resourceId=%s, companyNumber=%s, attempt=%d, error=%s",
                 payload.getResourceId(), payload.getCompanyNumber(), attemptNumber + 1, ex.getMessage()), ex);
 
-        if (attemptNumber < maxRetryAttempts - 1) {
-            long delayMillis = calculateDelay(attemptNumber);
-            LOGGER.info(format("Scheduling HMRC callback retry: resourceId=%s, nextAttempt=%d, delayMillis=%d",
-                    payload.getResourceId(), attemptNumber + 2, delayMillis));
-
-             synchronized (executorLock) {
-                 if (isShuttingDown.get() || executorService.get() == null || executorService.get().isShutdown()) {
-                     LOGGER.error(format("Cannot schedule callback retry: resourceId=%s, isShuttingDown=%s",
-                             payload.getResourceId(), isShuttingDown.get()));
-                     if (resultHandler != null) {
-                         resultHandler.accept(null, SHUTDOWN_MESSAGE);
-                     }
-                     return;
-                 }
-
-                try {
-                    executorService.get().schedule(
-                            () -> submitCallbackWithRetry(payload, attemptNumber + 1, resultHandler),
-                            delayMillis,
-                            TimeUnit.MILLISECONDS
-                    );
-                } catch (RejectedExecutionException rejEx) {
-                    LOGGER.error(format("Failed to schedule HMRC callback retry (executor rejected): resourceId=%s, nextAttempt=%d",
-                            payload.getResourceId(), attemptNumber + 2), rejEx);
-                    if (resultHandler != null) {
-                        resultHandler.accept(null, rejEx.getMessage());
-                    }
-                }
-            }
+        if (shouldRetry(attemptNumber)) {
+            scheduleRetry(payload, attemptNumber, resultHandler);
         } else {
-            LOGGER.error(format("HMRC callback exhausted all retry attempts: resourceId=%s, companyNumber=%s, "
-                            + "totalAttempts=%d",
-                    payload.getResourceId(), payload.getCompanyNumber(), maxRetryAttempts));
-
-            // Invoke handler with failure
-            if (resultHandler != null) {
-                resultHandler.accept(null, ex.getMessage());
-            }
-         }
+            handleRetriesExhausted(payload, ex, resultHandler);
+        }
      }
+
+    /**
+     * Determines whether another retry should be attempted.
+     *
+     * @param attemptNumber the current attempt number (0-based)
+     * @return true if retries remain, false otherwise
+     */
+    private boolean shouldRetry(int attemptNumber) {
+        return attemptNumber < maxRetryAttempts - 1;
+    }
+
+    /**
+     * Schedules a retry of the callback with exponential backoff.
+     *
+     * @param payload the callback payload to retry
+     * @param attemptNumber the current attempt number (0-based)
+     * @param resultHandler optional handler to invoke with result
+     */
+    private void scheduleRetry(HmrcCallbackPayload payload, int attemptNumber, BiConsumer<String, String> resultHandler) {
+        long delayMillis = calculateDelay(attemptNumber);
+        LOGGER.info(format("Scheduling HMRC callback retry: resourceId=%s, nextAttempt=%d, delayMillis=%d",
+                payload.getResourceId(), attemptNumber + 2, delayMillis));
+
+        synchronized (executorLock) {
+            if (!isExecutorAvailable()) {
+                notifyShutdown(payload, resultHandler);
+                return;
+            }
+
+            try {
+                executorService.get().schedule(
+                        () -> submitCallbackWithRetry(payload, attemptNumber + 1, resultHandler),
+                        delayMillis,
+                        TimeUnit.MILLISECONDS
+                );
+            } catch (RejectedExecutionException rejEx) {
+                handleRetrySchedulingRejection(payload, attemptNumber, rejEx, resultHandler);
+            }
+        }
+    }
+
+    /**
+     * Handles rejection when scheduling a callback retry.
+     *
+     * @param payload the callback payload that failed to schedule
+     * @param attemptNumber the current attempt number (0-based)
+     * @param ex the rejection exception
+     * @param resultHandler optional handler to invoke with failure reason
+     */
+    private void handleRetrySchedulingRejection(HmrcCallbackPayload payload, int attemptNumber,
+                                                 RejectedExecutionException ex, BiConsumer<String, String> resultHandler) {
+        LOGGER.error(format("Failed to schedule HMRC callback retry (executor rejected): resourceId=%s, nextAttempt=%d",
+                payload.getResourceId(), attemptNumber + 2), ex);
+        if (resultHandler != null) {
+            String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            resultHandler.accept(null, failureMessage);
+        }
+    }
+
+    /**
+     * Handles the case when all retry attempts have been exhausted.
+     *
+     * @param payload the callback payload that failed
+     * @param ex the exception that caused the final failure
+     * @param resultHandler optional handler to invoke with failure reason
+     */
+    private void handleRetriesExhausted(HmrcCallbackPayload payload, Exception ex, BiConsumer<String, String> resultHandler) {
+        LOGGER.error(format("HMRC callback exhausted all retry attempts: resourceId=%s, companyNumber=%s, totalAttempts=%d",
+                payload.getResourceId(), payload.getCompanyNumber(), maxRetryAttempts));
+
+        if (resultHandler != null) {
+            String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+            resultHandler.accept(null, failureMessage);
+        }
+    }
 
      /**
       * Calculates the delay for an exponential backoff retry based on the attempt number.
