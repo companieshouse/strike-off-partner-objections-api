@@ -22,11 +22,12 @@ public final class CallbackStatusTracker {
      *
      * @param document             the partner request document to update
      * @param callbackCorrelationId the unique correlation ID from the callback attempt
+     * @param callbackStatusChangedAt the timestamp when the status change was initiated
      */
-    public static void markCallbackSuccess(PartnerRequestDocument document, String callbackCorrelationId) {
+    public static void markCallbackSuccess(PartnerRequestDocument document, String callbackCorrelationId, Instant callbackStatusChangedAt) {
         document.setCallbackCorrelationId(callbackCorrelationId);
         document.setCallbackStatus(CallbackStatus.SUCCESS);
-        document.setCallbackStatusChangedAt(Instant.now());
+        document.setCallbackStatusChangedAt(callbackStatusChangedAt);
         document.setCallbackFailureReason(null);
     }
 
@@ -36,12 +37,13 @@ public final class CallbackStatusTracker {
      * @param document             the partner request document to update
      * @param callbackCorrelationId the unique correlation ID from the failed callback attempt
      * @param failureReason        a human-readable description of why the callback failed
+     * @param callbackStatusChangedAt the timestamp when the status change was initiated
      */
     public static void markCallbackFailed(PartnerRequestDocument document, String callbackCorrelationId,
-                                          String failureReason) {
+                                          String failureReason, Instant callbackStatusChangedAt) {
         document.setCallbackCorrelationId(callbackCorrelationId);
         document.setCallbackStatus(CallbackStatus.FAILED);
-        document.setCallbackStatusChangedAt(Instant.now());
+        document.setCallbackStatusChangedAt(callbackStatusChangedAt);
         document.setCallbackFailureReason(failureReason);
     }
 }

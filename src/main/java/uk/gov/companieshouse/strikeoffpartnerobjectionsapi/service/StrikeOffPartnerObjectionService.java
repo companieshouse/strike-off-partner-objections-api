@@ -224,7 +224,8 @@ public class StrikeOffPartnerObjectionService {
         }
 
         existingDocument.setProcessingStatus(requestedStatus.getValue());
-        existingDocument.setProcessingStatusChangedAt(Instant.now());
+        Instant statusChangedAt = Instant.now();
+        existingDocument.setProcessingStatusChangedAt(statusChangedAt);
         existingDocument.setEtag(objectionRequestMapper.getEtag());
 
         try {
@@ -234,7 +235,7 @@ public class StrikeOffPartnerObjectionService {
 
             // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
             String objectionsUri = format(OBJECTION_URI_TEMPLATE, companyNumber, objectionId);
-            BiConsumer<String, String> resultHandler = createObjectionCallbackResultHandler(updatedObjection);
+            BiConsumer<String, String> resultHandler = createObjectionCallbackResultHandler(updatedObjection, statusChangedAt);
             hmrcCallbackService.sendObjectionOutcomeCallback(objectionId, companyNumber, objectionsUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist updated objection processing status", ex);
@@ -245,19 +246,20 @@ public class StrikeOffPartnerObjectionService {
      * Creates a result handler for objection callbacks that persists the callback status to MongoDB.
      *
      * @param document the objection document to update
+     * @param callbackStatusChangedAt the timestamp when the status update was initiated
      * @return a BiConsumer that updates and persists callback status
      */
-    private BiConsumer<String, String> createObjectionCallbackResultHandler(ObjectionDocument document) {
+    private BiConsumer<String, String> createObjectionCallbackResultHandler(ObjectionDocument document, Instant callbackStatusChangedAt) {
         return (correlationId, failureReason) -> {
             try {
                 if (failureReason == null) {
                     // Callback succeeded
-                    CallbackStatusTracker.markCallbackSuccess(document, correlationId);
+                    CallbackStatusTracker.markCallbackSuccess(document, correlationId, callbackStatusChangedAt);
                     LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s",
                             document.getObjectionId(), correlationId));
                 } else {
                     // Callback failed after all retries
-                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason);
+                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason, callbackStatusChangedAt);
                     LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, reason=%s",
                             document.getObjectionId(), failureReason));
                 }

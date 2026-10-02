@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -265,8 +266,9 @@ public class StrikeOffPartnerWithdrawalsService {
                     updatedWithdrawal.getWithdrawalId(), updatedWithdrawal.getCompanyNumber()));
 
             // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
+            Instant statusChangedAt = Instant.now();
             String withdrawalUri = format(WITHDRAWAL_URI_TEMPLATE, companyNumber, withdrawalId);
-            BiConsumer<String, String> resultHandler = createWithdrawalCallbackResultHandler(updatedWithdrawal);
+            BiConsumer<String, String> resultHandler = createWithdrawalCallbackResultHandler(updatedWithdrawal, statusChangedAt);
             hmrcCallbackService.sendWithdrawalOutcomeCallback(withdrawalId, companyNumber, withdrawalUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
@@ -277,19 +279,20 @@ public class StrikeOffPartnerWithdrawalsService {
      * Creates a result handler for withdrawal callbacks that persists the callback status to MongoDB.
      *
      * @param document the withdrawal document to update
+     * @param callbackStatusChangedAt the timestamp when the status update was initiated
      * @return a BiConsumer that updates and persists callback status
      */
-    private BiConsumer<String, String> createWithdrawalCallbackResultHandler(WithdrawalDocument document) {
+    private BiConsumer<String, String> createWithdrawalCallbackResultHandler(WithdrawalDocument document, Instant callbackStatusChangedAt) {
         return (correlationId, failureReason) -> {
             try {
                 if (failureReason == null) {
                     // Callback succeeded
-                    CallbackStatusTracker.markCallbackSuccess(document, correlationId);
+                    CallbackStatusTracker.markCallbackSuccess(document, correlationId, callbackStatusChangedAt);
                     LOGGER.info(format("HMRC callback succeeded: withdrawalId=%s, correlationId=%s",
                             document.getWithdrawalId(), correlationId));
                 } else {
                     // Callback failed after all retries
-                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason);
+                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason, callbackStatusChangedAt);
                     LOGGER.error(format("HMRC callback failed permanently: withdrawalId=%s, reason=%s",
                             document.getWithdrawalId(), failureReason));
                 }
