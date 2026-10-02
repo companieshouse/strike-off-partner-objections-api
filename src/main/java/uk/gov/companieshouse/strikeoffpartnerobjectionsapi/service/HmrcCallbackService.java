@@ -3,10 +3,14 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.beans.factory.DisposableBean;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
@@ -20,16 +24,27 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * are executed asynchronously to prevent failures from blocking the API response. Each
  * callback attempt updates the document's callback status in MongoDB for investigation
  * support. Retry attempts include enhanced logging for traceability and diagnostics.</p>
+ *
+ * <p>This service is thread-safe and handles concurrent callback submissions with graceful
+ * shutdown support. Synchronisation is implemented to prevent race conditions during
+ * executor shutdown.</p>
  */
 @Service
-public class HmrcCallbackService {
+public class HmrcCallbackService implements DisposableBean {
+
+    private static final long SHUTDOWN_TIMEOUT_SECONDS = 30;
+    private static final String SHUTDOWN_MESSAGE = "HmrcCallbackService is shutting down";
 
     private final HmrcOutcomeCallbackClient callbackClient;
-    private final ScheduledExecutorService executorService;
     private final String callbackEndpointUrl;
     private final int maxRetryAttempts;
     private final int initialDelayMillis;
     private final double backoffMultiplier;
+
+    // Thread-safe access to executor service
+    private final AtomicReference<ScheduledExecutorService> executorService;
+    private final Object executorLock = new Object();
+    private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
     /**
      * Constructs the service with dependencies and configuration.
@@ -53,11 +68,44 @@ public class HmrcCallbackService {
         this.maxRetryAttempts = maxRetryAttempts;
         this.initialDelayMillis = initialDelayMillis;
         this.backoffMultiplier = backoffMultiplier;
-        this.executorService = Executors.newScheduledThreadPool(executorThreadPoolSize);
+        this.executorService = new AtomicReference<>(Executors.newScheduledThreadPool(executorThreadPoolSize));
 
         LOGGER.debug(format("HmrcCallbackService initialised: endpoint=%s, maxAttempts=%d, initialDelay=%dms, backoff=%.1f, executorThreads=%d",
                 callbackEndpointUrl.isEmpty() ? "<not-configured>" : callbackEndpointUrl,
                 maxRetryAttempts, initialDelayMillis, backoffMultiplier, executorThreadPoolSize));
+    }
+
+    /**
+     * Gracefully shuts down the executor service.
+     * Invoked by Spring when the application context is closing.
+     *
+     * @throws Exception if an error occurs during shutdown
+     */
+    @Override
+    public void destroy() throws Exception {
+        synchronized (executorLock) {
+            if (isShuttingDown.get() || executorService.get() == null) {
+                return;
+            }
+            isShuttingDown.set(true);
+            executorService.get().shutdown();
+        }
+
+        try {
+            ScheduledExecutorService executor = executorService.get();
+            if (executor != null && !executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                LOGGER.error("Executor service did not terminate within timeout, forcing shutdown");
+                executor.shutdownNow();
+            }
+            LOGGER.info("HmrcCallbackService executor service shut down gracefully");
+        } catch (InterruptedException ex) {
+            LOGGER.error("Interrupted while waiting for executor service shutdown", ex);
+            ScheduledExecutorService executor = executorService.get();
+            if (executor != null) {
+                executor.shutdownNow();
+            }
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -135,33 +183,53 @@ public class HmrcCallbackService {
      *
      * <p>Executes the callback asynchronously. On failure, schedules a retry with an
      * exponentially increasing delay. After maximum retry attempts, logs the final
-     * failure and invokes the result handler if provided.</p>
+     * failure and invokes the result handler if provided. Thread-safe with protection
+     * against executor shutdown.</p>
      *
      * @param payload the callback payload to send
      * @param attemptNumber the current attempt number (0-based)
      * @param resultHandler optional handler to invoke with callback result
      */
-    private void submitCallbackWithRetry(HmrcCallbackPayload payload, int attemptNumber,
-                                        BiConsumer<String, String> resultHandler) {
-        executorService.execute(() -> {
+     private void submitCallbackWithRetry(HmrcCallbackPayload payload, int attemptNumber,
+                                         BiConsumer<String, String> resultHandler) {
+         synchronized (executorLock) {
+             if (isShuttingDown.get() || executorService.get() == null || executorService.get().isShutdown()) {
+                 LOGGER.error(format("Cannot submit callback task: resourceId=%s, isShuttingDown=%s",
+                         payload.getResourceId(), isShuttingDown.get()));
+                 if (resultHandler != null) {
+                     resultHandler.accept(null, SHUTDOWN_MESSAGE);
+                 }
+                 return;
+             }
+
             try {
-                LOGGER.debug(format("Attempting HMRC callback: resourceId=%s, attempt=%d",
-                        payload.getResourceId(), attemptNumber + 1));
+                executorService.get().execute(() -> {
+                    try {
+                        LOGGER.debug(format("Attempting HMRC callback: resourceId=%s, attempt=%d",
+                                payload.getResourceId(), attemptNumber + 1));
 
-                String correlationId = callbackClient.sendCallback(callbackEndpointUrl, payload);
+                        String correlationId = callbackClient.sendCallback(callbackEndpointUrl, payload);
 
-                // Callback succeeded - invoke handler with success
-                if (resultHandler != null) {
-                    resultHandler.accept(correlationId, null);
-                }
-            } catch (RestClientException ex) {
-                handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
-            } catch (Exception ex) {
-                LOGGER.error(format("Unexpected error during HMRC callback: resourceId=%s, attempt=%d",
+                        // Callback succeeded - invoke handler with success
+                        if (resultHandler != null) {
+                            resultHandler.accept(correlationId, null);
+                        }
+                    } catch (RestClientException ex) {
+                        handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
+                    } catch (Exception ex) {
+                        LOGGER.error(format("Unexpected error during HMRC callback: resourceId=%s, attempt=%d",
+                                payload.getResourceId(), attemptNumber + 1), ex);
+                        handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
+                    }
+                 });
+            } catch (RejectedExecutionException ex) {
+                LOGGER.error(format("Failed to submit HMRC callback task (executor rejected): resourceId=%s, attempt=%d",
                         payload.getResourceId(), attemptNumber + 1), ex);
-                handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
+                if (resultHandler != null) {
+                    resultHandler.accept(null, ex.getMessage());
+                }
             }
-         });
+        }
      }
 
      /**
@@ -169,7 +237,8 @@ public class HmrcCallbackService {
      *
      * <p>Logs the failure with traceability information. If the maximum retry
      * attempts have not been exceeded, schedules a retry with exponential backoff.
-     * Otherwise, logs the final failure and invokes the result handler if provided.</p>
+     * Otherwise, logs the final failure and invokes the result handler if provided.
+     * Thread-safe with protection against executor shutdown.</p>
      *
      * @param payload the callback payload that failed to send
      * @param attemptNumber the current attempt number (0-based)
@@ -186,11 +255,30 @@ public class HmrcCallbackService {
             LOGGER.info(format("Scheduling HMRC callback retry: resourceId=%s, nextAttempt=%d, delayMillis=%d",
                     payload.getResourceId(), attemptNumber + 2, delayMillis));
 
-            executorService.schedule(
-                    () -> submitCallbackWithRetry(payload, attemptNumber + 1, resultHandler),
-                    delayMillis,
-                    TimeUnit.MILLISECONDS
-            );
+             synchronized (executorLock) {
+                 if (isShuttingDown.get() || executorService.get() == null || executorService.get().isShutdown()) {
+                     LOGGER.error(format("Cannot schedule callback retry: resourceId=%s, isShuttingDown=%s",
+                             payload.getResourceId(), isShuttingDown.get()));
+                     if (resultHandler != null) {
+                         resultHandler.accept(null, SHUTDOWN_MESSAGE);
+                     }
+                     return;
+                 }
+
+                try {
+                    executorService.get().schedule(
+                            () -> submitCallbackWithRetry(payload, attemptNumber + 1, resultHandler),
+                            delayMillis,
+                            TimeUnit.MILLISECONDS
+                    );
+                } catch (RejectedExecutionException rejEx) {
+                    LOGGER.error(format("Failed to schedule HMRC callback retry (executor rejected): resourceId=%s, nextAttempt=%d",
+                            payload.getResourceId(), attemptNumber + 2), rejEx);
+                    if (resultHandler != null) {
+                        resultHandler.accept(null, rejEx.getMessage());
+                    }
+                }
+            }
         } else {
             LOGGER.error(format("HMRC callback exhausted all retry attempts: resourceId=%s, companyNumber=%s, "
                             + "totalAttempts=%d",
