@@ -40,16 +40,17 @@ class HmrcCallbackServiceTest {
 
     private HmrcCallbackService callbackService;
 
-     @BeforeEach
-     void setUp() {
-         callbackService = new HmrcCallbackService(
-                 callbackClient,
-                 CALLBACK_ENDPOINT_URL,
-                 3, // maxRetryAttempts
-                 100, // initialDelayMillis (short for tests)
-                 2.0 // backoffMultiplier
-         );
-     }
+      @BeforeEach
+      void setUp() {
+          callbackService = new HmrcCallbackService(
+                  callbackClient,
+                  CALLBACK_ENDPOINT_URL,
+                  3, // maxRetryAttempts
+                  100, // initialDelayMillis (short for tests)
+                  2.0, // backoffMultiplier
+                  5 // executorThreadPoolSize
+          );
+      }
 
 
       @ParameterizedTest(name = "{0} callback executes asynchronously")
@@ -113,13 +114,14 @@ class HmrcCallbackServiceTest {
                   .when(callbackClient)
                   .sendCallback(anyString(), any(HmrcCallbackPayload.class));
 
-          HmrcCallbackService serviceWithLimitedRetries = new HmrcCallbackService(
-                  callbackClient,
-                  CALLBACK_ENDPOINT_URL,
-                  2, // Only 2 attempts max
-                  50, // Short delay for testing
-                  2.0
-          );
+           HmrcCallbackService serviceWithLimitedRetries = new HmrcCallbackService(
+                   callbackClient,
+                   CALLBACK_ENDPOINT_URL,
+                   2, // Only 2 attempts max
+                   50, // Short delay for testing
+                   2.0,
+                   5 // executorThreadPoolSize
+           );
 
           serviceWithLimitedRetries.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
@@ -244,13 +246,14 @@ class HmrcCallbackServiceTest {
              doThrow(new RestClientException("Permanent failure")).when(callbackClient)
                      .sendCallback(anyString(), any(HmrcCallbackPayload.class));
 
-             HmrcCallbackService serviceWithLimitedRetries = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     2,
-                     50,
-                     2.0
-             );
+              HmrcCallbackService serviceWithLimitedRetries = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      2,
+                      50,
+                      2.0,
+                      5 // executorThreadPoolSize
+              );
 
              serviceWithLimitedRetries.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
@@ -276,13 +279,14 @@ class HmrcCallbackServiceTest {
          @Test
          void calculateDelay_withBackoffMultiplier_calculatesExponentialBackoff() {
              // This test verifies the retry delay calculation
-             HmrcCallbackService service = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     5,
-                     100, // Initial delay 100ms
-                     2.0  // Backoff multiplier 2.0
-             );
+              HmrcCallbackService service = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      5,
+                      100, // Initial delay 100ms
+                      2.0,  // Backoff multiplier 2.0
+                      5 // executorThreadPoolSize
+              );
 
              // Attempt 0: 100 * 2^0 = 100ms
              // Attempt 1: 100 * 2^1 = 200ms

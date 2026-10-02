@@ -24,8 +24,6 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class HmrcCallbackService {
 
-    private static final int EXECUTOR_THREAD_COUNT = 2;
-
     private final HmrcOutcomeCallbackClient callbackClient;
     private final ScheduledExecutorService executorService;
     private final String callbackEndpointUrl;
@@ -41,23 +39,25 @@ public class HmrcCallbackService {
      * @param maxRetryAttempts maximum number of retry attempts for failed callbacks
      * @param initialDelayMillis initial delay in milliseconds before the first retry
      * @param backoffMultiplier multiplier applied to delay for each subsequent retry
+     * @param executorThreadPoolSize number of threads in the callback executor pool
      */
     public HmrcCallbackService(
             HmrcOutcomeCallbackClient callbackClient,
             @Value("${hmrc.callback.endpoint.url:}") String callbackEndpointUrl,
             @Value("${hmrc.callback.max-retry-attempts:3}") int maxRetryAttempts,
             @Value("${hmrc.callback.initial-delay-millis:1000}") int initialDelayMillis,
-            @Value("${hmrc.callback.backoff-multiplier:2.0}") double backoffMultiplier) {
+            @Value("${hmrc.callback.backoff-multiplier:2.0}") double backoffMultiplier,
+            @Value("${hmrc.callback.executor-thread-pool-size:10}") int executorThreadPoolSize) {
         this.callbackClient = callbackClient;
         this.callbackEndpointUrl = callbackEndpointUrl;
         this.maxRetryAttempts = maxRetryAttempts;
         this.initialDelayMillis = initialDelayMillis;
         this.backoffMultiplier = backoffMultiplier;
-        this.executorService = Executors.newScheduledThreadPool(EXECUTOR_THREAD_COUNT);
+        this.executorService = Executors.newScheduledThreadPool(executorThreadPoolSize);
 
-        LOGGER.debug(format("HmrcCallbackService initialised: endpoint=%s, maxAttempts=%d, initialDelay=%dms, backoff=%.1f",
+        LOGGER.debug(format("HmrcCallbackService initialised: endpoint=%s, maxAttempts=%d, initialDelay=%dms, backoff=%.1f, executorThreads=%d",
                 callbackEndpointUrl.isEmpty() ? "<not-configured>" : callbackEndpointUrl,
-                maxRetryAttempts, initialDelayMillis, backoffMultiplier));
+                maxRetryAttempts, initialDelayMillis, backoffMultiplier, executorThreadPoolSize));
     }
 
     /**
