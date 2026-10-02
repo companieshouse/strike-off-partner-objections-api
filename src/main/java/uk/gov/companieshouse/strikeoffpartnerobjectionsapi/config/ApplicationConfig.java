@@ -4,6 +4,8 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import uk.gov.companieshouse.api.InternalApiClient;
@@ -28,6 +30,14 @@ public class ApplicationConfig implements WebMvcConfigurer {
     @Bean
     public InternalApiClient internalApiClient() {
         return ApiSdkManager.getPrivateSDK();
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000); // 5 seconds
+        requestFactory.setReadTimeout(10000); // 10 seconds
+        return new RestTemplate(requestFactory);
     }
 
     @Override

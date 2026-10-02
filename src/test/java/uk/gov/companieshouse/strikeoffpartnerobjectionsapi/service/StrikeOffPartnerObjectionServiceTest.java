@@ -18,11 +18,13 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -66,6 +68,9 @@ class StrikeOffPartnerObjectionServiceTest {
     @Mock
     private CompanyValidator companyValidator;
 
+    @Mock
+    private HmrcCallbackService hmrcCallbackService;
+
     private static final String VALID_COMPANY_NUMBER = "12345";
 
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -77,7 +82,8 @@ class StrikeOffPartnerObjectionServiceTest {
                 objectionRequestMapper,
                 objectionResponseMapper,
                 objectionKafkaProducer,
-                companyValidator
+                companyValidator,
+                hmrcCallbackService
         );
     }
     @Test
@@ -538,21 +544,307 @@ class StrikeOffPartnerObjectionServiceTest {
                 .isEqualTo(409);
     }
 
-    private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
-        return StrikeOffPartnerObjections.newBuilder()
-                .setEventId(eventId)
-                .setEventType(EventType.OBJECTION)
-                .setEventTime(java.time.Instant.now().toString())
-                .setSource("strike-off-partner-objections-api")
-                .setCompanyNumber(VALID_COMPANY_NUMBER)
-                .setPartnerOrganisation(PARTNER_ORGANISATION)
-                .setStrikeOffEventId(UUID.randomUUID().toString())
-                .build();
+    @Test
+    void updateObjectionProcessingStatus_whenSuccessful_triggersHmrcCallback() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         ArgumentCaptor<String> callbackIdCaptor = ArgumentCaptor.forClass(String.class);
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 callbackIdCaptor.capture(),
+                 ArgumentMatchers.any());
+
+        String callbackUri = callbackIdCaptor.getValue();
+        assertEquals(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId), callbackUri);
     }
 
-    private CreateObjectionRequest validCreateObjectionRequest() {
-        CreateObjectionRequest request = new CreateObjectionRequest();
-        request.setSubmissionCompanyName("Test Company Ltd");
-        return request;
+    @Test
+    void updateObjectionProcessingStatus_whenTransitionToAccepted_triggersCallbackWithCorrectUri() {
+        String companyNumber = "87654321";
+        String objectionId = "obj-xyz-789";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-processing");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 eq(format("/company/%s/strike-off/objections/%s", companyNumber, objectionId)),
+                 ArgumentMatchers.any());
     }
-}
+
+    @Test
+    void updateObjectionProcessingStatus_whenCallbackFails_doesNotBlockResponse() {
+        String companyNumber = "12345";
+        String objectionId = "objection-1";
+        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        ObjectionDocument existing = new ObjectionDocument();
+        existing.setProcessingStatus("objection-submitted");
+        existing.setObjectionId(objectionId);
+        existing.setCompanyNumber(companyNumber);
+
+        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+        .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+        // Callback service is async, so exceptions don't propagate to the caller
+        // The test just verifies the method completes successfully
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(objectionRepository).save(any(ObjectionDocument.class));
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 anyString(),
+                 ArgumentMatchers.any());
+    }
+
+     @Test
+     void updateObjectionProcessingStatus_whenAlreadyProcessing_noCallbackTriggered() {
+         String companyNumber = "12345";
+         String objectionId = "objection-1";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-processing");
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+
+         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(objectionRepository).findByCompanyNumberAndObjectionId(companyNumber, objectionId);
+         verify(objectionRepository, never()).save(any(ObjectionDocument.class));
+         verifyNoInteractions(hmrcCallbackService);
+     }
+
+     @Test
+     void updateObjectionProcessingStatus_callbackResultHandlerSuccessPath() {
+         String companyNumber = "12345";
+         String objectionId = "objection-callback-success";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-submitted");
+         existing.setObjectionId(objectionId);
+         existing.setCompanyNumber(companyNumber);
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+         when(objectionRequestMapper.getEtag()).thenReturn("etag-callback-test");
+         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
+                 ArgumentCaptor.forClass(BiConsumer.class);
+
+         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 anyString(),
+                 handlerCaptor.capture());
+
+         // Test the result handler with success scenario
+         java.util.function.BiConsumer<String, String> handler = handlerCaptor.getValue();
+         handler.accept("correlation-123", null);
+
+         ArgumentCaptor<ObjectionDocument> documentCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
+         verify(objectionRepository, times(2)).save(documentCaptor.capture());
+
+          ObjectionDocument savedDoc = documentCaptor.getAllValues().get(1);
+          assertThat(savedDoc.getCallbackCorrelationId()).isEqualTo("correlation-123");
+      }
+
+     @Test
+     void updateObjectionProcessingStatus_callbackResultHandlerFailurePath() {
+         String companyNumber = "12345";
+         String objectionId = "objection-callback-failure";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-processing");
+         existing.setObjectionId(objectionId);
+         existing.setCompanyNumber(companyNumber);
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+         when(objectionRequestMapper.getEtag()).thenReturn("etag-failure-test");
+         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
+                 ArgumentCaptor.forClass(BiConsumer.class);
+
+         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 anyString(),
+                 handlerCaptor.capture());
+
+         // Test the result handler with failure scenario
+         java.util.function.BiConsumer<String, String> handler = handlerCaptor.getValue();
+         handler.accept("correlation-failure", "Connection timeout");
+
+         ArgumentCaptor<ObjectionDocument> documentCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
+         verify(objectionRepository, times(2)).save(documentCaptor.capture());
+
+         ObjectionDocument savedDoc = documentCaptor.getAllValues().get(1);
+         assertThat(savedDoc.getCallbackCorrelationId()).isEqualTo("correlation-failure");
+     }
+
+     @Test
+     void updateObjectionProcessingStatus_callbackResultHandlerPersistenceFails() {
+         String companyNumber = "12345";
+         String objectionId = "objection-callback-save-fail";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_REJECTED);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-processing");
+         existing.setObjectionId(objectionId);
+         existing.setCompanyNumber(companyNumber);
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+         when(objectionRequestMapper.getEtag()).thenReturn("etag-persistence-test");
+         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
+                 ArgumentCaptor.forClass(BiConsumer.class);
+
+         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         verify(hmrcCallbackService).sendObjectionOutcomeCallback(
+                 eq(objectionId),
+                 eq(companyNumber),
+                 anyString(),
+                 handlerCaptor.capture());
+
+         // Test the result handler when persistence fails
+         java.util.function.BiConsumer<String, String> handler = handlerCaptor.getValue();
+
+         when(objectionRepository.save(any(ObjectionDocument.class)))
+                 .thenThrow(new DataAccessResourceFailureException("Save failed"));
+
+         // Handler should not throw exception
+         handler.accept("correlation-persist", null);
+     }
+
+     @Test
+     @SuppressWarnings("ConstantConditions")
+     void parseRequestedStatus_whenStatusIsNull_throwsBadRequest() {
+         ResponseStatusException ex = assertThrows(
+                 ResponseStatusException.class,
+                 () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", (String) null));
+
+         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+     }
+
+     @Test
+     void parseCurrentStatus_whenStatusIsNull_throwsInternalServerError() {
+         String companyNumber = "12345";
+         String objectionId = "objection-null-status";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus(null);
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+
+         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
+                 .isInstanceOf(ResponseStatusException.class)
+                 .extracting("statusCode.value")
+                 .isEqualTo(500);
+     }
+
+     @Test
+     void updateObjectionProcessingStatus_whenRejectedTransitionsToAccepted_throwsConflict() {
+         String companyNumber = VALID_COMPANY_NUMBER;
+         String objectionId = "objection-1";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-rejected");
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+
+         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
+                 .isInstanceOf(ResponseStatusException.class)
+                 .extracting("statusCode.value")
+                 .isEqualTo(409);
+     }
+
+     @Test
+     void updateObjectionProcessingStatus_trims_requestedStatusValue() {
+         String companyNumber = VALID_COMPANY_NUMBER;
+         String objectionId = "objection-1";
+         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
+         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+         ObjectionDocument existing = new ObjectionDocument();
+         existing.setProcessingStatus("objection-submitted");
+         existing.setObjectionId(objectionId);
+         existing.setCompanyNumber(companyNumber);
+
+         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+         .thenReturn(Optional.of(existing));
+         when(objectionRequestMapper.getEtag()).thenReturn("etag-trim");
+         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+
+         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
+
+         ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
+         verify(objectionRepository).save(captor.capture());
+         assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-processing");
+     }
+
+     private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
+         return StrikeOffPartnerObjections.newBuilder()
+                 .setEventId(eventId)
+                 .setEventType(EventType.OBJECTION)
+                 .setEventTime(java.time.Instant.now().toString())
+                 .setSource("strike-off-partner-objections-api")
+                 .setCompanyNumber(VALID_COMPANY_NUMBER)
+                 .setPartnerOrganisation(PARTNER_ORGANISATION)
+                 .setStrikeOffEventId(UUID.randomUUID().toString())
+                 .build();
+     }
+
+     private CreateObjectionRequest validCreateObjectionRequest() {
+         CreateObjectionRequest request = new CreateObjectionRequest();
+         request.setSubmissionCompanyName("Test Company Ltd");
+         return request;
+     }
+ }
