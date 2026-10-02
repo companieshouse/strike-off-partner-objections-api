@@ -37,9 +37,8 @@ public class HmrcOutcomeCallbackClient {
     /**
      * Sends a callback notification to the HMRC endpoint.
      *
-     * <p>Validates that the callback endpoint URL is configured and the HTTP response is valid.
-     * Checks that the HTTP response status is successful (2xx). Non-2xx responses or invalid
-     * responses (null or missing status) are treated as failures and trigger an exception.
+     * <p>Validates that the callback endpoint URL is configured and the HTTP response status
+     * is successful (2xx). Non-2xx responses are treated as failures and trigger an exception.
      * Generates a correlation ID for traceability and logs the request and response.
      * Exceptions from HTTP communication, non-2xx status codes, or serialisation failures
      * are propagated to allow the caller to implement retry logic.</p>
@@ -52,7 +51,7 @@ public class HmrcOutcomeCallbackClient {
      * @param payload the callback payload containing resource details
      * @return a correlation ID for tracing this callback request
      * @throws IllegalArgumentException if callbackEndpointUrl is null or empty
-     * @throws RestClientException if the HTTP request fails, returns a non-2xx status, or response is invalid
+     * @throws RestClientException if the HTTP request fails or returns a non-2xx status
      */
     public String sendCallback(String callbackEndpointUrl, HmrcCallbackPayload payload) {
         if (callbackEndpointUrl == null || callbackEndpointUrl.trim().isEmpty()) {
@@ -72,12 +71,6 @@ public class HmrcOutcomeCallbackClient {
 
         ResponseEntity<Void> response = restTemplate.postForEntity(callbackEndpointUrl, request, Void.class);
 
-        if (response == null || response.getStatusCode() == null) {
-            String errorMessage = format("HMRC callback failed: correlationId=%s, statusCode=null, resourceId=%s",
-                    correlationId, payload.getResourceId());
-            LOGGER.error(errorMessage);
-            throw new RestClientException(errorMessage);
-        }
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             String errorMessage = format("HMRC callback failed: correlationId=%s, statusCode=%s, resourceId=%s",
