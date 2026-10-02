@@ -120,8 +120,7 @@ class HmrcOutcomeCallbackClientTest {
         when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
                 .thenReturn(errorResponse);
 
-        // The client does not check status code, just returns correlation ID
-        String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
-        assertEquals(36, correlationId.length());
+        // The client should throw RestClientException on non-2xx status codes
+        assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
     }
 }

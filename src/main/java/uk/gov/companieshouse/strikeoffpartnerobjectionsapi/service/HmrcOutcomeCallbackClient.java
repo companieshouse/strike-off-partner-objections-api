@@ -38,8 +38,10 @@ public class HmrcOutcomeCallbackClient {
      * Sends a callback notification to the HMRC endpoint.
      *
      * <p>Generates a correlation ID for traceability and logs the request and response.
-     * Exceptions from HTTP communication or serialisation failures are propagated to
-     * allow the caller to implement retry logic.
+     * Validates that the HTTP response status is successful (2xx). Non-2xx responses are
+     * treated as failures and trigger an exception. Exceptions from HTTP communication,
+     * non-2xx status codes, or serialisation failures are propagated to allow the caller
+     * to implement retry logic.</p>
      *
      * Note: HMRC authentication mechanism is still being finalised. Once finalised,
      * authentication headers (e.g., ERIC headers, API key, Bearer token) must be added
@@ -48,7 +50,7 @@ public class HmrcOutcomeCallbackClient {
      * @param callbackEndpointUrl the HMRC callback endpoint URL
      * @param payload the callback payload containing resource details
      * @return a correlation ID for tracing this callback request
-     * @throws RestClientException if the HTTP request fails
+     * @throws RestClientException if the HTTP request fails or returns a non-2xx status
      */
     public String sendCallback(String callbackEndpointUrl, HmrcCallbackPayload payload) {
         String correlationId = UUID.randomUUID().toString();
@@ -63,6 +65,13 @@ public class HmrcOutcomeCallbackClient {
         HttpEntity<HmrcCallbackPayload> request = new HttpEntity<>(payload, headers);
 
         ResponseEntity<Void> response = restTemplate.postForEntity(callbackEndpointUrl, request, Void.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            String errorMessage = format("HMRC callback failed: correlationId=%s, statusCode=%s, resourceId=%s",
+                    correlationId, response.getStatusCode(), payload.getResourceId());
+            LOGGER.error(errorMessage);
+            throw new RestClientException(errorMessage);
+        }
 
         LOGGER.info(format("HMRC callback sent successfully: correlationId=%s, statusCode=%s, resourceId=%s",
                 correlationId, response.getStatusCode(), payload.getResourceId()));
