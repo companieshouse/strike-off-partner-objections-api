@@ -37,22 +37,28 @@ public class HmrcOutcomeCallbackClient {
     /**
      * Sends a callback notification to the HMRC endpoint.
      *
-     * <p>Generates a correlation ID for traceability and logs the request and response.
-     * Validates that the HTTP response status is successful (2xx). Non-2xx responses are
-     * treated as failures and trigger an exception. Exceptions from HTTP communication,
-     * non-2xx status codes, or serialisation failures are propagated to allow the caller
-     * to implement retry logic.</p>
+     * <p>Validates that the callback endpoint URL is configured and the HTTP response is valid.
+     * Checks that the HTTP response status is successful (2xx). Non-2xx responses or invalid
+     * responses (null or missing status) are treated as failures and trigger an exception.
+     * Generates a correlation ID for traceability and logs the request and response.
+     * Exceptions from HTTP communication, non-2xx status codes, or serialisation failures
+     * are propagated to allow the caller to implement retry logic.</p>
      *
      * Note: HMRC authentication mechanism is still being finalised. Once finalised,
      * authentication headers (e.g., ERIC headers, API key, Bearer token) must be added
      * to the HTTP request headers here.</p>
      *
-     * @param callbackEndpointUrl the HMRC callback endpoint URL
+     * @param callbackEndpointUrl the HMRC callback endpoint URL (must not be null or empty)
      * @param payload the callback payload containing resource details
      * @return a correlation ID for tracing this callback request
-     * @throws RestClientException if the HTTP request fails or returns a non-2xx status
+     * @throws IllegalArgumentException if callbackEndpointUrl is null or empty
+     * @throws RestClientException if the HTTP request fails, returns a non-2xx status, or response is invalid
      */
     public String sendCallback(String callbackEndpointUrl, HmrcCallbackPayload payload) {
+        if (callbackEndpointUrl == null || callbackEndpointUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("Callback endpoint URL must not be null or empty");
+        }
+
         String correlationId = UUID.randomUUID().toString();
 
         LOGGER.info(format("Sending HMRC callback: correlationId=%s, resourceId=%s, companyNumber=%s",
@@ -65,6 +71,13 @@ public class HmrcOutcomeCallbackClient {
         HttpEntity<HmrcCallbackPayload> request = new HttpEntity<>(payload, headers);
 
         ResponseEntity<Void> response = restTemplate.postForEntity(callbackEndpointUrl, request, Void.class);
+
+        if (response == null || response.getStatusCode() == null) {
+            String errorMessage = format("HMRC callback failed: correlationId=%s, statusCode=null, resourceId=%s",
+                    correlationId, payload.getResourceId());
+            LOGGER.error(errorMessage);
+            throw new RestClientException(errorMessage);
+        }
 
         if (!response.getStatusCode().is2xxSuccessful()) {
             String errorMessage = format("HMRC callback failed: correlationId=%s, statusCode=%s, resourceId=%s",
