@@ -2,8 +2,10 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
@@ -33,12 +36,15 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * <p>Handles creation, retrieval, and processing status updates for withdrawal records.
  * On creation, a check is made that the partner has at least one active objection for
  * the company before the withdrawal is persisted to MongoDB and a Kafka event is published.
- * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.</p>
+ * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
+ * On status update, an HMRC callback notification is triggered asynchronously after
+ * the record is successfully updated in MongoDB.</p>
  */
 @Service
 public class StrikeOffPartnerWithdrawalsService {
 
     private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
+    private static final String WITHDRAWAL_URI_TEMPLATE = "/company/%s/strike-off/withdrawals/%s";
 
     private final WithdrawalRepository withdrawalRepository;
     private final ObjectionRepository objectionRepository;
@@ -46,6 +52,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private final WithdrawalKafkaProducer withdrawalKafkaProducer;
     private final CompanyValidator companyValidator;
     private final Validator validator;
+    private final HmrcCallbackService hmrcCallbackService;
 
     /**
      * Constructs the service with its required dependencies.
@@ -56,6 +63,7 @@ public class StrikeOffPartnerWithdrawalsService {
      * @param withdrawalKafkaProducer Kafka producer for publishing withdrawal events
      * @param companyValidator        validator for company details
      * @param validator               Jakarta Bean Validation validator for request payloads
+     * @param hmrcCallbackService     service for triggering HMRC outcome callbacks
      */
     @Autowired
     public StrikeOffPartnerWithdrawalsService(
@@ -64,13 +72,15 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalMapper withdrawalMapper,
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
-            Validator validator) {
+            Validator validator,
+            HmrcCallbackService hmrcCallbackService) {
         this.withdrawalRepository = withdrawalRepository;
         this.objectionRepository = objectionRepository;
         this.withdrawalMapper = withdrawalMapper;
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
+        this.hmrcCallbackService = hmrcCallbackService;
     }
 
     /**
@@ -211,7 +221,9 @@ public class StrikeOffPartnerWithdrawalsService {
      * Updates the processing status of an existing withdrawal.
      *
      * <p>If the requested status matches the current status, the update is silently ignored.
-     * No state-transition enforcement is applied for withdrawal status updates.</p>
+     * No state-transition enforcement is applied for withdrawal status updates.
+     * After successful status update, an HMRC callback notification is triggered
+     * asynchronously. Callback failures do not block the API response.</p>
      *
      * @param companyNumber       the company number the withdrawal belongs to
      * @param withdrawalId        the unique withdrawal identifier
@@ -253,9 +265,39 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalDocument updatedWithdrawal = withdrawalRepository.save(existingDocument);
             LOGGER.info(format("Withdrawal processing status updated successfully: withdrawalId=%s, companyNumber=%s",
                     updatedWithdrawal.getWithdrawalId(), updatedWithdrawal.getCompanyNumber()));
+
+            // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
+             Instant statusChangedAt = Instant.now();
+             String withdrawalUri = format(WITHDRAWAL_URI_TEMPLATE, companyNumber, withdrawalId);
+             Consumer<CallbackResult> resultHandler = createWithdrawalCallbackResultHandler(updatedWithdrawal, statusChangedAt);
+             hmrcCallbackService.sendWithdrawalOutcomeCallback(withdrawalId, companyNumber, withdrawalUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
         }
+    }
+
+    /**
+     * Creates a result handler for withdrawal callbacks that persists the callback status to MongoDB.
+     *
+     * @param document the withdrawal document to update
+     * @param callbackStatusChangedAt the timestamp when the status update was initiated
+     * @return a Consumer that updates and persists callback status
+     */
+     private Consumer<CallbackResult> createWithdrawalCallbackResultHandler(WithdrawalDocument document, Instant callbackStatusChangedAt) {
+         return callbackResult -> {
+            if (callbackResult.isSuccess()) {
+                // Callback succeeded
+                CallbackStatusTracker.markCallbackSuccess(document, callbackResult.getCorrelationId(), callbackStatusChangedAt);
+                LOGGER.info(format("HMRC callback succeeded: withdrawalId=%s, correlationId=%s, attempt=%d",
+                        document.getWithdrawalId(), callbackResult.getCorrelationId(), callbackResult.getAttemptNumber()));
+            } else {
+                // Callback failed after all retries
+                CallbackStatusTracker.markCallbackFailed(document, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
+                LOGGER.error(format("HMRC callback failed permanently: withdrawalId=%s, failureReason=%s, attempt=%d",
+                        document.getWithdrawalId(), callbackResult.getFailureReason(), callbackResult.getAttemptNumber()));
+            }
+            withdrawalRepository.save(document);
+        };
     }
 
     private static WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {

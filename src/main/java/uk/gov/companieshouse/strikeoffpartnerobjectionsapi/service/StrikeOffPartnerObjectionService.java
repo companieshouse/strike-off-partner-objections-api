@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
@@ -33,16 +35,24 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  *
  * <p>Handles creation, retrieval, and processing status updates for objection records.
  * On creation, the objection is persisted to MongoDB and a Kafka event is published.
- * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.</p>
+ * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
+ * On status update, an HMRC callback notification is triggered asynchronously after
+ * the record is successfully updated in MongoDB.</p>
  */
 @Service
 public class StrikeOffPartnerObjectionService {
+
+    private static final String OBJECTION_URI_TEMPLATE = "/company/%s/strike-off/objections/%s";
+    private static final int CALLBACK_STATUS_MAX_RETRIES = 3;
+    private static final long CALLBACK_STATUS_INITIAL_DELAY_MILLIS = 100;
+    private static final double CALLBACK_STATUS_BACKOFF_MULTIPLIER = 2.0;
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
+    private final HmrcCallbackService hmrcCallbackService;
 
     @Autowired
     public StrikeOffPartnerObjectionService(
@@ -50,12 +60,14 @@ public class StrikeOffPartnerObjectionService {
             ObjectionRequestMapper objectionRequestMapper,
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
-            CompanyValidator companyValidator) {
+            CompanyValidator companyValidator,
+            HmrcCallbackService hmrcCallbackService) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
+        this.hmrcCallbackService = hmrcCallbackService;
     }
 
     /**
@@ -173,7 +185,9 @@ public class StrikeOffPartnerObjectionService {
      *   <li>OBJECTION_SUBMITTED → OBJECTION_PROCESSING</li>
      *   <li>OBJECTION_PROCESSING → OBJECTION_ACCEPTED or OBJECTION_REJECTED</li>
      * </ul>
-     * Terminal statuses (ACCEPTED, REJECTED) cannot be changed.</p>
+     * Terminal statuses (ACCEPTED, REJECTED) cannot be changed.
+     * After successful status update, an HMRC callback notification is triggered
+     * asynchronously. Callback failures do not block the API response.</p>
      *
      * @param companyNumber       the company number the objection belongs to
      * @param objectionId         the unique objection identifier
@@ -214,16 +228,104 @@ public class StrikeOffPartnerObjectionService {
         }
 
         existingDocument.setProcessingStatus(requestedStatus.getValue());
-        existingDocument.setProcessingStatusChangedAt(Instant.now());
+        Instant statusChangedAt = Instant.now();
+        existingDocument.setProcessingStatusChangedAt(statusChangedAt);
         existingDocument.setEtag(objectionRequestMapper.getEtag());
 
         try {
             ObjectionDocument updatedObjection = objectionRepository.save(existingDocument);
             LOGGER.info(format("Objection processing status updated successfully: objectionId=%s, companyNumber=%s",
                     updatedObjection.getObjectionId(), updatedObjection.getCompanyNumber()));
+
+            // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
+            String objectionsUri = format(OBJECTION_URI_TEMPLATE, companyNumber, objectionId);
+            Consumer<CallbackResult> resultHandler = createObjectionCallbackResultHandler(updatedObjection, statusChangedAt);
+            hmrcCallbackService.sendObjectionOutcomeCallback(objectionId, companyNumber, objectionsUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist updated objection processing status", ex);
         }
+    }
+
+    /**
+     * Creates a result handler for objection callbacks that persists the callback status to MongoDB.
+     *
+     * <p>Reloads the document from MongoDB before updating callback status to mitigate against
+     * concurrent modifications during asynchronous callback processing. Implements retry logic
+     * with exponential backoff to handle transient persistence failures.</p>
+     *
+     * @param document the objection document to update
+     * @param callbackStatusChangedAt the timestamp when the status update was initiated
+     * @return a Consumer that updates and persists callback status
+     */
+     private Consumer<CallbackResult> createObjectionCallbackResultHandler(ObjectionDocument document, Instant callbackStatusChangedAt) {
+         return callbackResult -> {
+            // Reload document from MongoDB to mitigate concurrent modifications
+            ObjectionDocument freshDocument = objectionRepository
+                    .findByCompanyNumberAndObjectionId(
+                            document.getCompanyNumber(),
+                            document.getObjectionId())
+                    .orElseThrow(() -> new ObjectionNotFoundException(
+                            format("Objection not found: objectionId=%s", document.getObjectionId())));
+
+            if (callbackResult.isSuccess()) {
+                // Callback succeeded
+                CallbackStatusTracker.markCallbackSuccess(freshDocument, callbackResult.getCorrelationId(), callbackStatusChangedAt);
+                LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s, attempt=%d",
+                        freshDocument.getObjectionId(), callbackResult.getCorrelationId(), callbackResult.getAttemptNumber()));
+            } else {
+                // Callback failed after all retries
+                CallbackStatusTracker.markCallbackFailed(freshDocument, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
+                LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, failureReason=%s, attempt=%d",
+                        freshDocument.getObjectionId(), callbackResult.getFailureReason(), callbackResult.getAttemptNumber()));
+            }
+            persistCallbackStatusWithRetry(freshDocument, freshDocument.getObjectionId());
+        };
+    }
+
+    /**
+     * Persists callback status to MongoDB with retry logic and exponential backoff.
+     *
+     * <p>Attempts to save the document up to CALLBACK_STATUS_MAX_RETRIES times, with exponential
+     * backoff between attempts. This ensures transient database failures do not result in lost
+     * callback outcomes.</p>
+     *
+     * @param document the objection document to persist
+     * @param objectionId the objection ID for logging
+     * @throws ObjectionPersistenceException if persistence fails after all retry attempts
+     */
+    private void persistCallbackStatusWithRetry(ObjectionDocument document, String objectionId) {
+        DataAccessException lastException = null;
+
+        for (int attempt = 0; attempt < CALLBACK_STATUS_MAX_RETRIES; attempt++) {
+            try {
+                objectionRepository.save(document);
+                LOGGER.info(format("Callback status persisted successfully: objectionId=%s, attempt=%d",
+                        objectionId, attempt + 1));
+                return;
+            } catch (DataAccessException ex) {
+                lastException = ex;
+                if (attempt < CALLBACK_STATUS_MAX_RETRIES - 1) {
+                    long delayMillis = (long) (CALLBACK_STATUS_INITIAL_DELAY_MILLIS * Math.pow(CALLBACK_STATUS_BACKOFF_MULTIPLIER, attempt));
+                    LOGGER.info(format("Failed to persist callback status (attempt %d/%d): objectionId=%s, retrying in %dms",
+                            attempt + 1, CALLBACK_STATUS_MAX_RETRIES, objectionId, delayMillis));
+                    try {
+                        Thread.sleep(delayMillis);
+                    } catch (InterruptedException ie) {
+                        LOGGER.error(format("Interrupted whilst waiting for callback status persistence retry: objectionId=%s",
+                                objectionId), ie);
+                        Thread.currentThread().interrupt();
+                        throw new ObjectionPersistenceException("Failed to persist callback status: interrupted during retry", ie);
+                    }
+                }
+            }
+        }
+
+        // All retries exhausted
+        LOGGER.error(format("Failed to persist callback status after %d attempts: objectionId=%s",
+                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
+        throw new ObjectionPersistenceException(format(
+                "Failed to persist callback status after %d retries for objectionId=%s",
+                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
     }
 
     private static ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
