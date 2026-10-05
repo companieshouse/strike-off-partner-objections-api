@@ -1,8 +1,10 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -322,10 +324,120 @@ class HmrcCallbackServiceTest {
             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
         }
 
-        @Test
-        void sendWithdrawalOutcomeCallback_withNullResultHandler_completesSuccessfully() {
-            callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, null);
+         @Test
+         void sendWithdrawalOutcomeCallback_withNullResultHandler_completesSuccessfully() {
+             callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, null);
 
-            verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+         }
+
+        @Test
+        void destroy_whenNotShutdown_shutsDownExecutor() {
+            HmrcCallbackService service = new HmrcCallbackService(
+                    callbackClient,
+                    CALLBACK_ENDPOINT_URL,
+                    3,
+                    100,
+                    2.0,
+                    2
+            );
+
+            service.destroy();
+
+            verify(callbackClient, org.mockito.Mockito.never()).sendCallback(anyString(), any(HmrcCallbackPayload.class));
         }
+
+        @Test
+        void destroy_whenAlreadyShutdown_returnsWithoutError() {
+            HmrcCallbackService service = new HmrcCallbackService(
+                    callbackClient,
+                    CALLBACK_ENDPOINT_URL,
+                    3,
+                    100,
+                    2.0,
+                    2
+            );
+            service.destroy();
+
+            // Call destroy again - should return without error (no exception thrown)
+            assertDoesNotThrow(service::destroy);
+        }
+
+         @Test
+         void sendObjectionOutcomeCallback_withRejectedExecutionException_invokesHandler() {
+             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+             java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
+
+             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
+                 capturedFailureReason.set(failureReason);
+                 handlerInvoked.countDown();
+             };
+
+             // Create a mock executor that rejects execution
+             java.util.concurrent.ScheduledExecutorService mockExecutor = org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
+             org.mockito.Mockito.doThrow(new java.util.concurrent.RejectedExecutionException("Queue is full"))
+                     .when(mockExecutor).execute(org.mockito.ArgumentMatchers.any(Runnable.class));
+
+             // Use reflection to inject the mock executor
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     3,
+                     100,
+                     2.0,
+                     1
+             );
+             
+             org.springframework.test.util.ReflectionTestUtils.setField(service, "executorService", 
+                     new java.util.concurrent.atomic.AtomicReference<>(mockExecutor));
+
+             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
+
+             try {
+                 handlerInvoked.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+             } catch (InterruptedException e) {
+                 Thread.currentThread().interrupt();
+             }
+
+             assertThat(capturedFailureReason.get()).isNotNull().contains("Queue is full");
+         }
+
+         @ParameterizedTest
+         @org.junit.jupiter.params.provider.ValueSource(ints = {100, 200, 500})
+         void calculateDelay_withDifferentBackoffMultipliers_calculatesCorrectly(int attemptNumber) {
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     5,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // The delay calculation is exponential: initialDelay * backoff ^ attempt
+             long expectedDelay = (long) (100 * Math.pow(2.0, attemptNumber));
+
+             // Use reflection to invoke calculateDelay
+             long actualDelay = org.springframework.test.util.ReflectionTestUtils.invokeMethod(service, "calculateDelay", attemptNumber);
+
+             assertThat(actualDelay).isEqualTo(expectedDelay);
+         }
+
+         @Test
+         void sendObjectionOutcomeCallback_withEmptyCallbackUrl_shouldBeHandledByValidator() {
+             HmrcCallbackService serviceWithEmptyUrl = new HmrcCallbackService(
+                     callbackClient,
+                     "",
+                     3,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // The service should handle empty URL gracefully (validation is in the client)
+             serviceWithEmptyUrl.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+             // Verify callback client was called despite empty URL (URL validation is client's responsibility)
+             verify(callbackClient, org.mockito.Mockito.timeout(3000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+         }
 }

@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -122,5 +125,76 @@ class HmrcOutcomeCallbackClientTest {
 
         // The client should throw RestClientException on non-2xx status codes
         assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {400, 401, 403, 404, 405, 500, 502, 503})
+    void sendCallback_withVariousErrorStatusCodes_throwsRestClientException(int statusCode) {
+        HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
+                "objection-123",
+                "12345678",
+                "/company/12345678/strike-off/objections/objection-123"
+        );
+
+        org.springframework.http.ResponseEntity<Void> errorResponse = new org.springframework.http.ResponseEntity<>(
+                org.springframework.http.HttpStatus.valueOf(statusCode)
+        );
+
+        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
+                .thenReturn(errorResponse);
+
+        assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   "})
+    void sendCallback_withInvalidUrl_throwsIllegalArgumentException(String invalidUrl) {
+        HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
+                "objection-123",
+                "12345678",
+                "/company/12345678/strike-off/objections/objection-123"
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(invalidUrl, payload));
+    }
+
+    @Test
+    void sendCallback_withNullUrl_throwsIllegalArgumentException() {
+        HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
+                "objection-123",
+                "12345678",
+                "/company/12345678/strike-off/objections/objection-123"
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(null, payload));
+    }
+
+    @Test
+    void sendCallback_generatesUniqueCorrelationIds() {
+        HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.WITHDRAWAL,
+                "withdrawal-456",
+                "87654321",
+                "/company/87654321/strike-off/withdrawals/withdrawal-456"
+        );
+
+        org.springframework.http.ResponseEntity<Void> successResponse = new org.springframework.http.ResponseEntity<>(
+                org.springframework.http.HttpStatus.OK
+        );
+
+        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
+                .thenReturn(successResponse);
+
+        String correlationId1 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+        String correlationId2 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+
+        assertThat(correlationId1)
+                .isNotNull()
+                .isNotEqualTo(correlationId2);
+        assertThat(correlationId2)
+                .isNotNull();
     }
 }
