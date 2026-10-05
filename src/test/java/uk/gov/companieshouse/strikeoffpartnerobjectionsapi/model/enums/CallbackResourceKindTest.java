@@ -6,6 +6,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @Tag("unit-test")
 class CallbackResourceKindTest {
@@ -51,6 +53,35 @@ class CallbackResourceKindTest {
     void withdrawal_valueOf_returnsCorrectConstant() {
         assertThat(CallbackResourceKind.valueOf("WITHDRAWAL"))
                 .isEqualTo(CallbackResourceKind.WITHDRAWAL);
+    }
+
+    @Tag("unit-test")
+    static
+    class CallbackStatusTest {
+
+        @Test
+        void testEnumValuesExist() {
+            assertNotNull(CallbackStatus.SUCCESS);
+            assertNotNull(CallbackStatus.FAILED);
+        }
+
+        @Test
+        void testEnumValues() {
+            assertEquals("SUCCESS", CallbackStatus.SUCCESS.name());
+            assertEquals("FAILED", CallbackStatus.FAILED.name());
+        }
+
+        @Test
+        void testEnumValueOf() {
+            assertEquals(CallbackStatus.SUCCESS, CallbackStatus.valueOf("SUCCESS"));
+            assertEquals(CallbackStatus.FAILED, CallbackStatus.valueOf("FAILED"));
+        }
+
+        @Test
+        void testEnumValues_returnsAllValues() {
+            CallbackStatus[] values = CallbackStatus.values();
+            assertEquals(2, values.length);
+        }
     }
 }
 

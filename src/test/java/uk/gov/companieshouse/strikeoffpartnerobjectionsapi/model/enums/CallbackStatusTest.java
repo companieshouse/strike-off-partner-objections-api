@@ -1,4 +1,4 @@
-package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
+package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
