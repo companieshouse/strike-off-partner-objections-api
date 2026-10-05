@@ -2,7 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import java.time.Instant;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +20,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
@@ -238,7 +239,7 @@ public class StrikeOffPartnerObjectionService {
 
             // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
             String objectionsUri = format(OBJECTION_URI_TEMPLATE, companyNumber, objectionId);
-            BiConsumer<String, String> resultHandler = createObjectionCallbackResultHandler(updatedObjection, statusChangedAt);
+            Consumer<CallbackResult> resultHandler = createObjectionCallbackResultHandler(updatedObjection, statusChangedAt);
             hmrcCallbackService.sendObjectionOutcomeCallback(objectionId, companyNumber, objectionsUri, resultHandler);
         } catch (DataAccessException ex) {
             throw new ObjectionPersistenceException("Failed to persist updated objection processing status", ex);
@@ -254,10 +255,10 @@ public class StrikeOffPartnerObjectionService {
      *
      * @param document the objection document to update
      * @param callbackStatusChangedAt the timestamp when the status update was initiated
-     * @return a BiConsumer that updates and persists callback status
+     * @return a Consumer that updates and persists callback status
      */
-    private BiConsumer<String, String> createObjectionCallbackResultHandler(ObjectionDocument document, Instant callbackStatusChangedAt) {
-        return (correlationId, failureReason) -> {
+     private Consumer<CallbackResult> createObjectionCallbackResultHandler(ObjectionDocument document, Instant callbackStatusChangedAt) {
+         return callbackResult -> {
             // Reload document from MongoDB to mitigate concurrent modifications
             ObjectionDocument freshDocument = objectionRepository
                     .findByCompanyNumberAndObjectionId(
@@ -266,16 +267,16 @@ public class StrikeOffPartnerObjectionService {
                     .orElseThrow(() -> new ObjectionNotFoundException(
                             format("Objection not found: objectionId=%s", document.getObjectionId())));
 
-            if (failureReason == null) {
+            if (callbackResult.isSuccess()) {
                 // Callback succeeded
-                CallbackStatusTracker.markCallbackSuccess(freshDocument, correlationId, callbackStatusChangedAt);
-                LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s",
-                        freshDocument.getObjectionId(), correlationId));
+                CallbackStatusTracker.markCallbackSuccess(freshDocument, callbackResult.getCorrelationId(), callbackStatusChangedAt);
+                LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s, attempt=%d",
+                        freshDocument.getObjectionId(), callbackResult.getCorrelationId(), callbackResult.getAttemptNumber()));
             } else {
                 // Callback failed after all retries
-                CallbackStatusTracker.markCallbackFailed(freshDocument, correlationId, failureReason, callbackStatusChangedAt);
-                LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, reason=%s",
-                        freshDocument.getObjectionId(), failureReason));
+                CallbackStatusTracker.markCallbackFailed(freshDocument, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
+                LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, failureReason=%s, attempt=%d",
+                        freshDocument.getObjectionId(), callbackResult.getFailureReason(), callbackResult.getAttemptNumber()));
             }
             persistCallbackStatusWithRetry(freshDocument, freshDocument.getObjectionId());
         };

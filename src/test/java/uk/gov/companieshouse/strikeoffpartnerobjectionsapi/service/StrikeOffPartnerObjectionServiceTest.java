@@ -18,7 +18,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -47,6 +47,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.ObjectionKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionRequestMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
@@ -549,25 +550,25 @@ class StrikeOffPartnerObjectionServiceTest {
           verifyNoInteractions(hmrcCallbackService);
       }
 
-     @Test
-     void updateObjectionProcessingStatus_callbackResultHandlerSuccessPath() {
-         String companyNumber = "12345";
-         String objectionId = "objection-callback-success";
-         ObjectionDocument existing = createObjectionDocument("objection-submitted", objectionId, companyNumber);
+      @Test
+      void updateObjectionProcessingStatus_callbackResultHandlerSuccessPath() {
+          String companyNumber = "12345";
+          String objectionId = "objection-callback-success";
+          ObjectionDocument existing = createObjectionDocument("objection-submitted", objectionId, companyNumber);
 
-         setupUpdateStatusMocks(companyNumber, objectionId, existing, "etag-callback-test");
+          setupUpdateStatusMocks(companyNumber, objectionId, existing, "etag-callback-test");
 
-         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
-                 companyNumber, objectionId,
-                 createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_PROCESSING));
+          strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                  companyNumber, objectionId,
+                  createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_PROCESSING));
 
-         BiConsumer<String, String> handler = captureCallbackHandler();
+          Consumer<CallbackResult> handler = captureCallbackHandler();
 
-         // Test the result handler with success scenario
-         handler.accept("correlation-123", null);
+          // Test the result handler with success scenario
+          handler.accept(new CallbackResult("correlation-123", 1));
 
-         ArgumentCaptor<ObjectionDocument> documentCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
-         verify(objectionRepository, times(2)).save(documentCaptor.capture());
+          ArgumentCaptor<ObjectionDocument> documentCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
+          verify(objectionRepository, times(2)).save(documentCaptor.capture());
 
          ObjectionDocument savedDoc = documentCaptor.getAllValues().get(1);
          assertThat(savedDoc.getCallbackCorrelationId()).isEqualTo("correlation-123");
@@ -585,16 +586,16 @@ class StrikeOffPartnerObjectionServiceTest {
                  companyNumber, objectionId,
                  createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_ACCEPTED));
 
-         BiConsumer<String, String> handler = captureCallbackHandler();
+         Consumer<CallbackResult> handler = captureCallbackHandler();
 
          // Test the result handler with failure scenario
-         handler.accept("correlation-failure", "Connection timeout");
+         handler.accept(new CallbackResult(3, "Connection timeout"));
 
          ArgumentCaptor<ObjectionDocument> documentCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
          verify(objectionRepository, times(2)).save(documentCaptor.capture());
 
          ObjectionDocument savedDoc = documentCaptor.getAllValues().get(1);
-         assertThat(savedDoc.getCallbackCorrelationId()).isEqualTo("correlation-failure");
+         assertThat(savedDoc.getCallbackCorrelationId()).isNull();
      }
 
      @Test
@@ -609,17 +610,43 @@ class StrikeOffPartnerObjectionServiceTest {
                  companyNumber, objectionId,
                  createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_REJECTED));
 
-         BiConsumer<String, String> handler = captureCallbackHandler();
+          Consumer<CallbackResult> handler = captureCallbackHandler();
 
-         // Test the result handler when persistence fails - exception should propagate
-         when(objectionRepository.save(any(ObjectionDocument.class)))
-                 .thenThrow(new DataAccessResourceFailureException("Save failed"));
+          // Test the result handler when persistence fails - exception should propagate
+          when(objectionRepository.save(any(ObjectionDocument.class)))
+                  .thenThrow(new DataAccessResourceFailureException("Save failed"));
 
-         // Handler should throw exception so HmrcCallbackService can detect failure
-         assertThatThrownBy(() -> handler.accept("correlation-persist", null))
-                 .isInstanceOf(ObjectionPersistenceException.class)
-                 .hasMessageContaining("Failed to persist callback status after");
-      }
+          // Handler should throw exception so HmrcCallbackService can detect failure
+          CallbackResult callbackResult = new CallbackResult("correlation-persist", 1);
+          assertThatThrownBy(() -> handler.accept(callbackResult))
+                  .isInstanceOf(ObjectionPersistenceException.class)
+                  .hasMessageContaining("Failed to persist callback status after");
+       }
+
+      @Test
+      void updateObjectionProcessingStatus_callbackResultHandlerObjectionNotFound() {
+          String companyNumber = "12345";
+          String objectionId = "objection-callback-not-found";
+          ObjectionDocument existing = createObjectionDocument("objection-processing", objectionId, companyNumber);
+
+          setupUpdateStatusMocks(companyNumber, objectionId, existing, "etag-not-found-test");
+
+          strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                  companyNumber, objectionId,
+                  createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_REJECTED));
+
+          Consumer<CallbackResult> handler = captureCallbackHandler();
+
+          // Test the result handler when objection is not found - exception should propagate
+          when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
+                  .thenReturn(Optional.empty());
+
+          // Handler should throw exception so HmrcCallbackService can detect failure
+          CallbackResult callbackResultNotFound = new CallbackResult("correlation-not-found", 1);
+          assertThatThrownBy(() -> handler.accept(callbackResultNotFound))
+                  .isInstanceOf(ObjectionNotFoundException.class)
+                  .hasMessageContaining("Objection not found");
+       }
 
       @Test
       void parseCurrentStatus_whenStatusIsNull_throwsInternalServerError() {
@@ -707,9 +734,9 @@ class StrikeOffPartnerObjectionServiceTest {
      }
 
      @SuppressWarnings("unchecked")
-     private BiConsumer<String, String> captureCallbackHandler() {
-         ArgumentCaptor<BiConsumer<String, String>> handlerCaptor =
-                 ArgumentCaptor.forClass(BiConsumer.class);
+     private Consumer<CallbackResult> captureCallbackHandler() {
+         ArgumentCaptor<Consumer<CallbackResult>> handlerCaptor =
+                 ArgumentCaptor.forClass(Consumer.class);
          verify(hmrcCallbackService).sendObjectionOutcomeCallback(
                  anyString(),
                  anyString(),

@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
@@ -198,43 +199,49 @@ class HmrcCallbackServiceTest {
             verify(callbackClient, timeout(5000).times(3)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
         }
 
-         @Test
-         void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
-             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
-             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+          @Test
+          void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
+              java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
+              java.util.concurrent.atomic.AtomicReference<Integer> capturedAttemptNumber = new java.util.concurrent.atomic.AtomicReference<>();
+              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
 
-             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
-                 capturedCorrelationId.set(correlationId);
-                 capturedFailureReason.set(failureReason);
-             };
+              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+                  capturedCorrelationId.set(result.getCorrelationId());
+                  capturedAttemptNumber.set(result.getAttemptNumber());
+                  capturedFailureReason.set(result.getFailureReason());
+              };
 
-             when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("correlation-123");
+              when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("correlation-123");
 
-             callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
+              callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
-             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
-             assertEquals("correlation-123", capturedCorrelationId.get());
-             assertNull(capturedFailureReason.get());
-         }
+              verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+              assertEquals("correlation-123", capturedCorrelationId.get());
+              assertEquals(1, capturedAttemptNumber.get());
+              assertNull(capturedFailureReason.get());
+          }
 
-         @Test
-         void sendWithdrawalOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
-             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
-             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+          @Test
+          void sendWithdrawalOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
+              java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
+              java.util.concurrent.atomic.AtomicReference<Integer> capturedAttemptNumber = new java.util.concurrent.atomic.AtomicReference<>();
+              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
 
-             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
-                 capturedCorrelationId.set(correlationId);
-                 capturedFailureReason.set(failureReason);
-             };
+              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+                  capturedCorrelationId.set(result.getCorrelationId());
+                  capturedAttemptNumber.set(result.getAttemptNumber());
+                  capturedFailureReason.set(result.getFailureReason());
+              };
 
-             when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("withdrawal-correlation-456");
+              when(callbackClient.sendCallback(anyString(), any(HmrcCallbackPayload.class))).thenReturn("withdrawal-correlation-456");
 
-             callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, resultHandler);
+              callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI, resultHandler);
 
-             verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
-             assertEquals("withdrawal-correlation-456", capturedCorrelationId.get());
-             assertNull(capturedFailureReason.get());
-         }
+              verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+              assertEquals("withdrawal-correlation-456", capturedCorrelationId.get());
+              assertEquals(1, capturedAttemptNumber.get());
+              assertNull(capturedFailureReason.get());
+          }
 
          @Test
          void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnFailureAfterRetries() {
@@ -242,9 +249,9 @@ class HmrcCallbackServiceTest {
              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
              java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
 
-             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
-                 capturedCorrelationId.set(correlationId);
-                 capturedFailureReason.set(failureReason);
+             java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+                 capturedCorrelationId.set(result.getCorrelationId());
+                 capturedFailureReason.set(result.getFailureReason());
                  handlerInvoked.countDown();
              };
 
@@ -363,35 +370,35 @@ class HmrcCallbackServiceTest {
             assertDoesNotThrow(service::destroy);
         }
 
-         @Test
-         void sendObjectionOutcomeCallback_withRejectedExecutionException_invokesHandler() {
-             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
-             java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
+          @Test
+          void sendObjectionOutcomeCallback_withRejectedExecutionException_invokesHandler() {
+              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+              java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
 
-             java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
-                 capturedFailureReason.set(failureReason);
-                 handlerInvoked.countDown();
-             };
+              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+                  capturedFailureReason.set(result.getFailureReason());
+                  handlerInvoked.countDown();
+              };
 
-             // Create a mock executor that rejects execution
-             java.util.concurrent.ScheduledExecutorService mockExecutor = org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
-             org.mockito.Mockito.doThrow(new java.util.concurrent.RejectedExecutionException("Queue is full"))
-                     .when(mockExecutor).execute(org.mockito.ArgumentMatchers.any(Runnable.class));
+              // Create a mock executor that rejects execution
+              java.util.concurrent.ScheduledExecutorService mockExecutor = org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
+              org.mockito.Mockito.doThrow(new java.util.concurrent.RejectedExecutionException("Queue is full"))
+                      .when(mockExecutor).execute(org.mockito.ArgumentMatchers.any(Runnable.class));
 
-             // Use reflection to inject the mock executor
-             HmrcCallbackService service = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     3,
-                     100,
-                     2.0,
-                     1
-             );
-             
-             org.springframework.test.util.ReflectionTestUtils.setField(service, "executorService", 
-                     new java.util.concurrent.atomic.AtomicReference<>(mockExecutor));
+              // Use reflection to inject the mock executor
+              HmrcCallbackService service = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      3,
+                      100,
+                      2.0,
+                      1
+              );
 
-             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
+              org.springframework.test.util.ReflectionTestUtils.setField(service, "executorService",
+                      new java.util.concurrent.atomic.AtomicReference<>(mockExecutor));
+
+              service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
              try {
                  if (!handlerInvoked.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
