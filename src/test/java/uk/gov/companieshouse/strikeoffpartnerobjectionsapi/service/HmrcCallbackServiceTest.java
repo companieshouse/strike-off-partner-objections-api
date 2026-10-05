@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -237,10 +238,12 @@ class HmrcCallbackServiceTest {
          void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnFailureAfterRetries() {
              java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+             java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
 
              java.util.function.BiConsumer<String, String> resultHandler = (correlationId, failureReason) -> {
                  capturedCorrelationId.set(correlationId);
                  capturedFailureReason.set(failureReason);
+                 handlerInvoked.countDown();
              };
 
              doThrow(new RestClientException("Permanent failure")).when(callbackClient)
@@ -258,6 +261,17 @@ class HmrcCallbackServiceTest {
              serviceWithLimitedRetries.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
              verify(callbackClient, timeout(3000).times(2)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+
+             // Wait for the result handler to be invoked before asserting
+             try {
+                 if (!handlerInvoked.await(3000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                     fail("Result handler was not invoked within 3000ms");
+                 }
+             } catch (InterruptedException e) {
+                 Thread.currentThread().interrupt();
+                 fail("Test interrupted while waiting for handler invocation");
+             }
+
              assertNull(capturedCorrelationId.get());
              assertEquals("Permanent failure", capturedFailureReason.get());
          }
