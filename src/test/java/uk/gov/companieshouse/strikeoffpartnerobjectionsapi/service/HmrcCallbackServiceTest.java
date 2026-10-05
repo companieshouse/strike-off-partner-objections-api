@@ -394,9 +394,12 @@ class HmrcCallbackServiceTest {
              service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
              try {
-                 handlerInvoked.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+                 if (!handlerInvoked.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                     fail("Result handler was not invoked within timeout");
+                 }
              } catch (InterruptedException e) {
                  Thread.currentThread().interrupt();
+                 fail("Test interrupted while waiting for handler");
              }
 
              assertThat(capturedFailureReason.get()).isNotNull().contains("Queue is full");
@@ -418,7 +421,9 @@ class HmrcCallbackServiceTest {
              long expectedDelay = (long) (100 * Math.pow(2.0, attemptNumber));
 
              // Use reflection to invoke calculateDelay
-             long actualDelay = org.springframework.test.util.ReflectionTestUtils.invokeMethod(service, "calculateDelay", attemptNumber);
+             Object result = org.springframework.test.util.ReflectionTestUtils.invokeMethod(service, "calculateDelay", attemptNumber);
+             assertThat(result).isNotNull();
+             long actualDelay = (Long) result;
 
              assertThat(actualDelay).isEqualTo(expectedDelay);
          }
