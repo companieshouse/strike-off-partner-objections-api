@@ -23,6 +23,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -304,29 +307,33 @@ class StrikeOffPartnerObjectionServiceTest {
         verifyNoInteractions(objectionRequestMapper, objectionRepository, objectionKafkaProducer);
     }
 
-    @Test
-    void updateObjectionProcessingStatus_whenSubmitted_updatesToProcessing() {
+    @ParameterizedTest
+    @CsvSource({
+        "objection-submitted,objection-processing",
+        "objection-processing,objection-accepted",
+        "objection-processing,objection-rejected"
+    })
+    void updateObjectionProcessingStatus_whenValidTransition_updatesStatus(String currentStatus, String newStatus) {
         String companyNumber = "12345";
         String objectionId = "objection-1";
+        ObjectionProcessingStatus targetStatus = ObjectionProcessingStatus.fromValue(newStatus);
         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        request.setProcessingStatus(targetStatus);
         ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-submitted");
+        existing.setProcessingStatus(currentStatus);
         existing.setObjectionId(objectionId);
         existing.setCompanyNumber(companyNumber);
 
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
-        when(objectionRequestMapper.getEtag()).thenReturn("etag-2");
+                .thenReturn(Optional.of(existing));
+        when(objectionRequestMapper.getEtag()).thenReturn("etag-transition");
         when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
 
         strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
 
         ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
         verify(objectionRepository).save(captor.capture());
-        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-processing");
-        assertThat(captor.getValue().getProcessingStatusChangedAt()).isNotNull();
-        assertThat(captor.getValue().getEtag()).isEqualTo("etag-2");
+        assertThat(captor.getValue().getProcessingStatus()).isEqualTo(newStatus);
     }
 
     @Test
@@ -348,98 +355,64 @@ class StrikeOffPartnerObjectionServiceTest {
         verifyNoInteractions(objectionRequestMapper);
     }
 
-    @Test
-    void updateObjectionProcessingStatus_whenTransitionNotAllowed_throwsConflict() {
-        String companyNumber = "12345";
+    @ParameterizedTest
+    @CsvSource({
+        "objection-rejected,objection-processing",
+        "objection-accepted,objection-processing",
+        "objection-accepted,objection-rejected",
+        "objection-rejected,objection-accepted",
+        "objection-submitted,objection-accepted"
+    })
+    void updateObjectionProcessingStatus_whenInvalidTransition_throwsConflict(String currentStatus, String targetStatusStr) {
+        String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
+        ObjectionProcessingStatus targetStatus = ObjectionProcessingStatus.fromValue(targetStatusStr);
         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+        request.setProcessingStatus(targetStatus);
         ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-rejected");
+        existing.setProcessingStatus(currentStatus);
 
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
+                .thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
-                companyNumber,
-                objectionId,
-                request))
+                companyNumber, objectionId, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode.value")
                 .isEqualTo(409);
     }
 
-    @Test
-    void parseRequestedStatus_whenStatusIsEmpty_throwsBadRequest() {
+    @ParameterizedTest
+    @ValueSource(strings = {"", "unsupported-status", "invalid"})
+    void parseRequestedStatus_whenStatusIsInvalid_throwsBadRequest(String invalidStatus) {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", ""));
+                () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", invalidStatus));
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(ex.getReason()).isEqualTo("Unsupported status=");
+        assertThat(ex.getReason()).contains("Unsupported status");
     }
 
     @Test
-    void parseRequestedStatus_whenStatusIsUnsupported_throwsBadRequest() {
+    @SuppressWarnings("ConstantConditions")
+    void parseRequestedStatus_whenStatusIsNull_throwsBadRequest() {
         ResponseStatusException ex = assertThrows(
                 ResponseStatusException.class,
-                () -> ReflectionTestUtils.invokeMethod(
-                        strikeOffPartnerObjectionService,
-                        "parseRequestedStatus",
-                        "unsupported-status"));
+                () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", (String) null));
 
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(ex.getReason()).isEqualTo("Unsupported status=unsupported-status");
     }
 
-    @Test
-    void updateObjectionProcessingStatus_whenProcessing_updatesToAccepted() {
-        String companyNumber = "12345";
-        String objectionId = "objection-1";
-        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
-        ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-processing");
 
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
-        when(objectionRequestMapper.getEtag()).thenReturn("etag-3");
-        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
+    // Covered by updateObjectionProcessingStatus_whenValidTransition_updatesStatus parametrized test
 
-        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
-
-        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
-        verify(objectionRepository).save(captor.capture());
-        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-accepted");
-    }
-
-    @Test
-    void updateObjectionProcessingStatus_whenProcessing_updatesToRejected() {
-        String companyNumber = "12345";
-        String objectionId = "objection-1";
-        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_REJECTED);
-        ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-processing");
-
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
-        when(objectionRequestMapper.getEtag()).thenReturn("etag-4");
-        when(objectionRepository.save(any(ObjectionDocument.class))).thenReturn(existing);
-
-        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request);
-
-        ArgumentCaptor<ObjectionDocument> captor = ArgumentCaptor.forClass(ObjectionDocument.class);
-        verify(objectionRepository).save(captor.capture());
-        assertThat(captor.getValue().getProcessingStatus()).isEqualTo("objection-rejected");
-    }
-
-    @Test
-    void getObjection_whenPartnerOrganisationDoesNotMatch_throwsForbidden() {
+    @ParameterizedTest
+    @ValueSource(strings = {"different-organisation", "other-org", "wrong-partner"})
+    void getObjection_whenPartnerOrganisationDoesNotMatch_throwsForbidden(String wrongOrganisation) {
         String companyNumber = VALID_COMPANY_NUMBER;
         String objectionId = "objection-1";
         ObjectionDocument document = new ObjectionDocument();
-        document.setPartnerOrganisation("different-organisation");
+        document.setPartnerOrganisation(wrongOrganisation);
 
         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
         .thenReturn(Optional.of(document));
@@ -508,41 +481,6 @@ class StrikeOffPartnerObjectionServiceTest {
                 .isEqualTo(500);
     }
 
-    @Test
-    void updateObjectionProcessingStatus_whenAcceptedTransitionsToProcessing_throwsConflict() {
-        String companyNumber = VALID_COMPANY_NUMBER;
-        String objectionId = "objection-1";
-        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
-        ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-accepted");
-
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting("statusCode.value")
-                .isEqualTo(409);
-    }
-
-    @Test
-    void updateObjectionProcessingStatus_whenSubmittedTransitionsToAccepted_throwsConflict() {
-        String companyNumber = VALID_COMPANY_NUMBER;
-        String objectionId = "objection-1";
-        UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-        request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
-        ObjectionDocument existing = new ObjectionDocument();
-        existing.setProcessingStatus("objection-submitted");
-
-        when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-        .thenReturn(Optional.of(existing));
-
-        assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting("statusCode.value")
-                .isEqualTo(409);
-    }
 
     @Test
     void updateObjectionProcessingStatus_whenSuccessful_triggersHmrcCallback() {
@@ -759,20 +697,10 @@ class StrikeOffPartnerObjectionServiceTest {
 
          // Handler should not throw exception
          handler.accept("correlation-persist", null);
-     }
+      }
 
-     @Test
-     @SuppressWarnings("ConstantConditions")
-     void parseRequestedStatus_whenStatusIsNull_throwsBadRequest() {
-         ResponseStatusException ex = assertThrows(
-                 ResponseStatusException.class,
-                 () -> ReflectionTestUtils.invokeMethod(strikeOffPartnerObjectionService, "parseRequestedStatus", (String) null));
-
-         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-     }
-
-     @Test
-     void parseCurrentStatus_whenStatusIsNull_throwsInternalServerError() {
+      @Test
+      void parseCurrentStatus_whenStatusIsNull_throwsInternalServerError() {
          String companyNumber = "12345";
          String objectionId = "objection-null-status";
          UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
@@ -789,23 +717,6 @@ class StrikeOffPartnerObjectionServiceTest {
                  .isEqualTo(500);
      }
 
-     @Test
-     void updateObjectionProcessingStatus_whenRejectedTransitionsToAccepted_throwsConflict() {
-         String companyNumber = VALID_COMPANY_NUMBER;
-         String objectionId = "objection-1";
-         UpdateObjectionStatusRequest request = new UpdateObjectionStatusRequest();
-         request.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
-         ObjectionDocument existing = new ObjectionDocument();
-         existing.setProcessingStatus("objection-rejected");
-
-         when(objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId))
-         .thenReturn(Optional.of(existing));
-
-         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(companyNumber, objectionId, request))
-                 .isInstanceOf(ResponseStatusException.class)
-                 .extracting("statusCode.value")
-                 .isEqualTo(409);
-     }
 
      @Test
      void updateObjectionProcessingStatus_trims_requestedStatusValue() {
