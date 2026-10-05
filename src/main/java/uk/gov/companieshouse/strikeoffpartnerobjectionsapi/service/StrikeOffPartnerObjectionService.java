@@ -42,6 +42,9 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class StrikeOffPartnerObjectionService {
 
     private static final String OBJECTION_URI_TEMPLATE = "/company/%s/strike-off/objections/%s";
+    private static final int CALLBACK_STATUS_MAX_RETRIES = 3;
+    private static final long CALLBACK_STATUS_INITIAL_DELAY_MILLIS = 100;
+    private static final double CALLBACK_STATUS_BACKOFF_MULTIPLIER = 2.0;
 
     private final ObjectionRepository objectionRepository;
     private final ObjectionRequestMapper objectionRequestMapper;
@@ -246,7 +249,8 @@ public class StrikeOffPartnerObjectionService {
      * Creates a result handler for objection callbacks that persists the callback status to MongoDB.
      *
      * <p>Reloads the document from MongoDB before updating callback status to mitigate against
-     * concurrent modifications during asynchronous callback processing.</p>
+     * concurrent modifications during asynchronous callback processing. Implements retry logic
+     * with exponential backoff to handle transient persistence failures.</p>
      *
      * @param document the objection document to update
      * @param callbackStatusChangedAt the timestamp when the status update was initiated
@@ -274,15 +278,61 @@ public class StrikeOffPartnerObjectionService {
                     LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, reason=%s",
                             freshDocument.getObjectionId(), failureReason));
                 }
-                objectionRepository.save(freshDocument);
-            } catch (DataAccessException ex) {
-                LOGGER.error(format("Failed to persist callback status for objection: objectionId=%s",
-                        document.getObjectionId()), ex);
+                persistCallbackStatusWithRetry(freshDocument, freshDocument.getObjectionId());
             } catch (ObjectionNotFoundException ex) {
                 LOGGER.error(format("Cannot update callback status: objection not found during callback handling: objectionId=%s",
                         document.getObjectionId()), ex);
+            } catch (ObjectionPersistenceException ex) {
+                LOGGER.error(format("Callback status persistence failed after all retries: objectionId=%s",
+                        document.getObjectionId()), ex);
             }
         };
+    }
+
+    /**
+     * Persists callback status to MongoDB with retry logic and exponential backoff.
+     *
+     * <p>Attempts to save the document up to CALLBACK_STATUS_MAX_RETRIES times, with exponential
+     * backoff between attempts. This ensures transient database failures do not result in lost
+     * callback outcomes.</p>
+     *
+     * @param document the objection document to persist
+     * @param objectionId the objection ID for logging
+     * @throws ObjectionPersistenceException if persistence fails after all retry attempts
+     */
+    private void persistCallbackStatusWithRetry(ObjectionDocument document, String objectionId) {
+        DataAccessException lastException = null;
+
+        for (int attempt = 0; attempt < CALLBACK_STATUS_MAX_RETRIES; attempt++) {
+            try {
+                objectionRepository.save(document);
+                LOGGER.info(format("Callback status persisted successfully: objectionId=%s, attempt=%d",
+                        objectionId, attempt + 1));
+                return;
+            } catch (DataAccessException ex) {
+                lastException = ex;
+                if (attempt < CALLBACK_STATUS_MAX_RETRIES - 1) {
+                    long delayMillis = (long) (CALLBACK_STATUS_INITIAL_DELAY_MILLIS * Math.pow(CALLBACK_STATUS_BACKOFF_MULTIPLIER, attempt));
+                    LOGGER.info(format("Failed to persist callback status (attempt %d/%d): objectionId=%s, retrying in %dms",
+                            attempt + 1, CALLBACK_STATUS_MAX_RETRIES, objectionId, delayMillis));
+                    try {
+                        Thread.sleep(delayMillis);
+                    } catch (InterruptedException ie) {
+                        LOGGER.error(format("Interrupted whilst waiting for callback status persistence retry: objectionId=%s",
+                                objectionId), ie);
+                        Thread.currentThread().interrupt();
+                        throw new ObjectionPersistenceException("Failed to persist callback status: interrupted during retry", ie);
+                    }
+                }
+            }
+        }
+
+        // All retries exhausted
+        LOGGER.error(format("Failed to persist callback status after %d attempts: objectionId=%s",
+                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
+        throw new ObjectionPersistenceException(format(
+                "Failed to persist callback status after %d retries for objectionId=%s",
+                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
     }
 
     private static ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
