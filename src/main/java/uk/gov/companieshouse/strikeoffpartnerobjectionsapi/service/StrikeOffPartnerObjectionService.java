@@ -282,9 +282,6 @@ public class StrikeOffPartnerObjectionService {
             } catch (ObjectionNotFoundException ex) {
                 LOGGER.error(format("Cannot update callback status: objection not found during callback handling: objectionId=%s",
                         document.getObjectionId()), ex);
-            } catch (ObjectionPersistenceException ex) {
-                LOGGER.error(format("Callback status persistence failed after all retries: objectionId=%s",
-                        document.getObjectionId()), ex);
             }
         };
     }

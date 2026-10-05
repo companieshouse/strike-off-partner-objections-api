@@ -611,13 +611,14 @@ class StrikeOffPartnerObjectionServiceTest {
 
          BiConsumer<String, String> handler = captureCallbackHandler();
 
-         // Test the result handler when persistence fails
-
+         // Test the result handler when persistence fails - exception should propagate
          when(objectionRepository.save(any(ObjectionDocument.class)))
                  .thenThrow(new DataAccessResourceFailureException("Save failed"));
 
-         // Handler should not throw exception
-         handler.accept("correlation-persist", null);
+         // Handler should throw exception so HmrcCallbackService can detect failure
+         assertThatThrownBy(() -> handler.accept("correlation-persist", null))
+                 .isInstanceOf(ObjectionPersistenceException.class)
+                 .hasMessageContaining("Failed to persist callback status after");
       }
 
       @Test
