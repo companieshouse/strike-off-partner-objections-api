@@ -245,6 +245,9 @@ public class StrikeOffPartnerObjectionService {
     /**
      * Creates a result handler for objection callbacks that persists the callback status to MongoDB.
      *
+     * <p>Reloads the document from MongoDB before updating callback status to mitigate against
+     * concurrent modifications during asynchronous callback processing.</p>
+     *
      * @param document the objection document to update
      * @param callbackStatusChangedAt the timestamp when the status update was initiated
      * @return a BiConsumer that updates and persists callback status
@@ -252,20 +255,31 @@ public class StrikeOffPartnerObjectionService {
     private BiConsumer<String, String> createObjectionCallbackResultHandler(ObjectionDocument document, Instant callbackStatusChangedAt) {
         return (correlationId, failureReason) -> {
             try {
+                // Reload document from MongoDB to mitigate concurrent modifications
+                ObjectionDocument freshDocument = objectionRepository
+                        .findByCompanyNumberAndObjectionId(
+                                document.getCompanyNumber(),
+                                document.getObjectionId())
+                        .orElseThrow(() -> new ObjectionNotFoundException(
+                                format("Objection not found: objectionId=%s", document.getObjectionId())));
+
                 if (failureReason == null) {
                     // Callback succeeded
-                    CallbackStatusTracker.markCallbackSuccess(document, correlationId, callbackStatusChangedAt);
+                    CallbackStatusTracker.markCallbackSuccess(freshDocument, correlationId, callbackStatusChangedAt);
                     LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s",
-                            document.getObjectionId(), correlationId));
+                            freshDocument.getObjectionId(), correlationId));
                 } else {
                     // Callback failed after all retries
-                    CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason, callbackStatusChangedAt);
+                    CallbackStatusTracker.markCallbackFailed(freshDocument, correlationId, failureReason, callbackStatusChangedAt);
                     LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, reason=%s",
-                            document.getObjectionId(), failureReason));
+                            freshDocument.getObjectionId(), failureReason));
                 }
-                objectionRepository.save(document);
+                objectionRepository.save(freshDocument);
             } catch (DataAccessException ex) {
                 LOGGER.error(format("Failed to persist callback status for objection: objectionId=%s",
+                        document.getObjectionId()), ex);
+            } catch (ObjectionNotFoundException ex) {
+                LOGGER.error(format("Cannot update callback status: objection not found during callback handling: objectionId=%s",
                         document.getObjectionId()), ex);
             }
         };
