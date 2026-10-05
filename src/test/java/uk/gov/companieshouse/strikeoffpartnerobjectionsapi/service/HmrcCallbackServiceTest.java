@@ -470,6 +470,7 @@ class HmrcCallbackServiceTest {
              java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
                      (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
                      .getField(service, "isShuttingDown");
+             assertThat(shutdownFlag).isNotNull();
              assertTrue(shutdownFlag.get(), "Service should be marked as shutting down");
 
              // Verify that calling destroy again does not throw an exception
@@ -504,7 +505,9 @@ class HmrcCallbackServiceTest {
              service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
              // Wait briefly for callback to start
-             callbackStarted.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+             if (!callbackStarted.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                 fail("Callback did not start within timeout");
+             }
 
              // Shutdown the service (should wait for callbacks to complete)
              service.destroy();
@@ -513,6 +516,7 @@ class HmrcCallbackServiceTest {
              java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
                      (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
                      .getField(service, "isShuttingDown");
+             assertThat(shutdownFlag).isNotNull();
              assertTrue(shutdownFlag.get());
          }
 
@@ -556,6 +560,7 @@ class HmrcCallbackServiceTest {
              java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
                      (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
                      .getField(service, "isShuttingDown");
+             assertThat(shutdownFlag).isNotNull();
              assertTrue(shutdownFlag.get());
          }
 }
