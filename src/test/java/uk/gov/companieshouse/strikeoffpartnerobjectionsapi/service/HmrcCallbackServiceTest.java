@@ -17,15 +17,27 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Tag("unit-test")
@@ -57,11 +69,11 @@ class HmrcCallbackServiceTest {
       }
 
 
-      @ParameterizedTest(name = "{0} callback executes asynchronously")
-      @MethodSource("provideCallbackTestCases")
-      void callbackExecutesAsynchronously(String resourceType, CallbackResourceKind resourceKind,
-              String resourceId, String resourceUri, java.util.function.Consumer<HmrcCallbackService> callbackInvoker) {
-          callbackInvoker.accept(callbackService);
+       @ParameterizedTest(name = "{0} callback executes asynchronously")
+       @MethodSource("provideCallbackTestCases")
+       void callbackExecutesAsynchronously(String resourceType, CallbackResourceKind resourceKind,
+               String resourceId, String resourceUri, Consumer<HmrcCallbackService> callbackInvoker) {
+           callbackInvoker.accept(callbackService);
 
           ArgumentCaptor<HmrcCallbackPayload> payloadCaptor = ArgumentCaptor.forClass(HmrcCallbackPayload.class);
           verify(callbackClient, timeout(5000)).sendCallback(anyString(), payloadCaptor.capture());
@@ -73,26 +85,26 @@ class HmrcCallbackServiceTest {
           assertEquals(resourceUri, capturedPayload.getResourceUri());
       }
 
-      private static Stream<org.junit.jupiter.params.provider.Arguments> provideCallbackTestCases() {
-          return Stream.of(
-                  org.junit.jupiter.params.provider.Arguments.of(
-                          "Objection",
-                          CallbackResourceKind.OBJECTION,
-                          OBJECTION_ID,
-                          OBJECTION_URI,
-                          (java.util.function.Consumer<HmrcCallbackService>) service ->
-                              service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI)
-                  ),
-                  org.junit.jupiter.params.provider.Arguments.of(
-                          "Withdrawal",
-                          CallbackResourceKind.WITHDRAWAL,
-                          WITHDRAWAL_ID,
-                          WITHDRAWAL_URI,
-                          (java.util.function.Consumer<HmrcCallbackService>) service ->
-                              service.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI)
-                  )
-          );
-      }
+       private static Stream<Arguments> provideCallbackTestCases() {
+           return Stream.of(
+                   Arguments.of(
+                           "Objection",
+                           CallbackResourceKind.OBJECTION,
+                           OBJECTION_ID,
+                           OBJECTION_URI,
+                           (Consumer<HmrcCallbackService>) service ->
+                               service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI)
+                   ),
+                   Arguments.of(
+                           "Withdrawal",
+                           CallbackResourceKind.WITHDRAWAL,
+                           WITHDRAWAL_ID,
+                           WITHDRAWAL_URI,
+                           (Consumer<HmrcCallbackService>) service ->
+                               service.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI)
+                   )
+           );
+       }
 
       @Test
       void successfulCallbackDoesNotRetry() {
@@ -133,14 +145,14 @@ class HmrcCallbackServiceTest {
       }
 
       @Test
-      void multipleCallbacksAreProcessedIndependently() {
-          callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
-          callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI);
+       void multipleCallbacksAreProcessedIndependently() {
+           callbackService.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+           callbackService.sendWithdrawalOutcomeCallback(WITHDRAWAL_ID, COMPANY_NUMBER, WITHDRAWAL_URI);
 
-          ArgumentCaptor<HmrcCallbackPayload> payloadCaptor = ArgumentCaptor.forClass(HmrcCallbackPayload.class);
-          verify(callbackClient, timeout(5000).times(2)).sendCallback(anyString(), payloadCaptor.capture());
+           ArgumentCaptor<HmrcCallbackPayload> payloadCaptor = ArgumentCaptor.forClass(HmrcCallbackPayload.class);
+           verify(callbackClient, timeout(5000).times(2)).sendCallback(anyString(), payloadCaptor.capture());
 
-          java.util.List<HmrcCallbackPayload> capturedPayloads = payloadCaptor.getAllValues();
+           List<HmrcCallbackPayload> capturedPayloads = payloadCaptor.getAllValues();
           assertEquals(2, capturedPayloads.size());
 
           boolean hasObjection = capturedPayloads.stream()
@@ -201,11 +213,11 @@ class HmrcCallbackServiceTest {
 
           @Test
           void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
-              java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
-              java.util.concurrent.atomic.AtomicReference<Integer> capturedAttemptNumber = new java.util.concurrent.atomic.AtomicReference<>();
-              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+              AtomicReference<String> capturedCorrelationId = new AtomicReference<>();
+              AtomicReference<Integer> capturedAttemptNumber = new AtomicReference<>();
+              AtomicReference<String> capturedFailureReason = new AtomicReference<>();
 
-              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+              Consumer<CallbackResult> resultHandler = result -> {
                   capturedCorrelationId.set(result.getCorrelationId());
                   capturedAttemptNumber.set(result.getAttemptNumber());
                   capturedFailureReason.set(result.getFailureReason());
@@ -223,11 +235,11 @@ class HmrcCallbackServiceTest {
 
           @Test
           void sendWithdrawalOutcomeCallback_withResultHandler_invokesHandlerOnSuccess() {
-              java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
-              java.util.concurrent.atomic.AtomicReference<Integer> capturedAttemptNumber = new java.util.concurrent.atomic.AtomicReference<>();
-              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
+              AtomicReference<String> capturedCorrelationId = new AtomicReference<>();
+              AtomicReference<Integer> capturedAttemptNumber = new AtomicReference<>();
+              AtomicReference<String> capturedFailureReason = new AtomicReference<>();
 
-              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+              Consumer<CallbackResult> resultHandler = result -> {
                   capturedCorrelationId.set(result.getCorrelationId());
                   capturedAttemptNumber.set(result.getAttemptNumber());
                   capturedFailureReason.set(result.getFailureReason());
@@ -245,11 +257,11 @@ class HmrcCallbackServiceTest {
 
          @Test
          void sendObjectionOutcomeCallback_withResultHandler_invokesHandlerOnFailureAfterRetries() {
-             java.util.concurrent.atomic.AtomicReference<String> capturedCorrelationId = new java.util.concurrent.atomic.AtomicReference<>();
-             java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
-             java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
+             AtomicReference<String> capturedCorrelationId = new AtomicReference<>();
+             AtomicReference<String> capturedFailureReason = new AtomicReference<>();
+             CountDownLatch handlerInvoked = new CountDownLatch(1);
 
-             java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+             Consumer<CallbackResult> resultHandler = result -> {
                  capturedCorrelationId.set(result.getCorrelationId());
                  capturedFailureReason.set(result.getFailureReason());
                  handlerInvoked.countDown();
@@ -271,15 +283,15 @@ class HmrcCallbackServiceTest {
 
              verify(callbackClient, timeout(3000).times(2)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
 
-             // Wait for the result handler to be invoked before asserting
-             try {
-                 if (!handlerInvoked.await(3000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                     fail("Result handler was not invoked within 3000ms");
-                 }
-             } catch (InterruptedException e) {
-                 Thread.currentThread().interrupt();
-                 fail("Test interrupted while waiting for handler invocation");
-             }
+              // Wait for the result handler to be invoked before asserting
+              try {
+                  if (!handlerInvoked.await(3000, TimeUnit.MILLISECONDS)) {
+                      fail("Result handler was not invoked within 3000ms");
+                  }
+              } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  fail("Test interrupted while waiting for handler invocation");
+              }
 
              assertNull(capturedCorrelationId.get());
              assertEquals("Permanent failure", capturedFailureReason.get());
@@ -338,21 +350,21 @@ class HmrcCallbackServiceTest {
              verify(callbackClient, timeout(5000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
          }
 
-        @Test
-        void destroy_whenNotShutdown_shutsDownExecutor() {
-            HmrcCallbackService service = new HmrcCallbackService(
-                    callbackClient,
-                    CALLBACK_ENDPOINT_URL,
-                    3,
-                    100,
-                    2.0,
-                    2
-            );
+         @Test
+         void destroy_whenNotShutdown_shutsDownExecutor() {
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     3,
+                     100,
+                     2.0,
+                     2
+             );
 
-            service.destroy();
+             service.destroy();
 
-            verify(callbackClient, org.mockito.Mockito.never()).sendCallback(anyString(), any(HmrcCallbackPayload.class));
-        }
+             verify(callbackClient, Mockito.never()).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+         }
 
         @Test
         void destroy_whenAlreadyShutdown_returnsWithoutError() {
@@ -372,18 +384,18 @@ class HmrcCallbackServiceTest {
 
           @Test
           void sendObjectionOutcomeCallback_withRejectedExecutionException_invokesHandler() {
-              java.util.concurrent.atomic.AtomicReference<String> capturedFailureReason = new java.util.concurrent.atomic.AtomicReference<>();
-              java.util.concurrent.CountDownLatch handlerInvoked = new java.util.concurrent.CountDownLatch(1);
+              AtomicReference<String> capturedFailureReason = new AtomicReference<>();
+              CountDownLatch handlerInvoked = new CountDownLatch(1);
 
-              java.util.function.Consumer<CallbackResult> resultHandler = result -> {
+              Consumer<CallbackResult> resultHandler = result -> {
                   capturedFailureReason.set(result.getFailureReason());
                   handlerInvoked.countDown();
               };
 
               // Create a mock executor that rejects execution
-              java.util.concurrent.ScheduledExecutorService mockExecutor = org.mockito.Mockito.mock(java.util.concurrent.ScheduledExecutorService.class);
-              org.mockito.Mockito.doThrow(new java.util.concurrent.RejectedExecutionException("Queue is full"))
-                      .when(mockExecutor).execute(org.mockito.ArgumentMatchers.any(Runnable.class));
+              ScheduledExecutorService mockExecutor = Mockito.mock(ScheduledExecutorService.class);
+              Mockito.doThrow(new RejectedExecutionException("Queue is full"))
+                      .when(mockExecutor).execute(ArgumentMatchers.any(Runnable.class));
 
               // Use reflection to inject the mock executor
               HmrcCallbackService service = new HmrcCallbackService(
@@ -395,13 +407,13 @@ class HmrcCallbackServiceTest {
                       1
               );
 
-              org.springframework.test.util.ReflectionTestUtils.setField(service, "executorService",
-                      new java.util.concurrent.atomic.AtomicReference<>(mockExecutor));
+              ReflectionTestUtils.setField(service, "executorService",
+                      new AtomicReference<>(mockExecutor));
 
               service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI, resultHandler);
 
              try {
-                 if (!handlerInvoked.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                 if (!handlerInvoked.await(1000, TimeUnit.MILLISECONDS)) {
                      fail("Result handler was not invoked within timeout");
                  }
              } catch (InterruptedException e) {
@@ -412,46 +424,46 @@ class HmrcCallbackServiceTest {
              assertThat(capturedFailureReason.get()).isNotNull().contains("Queue is full");
          }
 
-         @ParameterizedTest
-         @org.junit.jupiter.params.provider.ValueSource(ints = {100, 200, 500})
-         void calculateDelay_withDifferentBackoffMultipliers_calculatesCorrectly(int attemptNumber) {
-             HmrcCallbackService service = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     5,
-                     100,
-                     2.0,
-                     2
-             );
+          @ParameterizedTest
+          @org.junit.jupiter.params.provider.ValueSource(ints = {100, 200, 500})
+          void calculateDelay_withDifferentBackoffMultipliers_calculatesCorrectly(int attemptNumber) {
+              HmrcCallbackService service = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      5,
+                      100,
+                      2.0,
+                      2
+              );
 
-             // The delay calculation is exponential: initialDelay * backoff ^ attempt
-             long expectedDelay = (long) (100 * Math.pow(2.0, attemptNumber));
+              // The delay calculation is exponential: initialDelay * backoff ^ attempt
+              long expectedDelay = (long) (100 * Math.pow(2.0, attemptNumber));
 
-             // Use reflection to invoke calculateDelay
-             Object result = org.springframework.test.util.ReflectionTestUtils.invokeMethod(service, "calculateDelay", attemptNumber);
-             assertThat(result).isNotNull();
-             long actualDelay = (Long) result;
+              // Use reflection to invoke calculateDelay
+              Object result = ReflectionTestUtils.invokeMethod(service, "calculateDelay", attemptNumber);
+              assertThat(result).isNotNull();
+              long actualDelay = (Long) result;
 
-             assertThat(actualDelay).isEqualTo(expectedDelay);
-         }
+              assertThat(actualDelay).isEqualTo(expectedDelay);
+          }
 
-         @Test
-         void sendObjectionOutcomeCallback_withEmptyCallbackUrl_shouldBeHandledByValidator() {
-             HmrcCallbackService serviceWithEmptyUrl = new HmrcCallbackService(
-                     callbackClient,
-                     "",
-                     3,
-                     100,
-                     2.0,
-                     2
-             );
+          @Test
+          void sendObjectionOutcomeCallback_withEmptyCallbackUrl_shouldBeHandledByValidator() {
+              HmrcCallbackService serviceWithEmptyUrl = new HmrcCallbackService(
+                      callbackClient,
+                      "",
+                      3,
+                      100,
+                      2.0,
+                      2
+              );
 
-             // The service should handle empty URL gracefully (validation is in the client)
-             serviceWithEmptyUrl.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+              // The service should handle empty URL gracefully (validation is in the client)
+              serviceWithEmptyUrl.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
-             // Verify callback client was called despite empty URL (URL validation is client's responsibility)
-             verify(callbackClient, org.mockito.Mockito.timeout(3000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
-         }
+              // Verify callback client was called despite empty URL (URL validation is client's responsibility)
+              verify(callbackClient, Mockito.timeout(3000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+          }
 
          @Test
          void serviceCanBeShutdownGracefully() {
@@ -473,59 +485,59 @@ class HmrcCallbackServiceTest {
              // Shutdown the service gracefully
              service.destroy();
 
-             // Verify that isShuttingDown flag is set
-             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
-                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
-                     .getField(service, "isShuttingDown");
-             assertThat(shutdownFlag).isNotNull();
-             assertTrue(shutdownFlag.get(), "Service should be marked as shutting down");
+              // Verify that isShuttingDown flag is set
+              AtomicBoolean shutdownFlag =
+                      (AtomicBoolean) ReflectionTestUtils
+                      .getField(service, "isShuttingDown");
+              assertThat(shutdownFlag).isNotNull();
+              assertTrue(shutdownFlag.get(), "Service should be marked as shutting down");
 
-             // Verify that calling destroy again does not throw an exception
-             assertDoesNotThrow(service::destroy);
+              // Verify that calling destroy again does not throw an exception
+              assertDoesNotThrow(service::destroy);
          }
 
          @Test
-         void serviceShutdownWithCallbacksInFlight() throws Exception {
-             java.util.concurrent.CountDownLatch callbackStarted = new java.util.concurrent.CountDownLatch(1);
-             java.util.concurrent.CountDownLatch callbackCompleted = new java.util.concurrent.CountDownLatch(1);
+          void serviceShutdownWithCallbacksInFlight() throws Exception {
+              CountDownLatch callbackStarted = new CountDownLatch(1);
+              CountDownLatch callbackCompleted = new CountDownLatch(1);
 
-             // Setup client to delay callback execution so we can test shutdown during flight
-             doThrow(new RestClientException("Simulated delay"))
-                     .doAnswer(invocation -> {
-                         callbackStarted.countDown();
-                         callbackCompleted.countDown();
-                         return null;
-                     })
-                     .when(callbackClient)
-                     .sendCallback(anyString(), any(HmrcCallbackPayload.class));
+              // Setup client to delay callback execution so we can test shutdown during flight
+              doThrow(new RestClientException("Simulated delay"))
+                      .doAnswer(invocation -> {
+                          callbackStarted.countDown();
+                          callbackCompleted.countDown();
+                          return null;
+                      })
+                      .when(callbackClient)
+                      .sendCallback(anyString(), any(HmrcCallbackPayload.class));
 
-             HmrcCallbackService service = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     2,
-                     100,
-                     2.0,
-                     2
-             );
+              HmrcCallbackService service = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      2,
+                      100,
+                      2.0,
+                      2
+              );
 
-             // Send callback
-             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+              // Send callback
+              service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
-             // Wait briefly for callback to start
-             if (!callbackStarted.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS)) {
-                 fail("Callback did not start within timeout");
-             }
+              // Wait briefly for callback to start
+              if (!callbackStarted.await(1000, TimeUnit.MILLISECONDS)) {
+                  fail("Callback did not start within timeout");
+              }
 
-             // Shutdown the service (should wait for callbacks to complete)
-             service.destroy();
+              // Shutdown the service (should wait for callbacks to complete)
+              service.destroy();
 
-             // Verify service is shutdown
-             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
-                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
-                     .getField(service, "isShuttingDown");
-             assertThat(shutdownFlag).isNotNull();
-             assertTrue(shutdownFlag.get());
-         }
+              // Verify service is shutdown
+              AtomicBoolean shutdownFlag =
+                      (AtomicBoolean) ReflectionTestUtils
+                      .getField(service, "isShuttingDown");
+              assertThat(shutdownFlag).isNotNull();
+              assertTrue(shutdownFlag.get());
+          }
 
          @Test
          void sendObjectionOutcomeCallback_withInvalidCallbackUrl_handledByValidator() {
@@ -541,33 +553,33 @@ class HmrcCallbackServiceTest {
              // Sending callback with invalid URL - client's validator will catch this
              serviceWithInvalidUrl.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
 
-             // Client should be called and will validate URL
-             verify(callbackClient, org.mockito.Mockito.timeout(3000)).sendCallback(any(), any(HmrcCallbackPayload.class));
-         }
+              // Client should be called and will validate URL
+              verify(callbackClient, Mockito.timeout(3000)).sendCallback(any(), any(HmrcCallbackPayload.class));
+          }
 
-         @Test
-         void multipleShutdownCallsAreIdempotent() {
-             HmrcCallbackService service = new HmrcCallbackService(
-                     callbackClient,
-                     CALLBACK_ENDPOINT_URL,
-                     3,
-                     100,
-                     2.0,
-                     2
-             );
+          @Test
+          void multipleShutdownCallsAreIdempotent() {
+              HmrcCallbackService service = new HmrcCallbackService(
+                      callbackClient,
+                      CALLBACK_ENDPOINT_URL,
+                      3,
+                      100,
+                      2.0,
+                      2
+              );
 
-             // Call destroy multiple times - should not throw
-             assertDoesNotThrow(() -> {
-                 service.destroy();
-                 service.destroy();
-                 service.destroy();
-             });
+              // Call destroy multiple times - should not throw
+              assertDoesNotThrow(() -> {
+                  service.destroy();
+                  service.destroy();
+                  service.destroy();
+              });
 
-             // Verify that isShuttingDown is set
-             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
-                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
-                     .getField(service, "isShuttingDown");
-             assertThat(shutdownFlag).isNotNull();
-             assertTrue(shutdownFlag.get());
-         }
+              // Verify that isShuttingDown is set
+              AtomicBoolean shutdownFlag =
+                      (AtomicBoolean) ReflectionTestUtils
+                      .getField(service, "isShuttingDown");
+              assertThat(shutdownFlag).isNotNull();
+              assertTrue(shutdownFlag.get());
+          }
 }

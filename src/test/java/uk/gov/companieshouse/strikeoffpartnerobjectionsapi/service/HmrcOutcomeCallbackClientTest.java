@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -44,46 +45,46 @@ class HmrcOutcomeCallbackClientTest {
         callbackClient = new HmrcOutcomeCallbackClient(restTemplate);
     }
 
-    @Test
-    void sendCallbackSendsPayloadSuccessfully() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
-                OBJECTION_ID,
-                COMPANY_NUMBER,
-                OBJECTION_URI
-        );
+     @Test
+     void sendCallbackSendsPayloadSuccessfully() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 OBJECTION_ID,
+                 COMPANY_NUMBER,
+                 OBJECTION_URI
+         );
 
-        ResponseEntity<Void> successResponse = ResponseEntity.ok().build();
-        when(restTemplate.postForEntity(eq(CALLBACK_ENDPOINT_URL),
-                org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenReturn(successResponse);
+         ResponseEntity<Void> successResponse = ResponseEntity.ok().build();
+         when(restTemplate.postForEntity(eq(CALLBACK_ENDPOINT_URL),
+                 any(), eq(Void.class)))
+                 .thenReturn(successResponse);
 
-        String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+         String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
 
-        assertEquals(36, correlationId.length()); // UUID length
+         assertEquals(36, correlationId.length()); // UUID length
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<HttpEntity<HmrcCallbackPayload>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
-        verify(restTemplate).postForEntity(eq(CALLBACK_ENDPOINT_URL), entityCaptor.capture(), eq(Void.class));
+         @SuppressWarnings("unchecked")
+         ArgumentCaptor<HttpEntity<HmrcCallbackPayload>> entityCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+         verify(restTemplate).postForEntity(eq(CALLBACK_ENDPOINT_URL), entityCaptor.capture(), eq(Void.class));
 
-        HttpEntity<HmrcCallbackPayload> capturedEntity = entityCaptor.getValue();
-        assertEquals(payload, capturedEntity.getBody());
-    }
+         HttpEntity<HmrcCallbackPayload> capturedEntity = entityCaptor.getValue();
+         assertEquals(payload, capturedEntity.getBody());
+     }
 
-    @Test
-    void sendCallbackReturnsValidUUID() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.WITHDRAWAL,
-                "withdrawal-456",
-                COMPANY_NUMBER,
-                "/company/12345678/withdrawals/withdrawal-456"
-        );
+     @Test
+     void sendCallbackReturnsValidUUID() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.WITHDRAWAL,
+                 "withdrawal-456",
+                 COMPANY_NUMBER,
+                 "/company/12345678/withdrawals/withdrawal-456"
+         );
 
-        ResponseEntity<Void> successResponse = ResponseEntity.ok().build();
-        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenReturn(successResponse);
+         ResponseEntity<Void> successResponse = ResponseEntity.ok().build();
+         when(restTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                 .thenReturn(successResponse);
 
-        String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+         String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
 
         // Verify it's a valid UUID format (contains dashes at expected positions)
         assertEquals(36, correlationId.length());
@@ -93,108 +94,108 @@ class HmrcOutcomeCallbackClientTest {
         assertEquals('-', correlationId.charAt(23));
     }
 
-    @Test
-    void sendCallbackThrowsExceptionOnRestClientFailure() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
-                OBJECTION_ID,
-                COMPANY_NUMBER,
-                OBJECTION_URI
-        );
+     @Test
+     void sendCallbackThrowsExceptionOnRestClientFailure() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 OBJECTION_ID,
+                 COMPANY_NUMBER,
+                 OBJECTION_URI
+         );
 
-        RestClientException restException = new RestClientException("Connection timeout");
-        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenThrow(restException);
+         RestClientException restException = new RestClientException("Connection timeout");
+         when(restTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                 .thenThrow(restException);
 
-        assertThrows(RestClientException.class, () ->
-                callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
-    }
+         assertThrows(RestClientException.class, () ->
+                 callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+     }
 
-    @Test
-    void sendCallbackHandlesNon200StatusCodes() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
-                OBJECTION_ID,
-                COMPANY_NUMBER,
-                OBJECTION_URI
-        );
+     @Test
+     void sendCallbackHandlesNon200StatusCodes() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 OBJECTION_ID,
+                 COMPANY_NUMBER,
+                 OBJECTION_URI
+         );
 
-        ResponseEntity<Void> errorResponse = ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenReturn(errorResponse);
+         ResponseEntity<Void> errorResponse = ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+         when(restTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                 .thenReturn(errorResponse);
 
-        // The client should throw RestClientException on non-2xx status codes
-        assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
-    }
+         // The client should throw RestClientException on non-2xx status codes
+         assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+     }
 
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(ints = {400, 401, 403, 404, 405, 500, 502, 503})
-    void sendCallback_withVariousErrorStatusCodes_throwsRestClientException(int statusCode) {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
-                "objection-123",
-                "12345678",
-                "/company/12345678/strike-off/objections/objection-123"
-        );
+     @ParameterizedTest
+     @org.junit.jupiter.params.provider.ValueSource(ints = {400, 401, 403, 404, 405, 500, 502, 503})
+     void sendCallback_withVariousErrorStatusCodes_throwsRestClientException(int statusCode) {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 "objection-123",
+                 "12345678",
+                 "/company/12345678/strike-off/objections/objection-123"
+         );
 
-        org.springframework.http.ResponseEntity<Void> errorResponse = new org.springframework.http.ResponseEntity<>(
-                org.springframework.http.HttpStatus.valueOf(statusCode)
-        );
+         ResponseEntity<Void> errorResponse = new ResponseEntity<>(
+                 HttpStatus.valueOf(statusCode)
+         );
 
-        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenReturn(errorResponse);
+         when(restTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                 .thenReturn(errorResponse);
 
-        assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
-    }
+         assertThrows(RestClientException.class, () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"", "   "})
-    void sendCallback_withInvalidUrl_throwsIllegalArgumentException(String invalidUrl) {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
-                "objection-123",
-                "12345678",
-                "/company/12345678/strike-off/objections/objection-123"
-        );
+     @ParameterizedTest
+     @ValueSource(strings = {"", "   "})
+     void sendCallback_withInvalidUrl_throwsIllegalArgumentException(String invalidUrl) {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 "objection-123",
+                 "12345678",
+                 "/company/12345678/strike-off/objections/objection-123"
+         );
 
-        assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(invalidUrl, payload));
-    }
+         assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(invalidUrl, payload));
+     }
 
-    @Test
-    void sendCallback_withNullUrl_throwsIllegalArgumentException() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.OBJECTION,
-                "objection-123",
-                "12345678",
-                "/company/12345678/strike-off/objections/objection-123"
-        );
+     @Test
+     void sendCallback_withNullUrl_throwsIllegalArgumentException() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.OBJECTION,
+                 "objection-123",
+                 "12345678",
+                 "/company/12345678/strike-off/objections/objection-123"
+         );
 
-        assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(null, payload));
-    }
+         assertThrows(IllegalArgumentException.class, () -> callbackClient.sendCallback(null, payload));
+     }
 
-    @Test
-    void sendCallback_generatesUniqueCorrelationIds() {
-        HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind.WITHDRAWAL,
-                "withdrawal-456",
-                "87654321",
-                "/company/87654321/strike-off/withdrawals/withdrawal-456"
-        );
+     @Test
+     void sendCallback_generatesUniqueCorrelationIds() {
+         HmrcCallbackPayload payload = new HmrcCallbackPayload(
+                 CallbackResourceKind.WITHDRAWAL,
+                 "withdrawal-456",
+                 "87654321",
+                 "/company/87654321/strike-off/withdrawals/withdrawal-456"
+         );
 
-        org.springframework.http.ResponseEntity<Void> successResponse = new org.springframework.http.ResponseEntity<>(
-                org.springframework.http.HttpStatus.OK
-        );
+         ResponseEntity<Void> successResponse = new ResponseEntity<>(
+                 HttpStatus.OK
+         );
 
-        when(restTemplate.postForEntity(anyString(), org.mockito.ArgumentMatchers.any(), eq(Void.class)))
-                .thenReturn(successResponse);
+         when(restTemplate.postForEntity(anyString(), any(), eq(Void.class)))
+                 .thenReturn(successResponse);
 
-        String correlationId1 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
-        String correlationId2 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+         String correlationId1 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+         String correlationId2 = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
 
-        assertThat(correlationId1)
-                .isNotNull()
-                .isNotEqualTo(correlationId2);
-        assertThat(correlationId2)
-                .isNotNull();
-    }
+         assertThat(correlationId1)
+                 .isNotNull()
+                 .isNotEqualTo(correlationId2);
+         assertThat(correlationId2)
+                 .isNotNull();
+     }
 }
