@@ -445,4 +445,117 @@ class HmrcCallbackServiceTest {
              // Verify callback client was called despite empty URL (URL validation is client's responsibility)
              verify(callbackClient, org.mockito.Mockito.timeout(3000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
          }
+
+         @Test
+         void serviceCanBeShutdownGracefully() {
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     3,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // Send a callback before shutdown
+             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+             // Verify callback was initiated
+             verify(callbackClient, timeout(3000)).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+
+             // Shutdown the service gracefully
+             service.destroy();
+
+             // Verify that isShuttingDown flag is set
+             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
+                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
+                     .getField(service, "isShuttingDown");
+             assertTrue(shutdownFlag.get(), "Service should be marked as shutting down");
+
+             // Verify that calling destroy again does not throw an exception
+             assertDoesNotThrow(service::destroy);
+         }
+
+         @Test
+         void serviceShutdownWithCallbacksInFlight() throws Exception {
+             java.util.concurrent.CountDownLatch callbackStarted = new java.util.concurrent.CountDownLatch(1);
+             java.util.concurrent.CountDownLatch callbackCompleted = new java.util.concurrent.CountDownLatch(1);
+
+             // Setup client to delay callback execution so we can test shutdown during flight
+             doThrow(new RestClientException("Simulated delay"))
+                     .doAnswer(invocation -> {
+                         callbackStarted.countDown();
+                         callbackCompleted.countDown();
+                         return null;
+                     })
+                     .when(callbackClient)
+                     .sendCallback(anyString(), any(HmrcCallbackPayload.class));
+
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     2,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // Send callback
+             service.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+             // Wait briefly for callback to start
+             callbackStarted.await(1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+             // Shutdown the service (should wait for callbacks to complete)
+             service.destroy();
+
+             // Verify service is shutdown
+             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
+                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
+                     .getField(service, "isShuttingDown");
+             assertTrue(shutdownFlag.get());
+         }
+
+         @Test
+         void sendObjectionOutcomeCallback_withInvalidCallbackUrl_handledByValidator() {
+             HmrcCallbackService serviceWithInvalidUrl = new HmrcCallbackService(
+                     callbackClient,
+                     " ", // Whitespace-only URL
+                     3,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // Sending callback with invalid URL - client's validator will catch this
+             serviceWithInvalidUrl.sendObjectionOutcomeCallback(OBJECTION_ID, COMPANY_NUMBER, OBJECTION_URI);
+
+             // Client should be called and will validate URL
+             verify(callbackClient, org.mockito.Mockito.timeout(3000)).sendCallback(any(), any(HmrcCallbackPayload.class));
+         }
+
+         @Test
+         void multipleShutdownCallsAreIdempotent() {
+             HmrcCallbackService service = new HmrcCallbackService(
+                     callbackClient,
+                     CALLBACK_ENDPOINT_URL,
+                     3,
+                     100,
+                     2.0,
+                     2
+             );
+
+             // Call destroy multiple times - should not throw
+             assertDoesNotThrow(() -> {
+                 service.destroy();
+                 service.destroy();
+                 service.destroy();
+             });
+
+             // Verify that isShuttingDown is set
+             java.util.concurrent.atomic.AtomicBoolean shutdownFlag =
+                     (java.util.concurrent.atomic.AtomicBoolean) org.springframework.test.util.ReflectionTestUtils
+                     .getField(service, "isShuttingDown");
+             assertTrue(shutdownFlag.get());
+         }
 }
