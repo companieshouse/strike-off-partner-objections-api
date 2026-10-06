@@ -160,6 +160,8 @@ When generating tests:
 - Share setup code to reduce duplication.
 - Use existing project patterns for test structure.
 - Lambda assertions: lambdas in `assertThatThrownBy()` should contain **only one invocation** that could throw; extract helper method calls outside the lambda and pass as variables.
+- Use parametrised tests when applicable to avoid code repetition and test multiple scenarios with different inputs.
+- Parametrised tests (using `@ParameterizedTest`, `@ValueSource`, `@CsvSource`, etc.) reduce duplication and improve maintainability.
 
 Generate sufficient tests to reasonably achieve:
 - Line Coverage >= 80%
