@@ -104,8 +104,7 @@ public class HmrcCallbackService implements DisposableBean {
                 LOGGER.error("Executor service forced shutdown", logMap);
                 executor.shutdownNow();
             }
-            var logMap = new DataMap.Builder().build().getLogMap();
-            LOGGER.info("HmrcCallbackService executor shutdown complete", logMap);
+            LOGGER.info("HmrcCallbackService executor service shut down gracefully");
         } catch (InterruptedException ex) {
             var logMap = new DataMap.Builder()
                     .errorMessage("Interrupted during executor service shutdown")
