@@ -71,14 +71,14 @@ public abstract class AbstractKafkaProducer {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new KafkaPublishException(
-                    INTERRUPTED_MESSAGE_PREFIX + String.valueOf(message.getEventType()) + ": " + documentId,
+                    INTERRUPTED_MESSAGE_PREFIX + message.getEventType() + ": " + documentId,
                     message.getEventId(), ex);
         } catch (ExecutionException | TimeoutException | KafkaException ex) {
             if (ex.getCause() instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             throw new KafkaPublishException(
-                    FAILED_MESSAGE_PREFIX + String.valueOf(message.getEventType()) + ": " + documentId,
+                    FAILED_MESSAGE_PREFIX + message.getEventType() + ": " + documentId,
                     message.getEventId(), ex);
         }
     }
