@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import org.springframework.stereotype.Service;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
@@ -57,14 +58,17 @@ public class CompanyValidator {
      * @throws ServiceException if the Company Profile API call fails
      */
     public void validateCompany(String companyNumber, String submissionCompanyName) {
-        LOGGER.info(format("Validating company: companyNumber=%s, submissionCompanyName=%s",
-                companyNumber, submissionCompanyName));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .build()
+                .getLogMap();
+        LOGGER.info("Validating company", logMap);
 
         CompanyProfileApi companyProfile = validateCommonFields(companyNumber, submissionCompanyName);
         validateCompanyType(companyProfile, companyNumber);
         validateCompanyStatus(companyProfile, companyNumber);
 
-        LOGGER.info(format("Company validation passed: companyNumber=%s", companyNumber));
+        LOGGER.info("Company validation passed", logMap);
     }
 
     /**
@@ -77,13 +81,16 @@ public class CompanyValidator {
      * @throws ServiceException if the Company Profile API call fails
      */
     public void validateCompanyForWithdrawal(String companyNumber, String submissionCompanyName) {
-        LOGGER.info(format("Validating company for withdrawal: companyNumber=%s, submissionCompanyName=%s",
-                companyNumber, submissionCompanyName));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .build()
+                .getLogMap();
+        LOGGER.info("Validating company for withdrawal", logMap);
 
         CompanyProfileApi companyProfile = validateCommonFields(companyNumber, submissionCompanyName);
         validateCompanyStatus(companyProfile, companyNumber);
 
-        LOGGER.info(format("Company validation for withdrawal passed: companyNumber=%s", companyNumber));
+        LOGGER.info("Company validation for withdrawal passed", logMap);
     }
 
     private CompanyProfileApi validateCommonFields(String companyNumber, String submissionCompanyName) {
