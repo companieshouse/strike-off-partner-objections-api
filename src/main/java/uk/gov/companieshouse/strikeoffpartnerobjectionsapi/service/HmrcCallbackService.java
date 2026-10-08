@@ -11,11 +11,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.beans.factory.DisposableBean;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
-import static java.lang.String.format;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 /**
@@ -71,9 +71,13 @@ public class HmrcCallbackService implements DisposableBean {
         this.backoffMultiplier = backoffMultiplier;
         this.executorService = new AtomicReference<>(Executors.newScheduledThreadPool(executorThreadPoolSize));
 
-        LOGGER.debug(format("HmrcCallbackService initialised: endpoint=%s, maxAttempts=%d, initialDelay=%dms, backoff=%.1f, executorThreads=%d",
-                callbackEndpointUrl.isEmpty() ? "<not-configured>" : callbackEndpointUrl,
-                maxRetryAttempts, initialDelayMillis, backoffMultiplier, executorThreadPoolSize));
+        var logMap = new DataMap.Builder()
+                .topic("hmrc-callback")
+                .retryCount(maxRetryAttempts)
+                .durationMs((long) initialDelayMillis)
+                .build()
+                .getLogMap();
+        LOGGER.debug("HmrcCallbackService initialised with configuration", logMap);
     }
 
     /**
@@ -93,12 +97,20 @@ public class HmrcCallbackService implements DisposableBean {
         try {
             ScheduledExecutorService executor = executorService.get();
             if (executor != null && !executor.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                LOGGER.error("Executor service did not terminate within timeout, forcing shutdown");
+                var logMap = new DataMap.Builder()
+                        .errorMessage("Executor service shutdown timeout exceeded")
+                        .build()
+                        .getLogMap();
+                LOGGER.error("Executor service forced shutdown", logMap);
                 executor.shutdownNow();
             }
             LOGGER.info("HmrcCallbackService executor service shut down gracefully");
         } catch (InterruptedException ex) {
-            LOGGER.error("Interrupted while waiting for executor service shutdown", ex);
+            var logMap = new DataMap.Builder()
+                    .errorMessage("Interrupted during executor service shutdown")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Executor service shutdown interrupted", ex, logMap);
             ScheduledExecutorService executor = executorService.get();
             if (executor != null) {
                 executor.shutdownNow();
@@ -215,8 +227,13 @@ public class HmrcCallbackService implements DisposableBean {
     private void executeCallback(HmrcCallbackPayload payload, int attemptNumber, Consumer<CallbackResult> resultHandler) {
         executorService.get().execute(() -> {
             try {
-                LOGGER.debug(format("Attempting HMRC callback: resourceId=%s, attempt=%d",
-                        payload.getResourceId(), attemptNumber));
+                var logMap = new DataMap.Builder()
+                        .resourceId(payload.getResourceId())
+                        .resourceKind(payload.getResourceKind().name())
+                        .retryCount(attemptNumber)
+                        .build()
+                        .getLogMap();
+                LOGGER.debugContext(null, "Attempting HMRC callback", logMap);
 
                 String correlationId = callbackClient.sendCallback(callbackEndpointUrl, payload);
                 if (resultHandler != null) {
@@ -225,8 +242,14 @@ public class HmrcCallbackService implements DisposableBean {
             } catch (RestClientException ex) {
                 handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
             } catch (Exception ex) {
-                LOGGER.error(format("Unexpected error during HMRC callback: resourceId=%s, attempt=%d",
-                        payload.getResourceId(), attemptNumber), ex);
+                var logMap = new DataMap.Builder()
+                        .resourceId(payload.getResourceId())
+                        .resourceKind(payload.getResourceKind().name())
+                        .retryCount(attemptNumber)
+                        .errorMessage("Unexpected error during callback execution")
+                        .build()
+                        .getLogMap();
+                LOGGER.error("Unexpected error during HMRC callback", ex, logMap);
                 handleCallbackFailure(payload, attemptNumber, ex, resultHandler);
             }
         });
@@ -242,8 +265,14 @@ public class HmrcCallbackService implements DisposableBean {
      */
     private void handleCallbackExecutionRejection(HmrcCallbackPayload payload, int attemptNumber,
                                                    RejectedExecutionException ex, Consumer<CallbackResult> resultHandler) {
-        LOGGER.error(format("Failed to submit HMRC callback task (executor rejected): resourceId=%s, attempt=%d",
-                payload.getResourceId(), attemptNumber), ex);
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .resourceKind(payload.getResourceKind().name())
+                .retryCount(attemptNumber)
+                .errorMessage("Executor rejected callback task submission")
+                .build()
+                .getLogMap();
+        LOGGER.error("Failed to submit HMRC callback task", ex, logMap);
         if (resultHandler != null) {
             String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
             resultHandler.accept(new CallbackResult(attemptNumber, failureMessage));
@@ -266,8 +295,13 @@ public class HmrcCallbackService implements DisposableBean {
      * @param resultHandler optional handler to invoke with shutdown message
      */
     private void notifyShutdown(HmrcCallbackPayload payload, Consumer<CallbackResult> resultHandler) {
-        LOGGER.error(format("Cannot submit callback task: resourceId=%s, isShuttingDown=%s",
-                payload.getResourceId(), isShuttingDown.get()));
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .resourceKind(payload.getResourceKind().name())
+                .errorMessage("Service is shutting down, cannot submit callback task")
+                .build()
+                .getLogMap();
+        LOGGER.error("Cannot submit callback task: service shutting down", logMap);
         if (resultHandler != null) {
             resultHandler.accept(new CallbackResult(1, SHUTDOWN_MESSAGE));
         }
@@ -288,8 +322,15 @@ public class HmrcCallbackService implements DisposableBean {
      */
     private void handleCallbackFailure(HmrcCallbackPayload payload, int attemptNumber, Exception ex,
                                       Consumer<CallbackResult> resultHandler) {
-        LOGGER.error(format("HMRC callback failed: resourceId=%s, companyNumber=%s, attempt=%d, error=%s",
-                payload.getResourceId(), payload.getCompanyNumber(), attemptNumber, ex.getMessage()), ex);
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .companyNumber(payload.getCompanyNumber())
+                .resourceKind(payload.getResourceKind().name())
+                .retryCount(attemptNumber)
+                .errorMessage(ex.getMessage())
+                .build()
+                .getLogMap();
+        LOGGER.error("HMRC callback failed", ex, logMap);
 
         if (shouldRetry(attemptNumber)) {
             scheduleRetry(payload, attemptNumber, resultHandler);
@@ -317,8 +358,14 @@ public class HmrcCallbackService implements DisposableBean {
      */
     private void scheduleRetry(HmrcCallbackPayload payload, int attemptNumber, Consumer<CallbackResult> resultHandler) {
         long delayMillis = calculateDelay(attemptNumber);
-        LOGGER.info(format("Scheduling HMRC callback retry: resourceId=%s, nextAttempt=%d, delayMillis=%d",
-                payload.getResourceId(), attemptNumber + 1, delayMillis));
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .resourceKind(payload.getResourceKind().name())
+                .retryCount(attemptNumber + 1)
+                .durationMs(delayMillis)
+                .build()
+                .getLogMap();
+        LOGGER.info("Scheduling HMRC callback retry", logMap);
 
         synchronized (executorLock) {
             if (isExecutorUnavailable()) {
@@ -348,8 +395,14 @@ public class HmrcCallbackService implements DisposableBean {
      */
     private void handleRetrySchedulingRejection(HmrcCallbackPayload payload, int attemptNumber,
                                                  RejectedExecutionException ex, Consumer<CallbackResult> resultHandler) {
-        LOGGER.error(format("Failed to schedule HMRC callback retry (executor rejected): resourceId=%s, nextAttempt=%d",
-                payload.getResourceId(), attemptNumber + 1), ex);
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .resourceKind(payload.getResourceKind().name())
+                .retryCount(attemptNumber + 1)
+                .errorMessage("Executor rejected retry scheduling")
+                .build()
+                .getLogMap();
+        LOGGER.error("Failed to schedule HMRC callback retry", ex, logMap);
         if (resultHandler != null) {
             String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
             resultHandler.accept(new CallbackResult(attemptNumber + 1, failureMessage));
@@ -365,8 +418,15 @@ public class HmrcCallbackService implements DisposableBean {
      * @param resultHandler optional handler to invoke with failure reason
      */
     private void handleRetriesExhausted(HmrcCallbackPayload payload, int attemptNumber, Exception ex, Consumer<CallbackResult> resultHandler) {
-        LOGGER.error(format("HMRC callback exhausted all retry attempts: resourceId=%s, companyNumber=%s, totalAttempts=%d",
-                payload.getResourceId(), payload.getCompanyNumber(), attemptNumber));
+        var logMap = new DataMap.Builder()
+                .resourceId(payload.getResourceId())
+                .companyNumber(payload.getCompanyNumber())
+                .resourceKind(payload.getResourceKind().name())
+                .retryCount(attemptNumber)
+                .errorMessage("All callback retry attempts exhausted")
+                .build()
+                .getLogMap();
+        LOGGER.error("HMRC callback exhausted all retry attempts", logMap);
 
         if (resultHandler != null) {
             String failureMessage = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();

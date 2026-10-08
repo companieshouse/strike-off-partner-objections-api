@@ -13,6 +13,7 @@ import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
 import uk.gov.companieshouse.api.objections.model.CreateObjectionRequest;
 import uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus;
 import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionPersistenceException;
@@ -43,6 +44,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class StrikeOffPartnerObjectionService {
 
     private static final String OBJECTION_URI_TEMPLATE = "/company/%s/strike-off/objections/%s";
+    private static final String RESOURCE_KIND_OBJECTION = "objection";
     private static final int CALLBACK_STATUS_MAX_RETRIES = 3;
     private static final long CALLBACK_STATUS_INITIAL_DELAY_MILLIS = 100;
     private static final double CALLBACK_STATUS_BACKOFF_MULTIPLIER = 2.0;
@@ -96,8 +98,14 @@ public class StrikeOffPartnerObjectionService {
 
         String objectionId = UUID.randomUUID().toString();
 
-        LOGGER.info(format("Creating objection: companyNumber=%s, partnerOrganisation=%s, objectionId=%s",
-                companyNumber, partnerOrganisation, objectionId));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(objectionId)
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .partnerOrganisation(partnerOrganisation)
+                .build()
+                .getLogMap();
+        LOGGER.info("Creating objection for company", logMap);
 
         ObjectionDocument document = objectionRequestMapper.toObjectionDocument(
                 createObjectionRequest,
@@ -109,8 +117,13 @@ public class StrikeOffPartnerObjectionService {
 
         try {
             ObjectionDocument persistedObjection = objectionRepository.insert(document);
-            LOGGER.info(format("Objection created successfully: objectionId=%s, companyNumber=%s",
-                    persistedObjection.getObjectionId(), persistedObjection.getCompanyNumber()));
+            var successLogMap = new DataMap.Builder()
+                    .companyNumber(persistedObjection.getCompanyNumber())
+                    .resourceId(persistedObjection.getObjectionId())
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Objection created and persisted", successLogMap);
 
             publishAndSaveObjection(persistedObjection);
 
@@ -124,8 +137,13 @@ public class StrikeOffPartnerObjectionService {
         try {
             StrikeOffPartnerObjections publishedEvent = objectionKafkaProducer.publishObjectionEvent(persistedObjection);
             EventTracker.markPublished(persistedObjection, publishedEvent.getEventId());
-            LOGGER.info(format("Objection event published successfully: objectionId=%s",
-                    persistedObjection.getObjectionId()));
+            var logMap = new DataMap.Builder()
+                    .companyNumber(persistedObjection.getCompanyNumber())
+                    .resourceId(persistedObjection.getObjectionId())
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Objection event published to Kafka", logMap);
         } catch (KafkaPublishException ex) {
             EventTracker.markFailed(persistedObjection, ex.getEventId(), ex.getMessage());
             throw ex;
@@ -138,8 +156,14 @@ public class StrikeOffPartnerObjectionService {
         try {
             objectionRepository.save(persistedObjection);
         } catch (DataAccessException saveEx) {
-            LOGGER.error(format("Failed to update objection event status: objectionId=%s",
-                    persistedObjection.getObjectionId()), saveEx);
+            var logMap = new DataMap.Builder()
+                    .companyNumber(persistedObjection.getCompanyNumber())
+                    .resourceId(persistedObjection.getObjectionId())
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .errorMessage("Failed to update event status after publish")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Failed to save objection event status", saveEx, logMap);
         }
     }
 
@@ -157,22 +181,38 @@ public class StrikeOffPartnerObjectionService {
                                               String objectionId,
                                               String partnerOrganisation) throws ObjectionNotFoundException {
 
-        LOGGER.info(format("Attempting to fetch objection with ID=%s and company number=%s",
-                objectionId, companyNumber));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(objectionId)
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .build()
+                .getLogMap();
+        LOGGER.info("Retrieving objection", logMap);
 
         ObjectionDocument document = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)
                 .orElseThrow(() -> new ObjectionNotFoundException(
                         format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId)));
 
         if (!partnerOrganisation.equals(document.getPartnerOrganisation())) {
-            LOGGER.error(format("Organisation mismatch: caller=%s, document=%s, objectionId=%s",
-                    partnerOrganisation, document.getPartnerOrganisation(), objectionId));
+            var errorLogMap = new DataMap.Builder()
+                    .companyNumber(companyNumber)
+                    .resourceId(objectionId)
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .errorMessage("Organisation mismatch: caller organisation does not match document organisation")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Organisation access control violation", errorLogMap);
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Access denied: objection belongs to a different organisation");
         }
 
-        LOGGER.info(format("Objection found successfully: objectionId=%s, companyNumber=%s",
-                document.getObjectionId(), document.getCompanyNumber()));
+        var successLogMap = new DataMap.Builder()
+                .companyNumber(document.getCompanyNumber())
+                .resourceId(document.getObjectionId())
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .build()
+                .getLogMap();
+        LOGGER.info("Objection retrieved successfully", successLogMap);
 
         return objectionResponseMapper.toObjectionApiResponse(document);
     }
@@ -201,8 +241,13 @@ public class StrikeOffPartnerObjectionService {
             String objectionId,
             UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
 
-        LOGGER.info(format("Attempting to update objection processing status: objectionId=%s, companyNumber=%s",
-                objectionId, companyNumber));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(objectionId)
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .build()
+                .getLogMap();
+        LOGGER.info("Attempting to update objection processing status", logMap);
 
         ObjectionDocument existingDocument = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)
                 .orElseThrow(() -> new ObjectionNotFoundException(
@@ -216,8 +261,14 @@ public class StrikeOffPartnerObjectionService {
                 companyNumber,
                 objectionId);
         if (currentStatus == requestedStatus) {
-            LOGGER.debug(format("Objection processing status unchanged: objectionId=%s, companyNumber=%s, status=%s",
-                    objectionId, companyNumber, currentStatus.getValue()));
+            var unchangedLogMap = new DataMap.Builder()
+                    .companyNumber(companyNumber)
+                    .resourceId(objectionId)
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .status(currentStatus.getValue())
+                    .build()
+                    .getLogMap();
+            LOGGER.debugContext(null, "Objection processing status unchanged", unchangedLogMap);
             return;
         }
 
@@ -234,8 +285,14 @@ public class StrikeOffPartnerObjectionService {
 
         try {
             ObjectionDocument updatedObjection = objectionRepository.save(existingDocument);
-            LOGGER.info(format("Objection processing status updated successfully: objectionId=%s, companyNumber=%s",
-                    updatedObjection.getObjectionId(), updatedObjection.getCompanyNumber()));
+            var successLogMap = new DataMap.Builder()
+                    .companyNumber(updatedObjection.getCompanyNumber())
+                    .resourceId(updatedObjection.getObjectionId())
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .status(updatedObjection.getProcessingStatus())
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Objection processing status updated", successLogMap);
 
             // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
             String objectionsUri = format(OBJECTION_URI_TEMPLATE, companyNumber, objectionId);
@@ -270,17 +327,31 @@ public class StrikeOffPartnerObjectionService {
             if (callbackResult.isSuccess()) {
                 // Callback succeeded
                 CallbackStatusTracker.markCallbackSuccess(freshDocument, callbackResult.getCorrelationId(), callbackStatusChangedAt);
-                LOGGER.info(format("HMRC callback succeeded: objectionId=%s, correlationId=%s, attempt=%d",
-                        freshDocument.getObjectionId(), callbackResult.getCorrelationId(), callbackResult.getAttemptNumber()));
+                var logMap = new DataMap.Builder()
+                        .companyNumber(freshDocument.getCompanyNumber())
+                        .resourceId(freshDocument.getObjectionId())
+                        .resourceKind(RESOURCE_KIND_OBJECTION)
+                        .retryCount(callbackResult.getAttemptNumber())
+                        .correlationId(callbackResult.getCorrelationId())
+                        .build()
+                        .getLogMap();
+                LOGGER.info("HMRC callback succeeded for objection", logMap);
             } else {
                 // Callback failed after all retries
                 CallbackStatusTracker.markCallbackFailed(freshDocument, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
-                LOGGER.error(format("HMRC callback failed permanently: objectionId=%s, failureReason=%s, attempt=%d",
-                        freshDocument.getObjectionId(), callbackResult.getFailureReason(), callbackResult.getAttemptNumber()));
+                var logMap = new DataMap.Builder()
+                        .companyNumber(freshDocument.getCompanyNumber())
+                        .resourceId(freshDocument.getObjectionId())
+                        .resourceKind(RESOURCE_KIND_OBJECTION)
+                        .retryCount(callbackResult.getAttemptNumber())
+                        .errorMessage(callbackResult.getFailureReason())
+                        .build()
+                        .getLogMap();
+                LOGGER.error("HMRC callback failed permanently for objection", logMap);
             }
             persistCallbackStatusWithRetry(freshDocument, freshDocument.getObjectionId());
         };
-    }
+     }
 
     /**
      * Persists callback status to MongoDB with retry logic and exponential backoff.
@@ -293,40 +364,66 @@ public class StrikeOffPartnerObjectionService {
      * @param objectionId the objection ID for logging
      * @throws ObjectionPersistenceException if persistence fails after all retry attempts
      */
-    private void persistCallbackStatusWithRetry(ObjectionDocument document, String objectionId) {
-        DataAccessException lastException = null;
+     private void persistCallbackStatusWithRetry(ObjectionDocument document, String objectionId) {
+         DataAccessException lastException = null;
 
-        for (int attempt = 0; attempt < CALLBACK_STATUS_MAX_RETRIES; attempt++) {
-            try {
-                objectionRepository.save(document);
-                LOGGER.info(format("Callback status persisted successfully: objectionId=%s, attempt=%d",
-                        objectionId, attempt + 1));
-                return;
-            } catch (DataAccessException ex) {
-                lastException = ex;
-                if (attempt < CALLBACK_STATUS_MAX_RETRIES - 1) {
-                    long delayMillis = (long) (CALLBACK_STATUS_INITIAL_DELAY_MILLIS * Math.pow(CALLBACK_STATUS_BACKOFF_MULTIPLIER, attempt));
-                    LOGGER.info(format("Failed to persist callback status (attempt %d/%d): objectionId=%s, retrying in %dms",
-                            attempt + 1, CALLBACK_STATUS_MAX_RETRIES, objectionId, delayMillis));
-                    try {
-                        Thread.sleep(delayMillis);
-                    } catch (InterruptedException ie) {
-                        LOGGER.error(format("Interrupted whilst waiting for callback status persistence retry: objectionId=%s",
-                                objectionId), ie);
-                        Thread.currentThread().interrupt();
-                        throw new ObjectionPersistenceException("Failed to persist callback status: interrupted during retry", ie);
-                    }
-                }
-            }
-        }
+         for (int attempt = 0; attempt < CALLBACK_STATUS_MAX_RETRIES; attempt++) {
+             try {
+                 objectionRepository.save(document);
+                 var logMap = new DataMap.Builder()
+                         .companyNumber(document.getCompanyNumber())
+                         .resourceId(objectionId)
+                         .resourceKind(RESOURCE_KIND_OBJECTION)
+                         .retryCount(attempt + 1)
+                         .build()
+                         .getLogMap();
+                 LOGGER.info("Callback status persisted to MongoDB", logMap);
+                 return;
+             } catch (DataAccessException ex) {
+                 lastException = ex;
+                 if (attempt < CALLBACK_STATUS_MAX_RETRIES - 1) {
+                     long delayMillis = (long) (CALLBACK_STATUS_INITIAL_DELAY_MILLIS * Math.pow(CALLBACK_STATUS_BACKOFF_MULTIPLIER, attempt));
+                     var logMap = new DataMap.Builder()
+                             .companyNumber(document.getCompanyNumber())
+                             .resourceId(objectionId)
+                             .resourceKind(RESOURCE_KIND_OBJECTION)
+                             .retryCount(attempt + 1)
+                             .durationMs(delayMillis)
+                             .build()
+                             .getLogMap();
+                     LOGGER.info("Callback status persistence failed, retrying", logMap);
+                     try {
+                         Thread.sleep(delayMillis);
+                     } catch (InterruptedException ie) {
+                         var errorLogMap = new DataMap.Builder()
+                                 .companyNumber(document.getCompanyNumber())
+                                 .resourceId(objectionId)
+                                 .resourceKind(RESOURCE_KIND_OBJECTION)
+                                 .errorMessage("Interrupted during callback status persistence retry")
+                                 .build()
+                                 .getLogMap();
+                         LOGGER.error("Interrupted whilst waiting for callback status persistence retry", ie, errorLogMap);
+                         Thread.currentThread().interrupt();
+                         throw new ObjectionPersistenceException("Failed to persist callback status: interrupted during retry", ie);
+                     }
+                 }
+             }
+         }
 
-        // All retries exhausted
-        LOGGER.error(format("Failed to persist callback status after %d attempts: objectionId=%s",
-                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
-        throw new ObjectionPersistenceException(format(
-                "Failed to persist callback status after %d retries for objectionId=%s",
-                CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
-    }
+         // All retries exhausted
+         var logMap = new DataMap.Builder()
+                 .companyNumber(document.getCompanyNumber())
+                 .resourceId(objectionId)
+                 .resourceKind(RESOURCE_KIND_OBJECTION)
+                 .retryCount(CALLBACK_STATUS_MAX_RETRIES)
+                 .errorMessage("All retry attempts exhausted")
+                 .build()
+                 .getLogMap();
+         LOGGER.error("Failed to persist callback status after all retries", lastException, logMap);
+         throw new ObjectionPersistenceException(format(
+                 "Failed to persist callback status after %d retries for objectionId=%s",
+                 CALLBACK_STATUS_MAX_RETRIES, objectionId), lastException);
+     }
 
     private static ObjectionProcessingStatus parseRequestedStatus(String requestedStatusValue) {
         try {
@@ -343,11 +440,15 @@ public class StrikeOffPartnerObjectionService {
         try {
             return ObjectionProcessingStatus.fromValue(currentStatusValue);
         } catch (IllegalArgumentException | NullPointerException ex) {
-            LOGGER.error(format(
-                    "Invalid persisted objection processing status: companyNumber=%s, objectionId=%s, currentStatus=%s",
-                    companyNumber,
-                    objectionId,
-                    currentStatusValue), ex);
+            var logMap = new DataMap.Builder()
+                    .companyNumber(companyNumber)
+                    .resourceId(objectionId)
+                    .resourceKind(RESOURCE_KIND_OBJECTION)
+                    .status(currentStatusValue)
+                    .errorMessage("Invalid persisted objection processing status")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Unable to parse current objection status", ex, logMap);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Unable to process objection status update");
         }

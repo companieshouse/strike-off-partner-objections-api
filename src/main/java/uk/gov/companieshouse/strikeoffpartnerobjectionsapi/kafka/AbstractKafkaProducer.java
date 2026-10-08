@@ -3,6 +3,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
 
@@ -20,8 +21,6 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * {@link KafkaPublishException} to propagate event correlation context to callers.</p>
  */
 public abstract class AbstractKafkaProducer {
-    private static final String SENDING_EVENT_FORMAT = "Sending event:%s to topic: %s, id: %s";
-    private static final String SUCCESSFULLY_SENT_FORMAT = "Successfully sent: %s eventId: %s";
     private static final String INTERRUPTED_MESSAGE_PREFIX = "Interrupted while sending Kafka message for ";
     private static final String FAILED_MESSAGE_PREFIX = "Failed to send Kafka message for ";
 
@@ -56,13 +55,18 @@ public abstract class AbstractKafkaProducer {
         String topic = producerRecord.topic();
         String documentId = producerRecord.key();
 
-        LOGGER.info(String.format(SENDING_EVENT_FORMAT,
-                message.getEventType(), topic, documentId));
+        var logMap = new DataMap.Builder()
+                .resourceId(message.getEventId())
+                .topic(topic)
+                .eventType(String.valueOf(message.getEventType()))
+                .build()
+                .getLogMap();
+        LOGGER.info("Publishing event to Kafka topic", logMap);
 
         try {
             kafkaTemplate.send(producerRecord)
                     .get(timeoutMilliseconds, TimeUnit.MILLISECONDS);
-            LOGGER.info(String.format(SUCCESSFULLY_SENT_FORMAT, message.getEventType(), message.getEventId()));
+            LOGGER.info("Event published successfully to Kafka topic", logMap);
             return message;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
