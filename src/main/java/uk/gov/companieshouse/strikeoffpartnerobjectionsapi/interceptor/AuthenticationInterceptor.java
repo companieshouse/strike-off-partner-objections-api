@@ -7,6 +7,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import uk.gov.companieshouse.logging.util.DataMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -25,8 +26,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private static final String X_REQUEST_ID_HEADER = "X-Request-Id";
     private static final String KEY = "key";
     private static final String ERIC_PERMISSIONS_HEADER = "ERIC-Authorised-Application-Permissions";
-    private static final String AUTHENTICATION_FAILED_PREFIX = "Authentication failed: requestId=";
-    private static final String IDENTITY_TYPE_SUFFIX = ", identityType=";
+    private static final String AUTHENTICATION_VALIDATION_FAILED = "Authentication validation failed";
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -37,31 +37,56 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String identityHeader = AuthorisationUtil.getAuthorisedIdentity(request);
 
         if (!KEY.equals(identityType)) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Invalid ERIC-Identity-Type header");
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("Invalid ERIC-Identity-Type header: " + identityType)
+                    .build()
+                    .getLogMap();
+            LOGGER.error(AUTHENTICATION_VALIDATION_FAILED, logMap);
             sendForbiddenResponse(response, requestId, "Missing or invalid ERIC-Identity-Type header");
             return false;
         }
 
         if (identityHeader == null || identityHeader.isBlank()) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", reason=Missing or invalid API key");
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("Missing or invalid API key")
+                    .build()
+                    .getLogMap();
+            LOGGER.error(AUTHENTICATION_VALIDATION_FAILED, logMap);
             sendUnauthorizedResponse(response, requestId);
             return false;
         }
 
         if (!hasRequiredPermission(request)) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required permission: " + StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION);
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("Missing required permission: " + StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION)
+                    .build()
+                    .getLogMap();
+            LOGGER.error(AUTHENTICATION_VALIDATION_FAILED, logMap);
             sendForbiddenResponse(response, requestId, "Missing required permission: " + StrikeoffPartnerObjectionsUtils.REQUIRED_ERIC_PERMISSION);
             return false;
         }
 
         String partnerOrganisation = getPartnerOrganisation(request);
         if (partnerOrganisation == null) {
-            LOGGER.error(AUTHENTICATION_FAILED_PREFIX + requestId + ", reason=Missing required header: " + ERIC_PARTNER_ORGANISATION_HEADER);
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("Missing required header: " + ERIC_PARTNER_ORGANISATION_HEADER)
+                    .build()
+                    .getLogMap();
+            LOGGER.error(AUTHENTICATION_VALIDATION_FAILED, logMap);
             sendForbiddenResponse(response, requestId, "Missing required header: " + ERIC_PARTNER_ORGANISATION_HEADER);
             return false;
         }
 
-        LOGGER.info("Authentication credentials validated: requestId=" + requestId + IDENTITY_TYPE_SUFFIX + identityType + ", partnerOrganisation=" + partnerOrganisation + ", passing request through");
+        var logMap = new DataMap.Builder()
+                .requestId(requestId)
+                .partnerOrganisation(partnerOrganisation)
+                .build()
+                .getLogMap();
+        LOGGER.info("Authentication credentials validated and request passed through", logMap);
         return true;
     }
 
@@ -76,7 +101,12 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             errorResponse.put("requestId", requestId);
             response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
         } catch (IOException e) {
-            LOGGER.error("Failed to write error response", e);
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("IOException whilst writing forbidden response")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Failed to write forbidden error response", e, logMap);
         }
     }
 
@@ -91,7 +121,12 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             errorResponse.put("requestId", requestId);
             response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
         } catch (IOException e) {
-            LOGGER.error("Failed to write error response", e);
+            var logMap = new DataMap.Builder()
+                    .requestId(requestId)
+                    .errorMessage("IOException whilst writing unauthorized response")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Failed to write unauthorized error response", e, logMap);
         }
     }
 

@@ -15,6 +15,7 @@ import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
@@ -45,6 +46,7 @@ public class StrikeOffPartnerWithdrawalsService {
 
     private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
     private static final String WITHDRAWAL_URI_TEMPLATE = "/company/%s/strike-off/withdrawals/%s";
+    private static final String RESOURCE_KIND_WITHDRAWAL = "withdrawal";
 
     private final WithdrawalRepository withdrawalRepository;
     private final ObjectionRepository objectionRepository;
@@ -99,8 +101,13 @@ public class StrikeOffPartnerWithdrawalsService {
             String withdrawalId,
             String partnerOrganisation) {
 
-        LOGGER.info(format("Retrieving withdrawal: companyNumber=%s, withdrawalId=%s",
-                companyNumber, withdrawalId));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(withdrawalId)
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                .build()
+                .getLogMap();
+        LOGGER.info("Retrieving withdrawal", logMap);
 
         try {
             WithdrawalDocument document = withdrawalRepository
@@ -110,14 +117,25 @@ public class StrikeOffPartnerWithdrawalsService {
                             format("Withdrawal not found: withdrawalId=%s for company=%s", withdrawalId, companyNumber)));
 
             if (!partnerOrganisation.equals(document.getPartnerOrganisation())) {
-                LOGGER.error(format("Organisation mismatch: caller=%s, document=%s, withdrawalId=%s",
-                        partnerOrganisation, document.getPartnerOrganisation(), withdrawalId));
+                var errorLogMap = new DataMap.Builder()
+                        .companyNumber(companyNumber)
+                        .resourceId(withdrawalId)
+                        .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                        .errorMessage("Organisation mismatch: caller organisation does not match document organisation")
+                        .build()
+                        .getLogMap();
+                LOGGER.error("Organisation access control violation", errorLogMap);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Access denied: withdrawal belongs to a different organisation");
             }
 
-            LOGGER.info(format("Withdrawal retrieved successfully: withdrawalId=%s, companyNumber=%s",
-                    document.getWithdrawalId(), document.getCompanyNumber()));
+            var successLogMap = new DataMap.Builder()
+                    .companyNumber(document.getCompanyNumber())
+                    .resourceId(document.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Withdrawal retrieved successfully", successLogMap);
 
             return withdrawalMapper.toWithdrawAllObjectionsResponse(document);
         } catch (DataAccessException ex) {
@@ -156,8 +174,14 @@ public class StrikeOffPartnerWithdrawalsService {
         String withdrawalId = UUID.randomUUID().toString();
         String etag = UUID.randomUUID().toString();
 
-        LOGGER.info(format("Creating withdrawal: companyNumber=%s, withdrawalId=%s",
-                companyNumber, withdrawalId));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(withdrawalId)
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                .partnerOrganisation(partnerOrganisation)
+                .build()
+                .getLogMap();
+        LOGGER.info("Creating withdrawal for company", logMap);
 
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, partnerOrganisation, withdrawalId, etag);
@@ -165,8 +189,13 @@ public class StrikeOffPartnerWithdrawalsService {
 
         try {
             WithdrawalDocument persistedWithdrawal = withdrawalRepository.insert(document);
-            LOGGER.info(format("Withdrawal created successfully: withdrawalId=%s, companyNumber=%s",
-                    persistedWithdrawal.getWithdrawalId(), persistedWithdrawal.getCompanyNumber()));
+            var successLogMap = new DataMap.Builder()
+                    .companyNumber(persistedWithdrawal.getCompanyNumber())
+                    .resourceId(persistedWithdrawal.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Withdrawal created and persisted", successLogMap);
 
             publishAndSaveWithdrawal(persistedWithdrawal);
 
@@ -180,8 +209,13 @@ public class StrikeOffPartnerWithdrawalsService {
         try {
             StrikeOffPartnerObjections publishedEvent = withdrawalKafkaProducer.publishWithdrawalEvent(persistedWithdrawal);
             EventTracker.markPublished(persistedWithdrawal, publishedEvent.getEventId());
-            LOGGER.info(format("Withdrawal event published successfully: withdrawalId=%s",
-                    persistedWithdrawal.getWithdrawalId()));
+            var logMap = new DataMap.Builder()
+                    .companyNumber(persistedWithdrawal.getCompanyNumber())
+                    .resourceId(persistedWithdrawal.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Withdrawal event published to Kafka", logMap);
         } catch (KafkaPublishException ex) {
             EventTracker.markFailed(persistedWithdrawal, ex.getEventId(), ex.getMessage());
             throw ex;
@@ -194,8 +228,14 @@ public class StrikeOffPartnerWithdrawalsService {
         try {
             withdrawalRepository.save(persistedWithdrawal);
         } catch (DataAccessException saveEx) {
-            LOGGER.error(format("Failed to update withdrawal event status: withdrawalId=%s",
-                    persistedWithdrawal.getWithdrawalId()), saveEx);
+            var logMap = new DataMap.Builder()
+                    .companyNumber(persistedWithdrawal.getCompanyNumber())
+                    .resourceId(persistedWithdrawal.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .errorMessage("Failed to update event status after publish")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Failed to save withdrawal event status", saveEx, logMap);
         }
     }
 
@@ -208,8 +248,12 @@ public class StrikeOffPartnerWithdrawalsService {
             throw new WithdrawalPersistenceException("Failed to validate objections for withdrawal", ex);
         }
         if (!hasObjectionsForPartner) {
-            LOGGER.info(format("No objections found for companyNumber=%s and partnerOrganisation=%s",
-                    companyNumber, partnerOrganisation));
+            var logMap = new DataMap.Builder()
+                    .companyNumber(companyNumber)
+                    .errorMessage("No objections found for partner organisation")
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Withdrawal validation failed: no partner objections found", logMap);
             throw new CompanyValidationException(
                     format("No objections found for companyNumber=%s and partnerOrganisation=%s",
                             companyNumber, partnerOrganisation),
@@ -238,8 +282,13 @@ public class StrikeOffPartnerWithdrawalsService {
             String withdrawalId,
             UpdateWithdrawalStatusRequest updateStatusRequest) {
 
-        LOGGER.info(format("Attempting to update withdrawal processing status: withdrawalId=%s, companyNumber=%s",
-                withdrawalId, companyNumber));
+        var logMap = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(withdrawalId)
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                .build()
+                .getLogMap();
+        LOGGER.info("Attempting to update withdrawal processing status", logMap);
 
         WithdrawalDocument existingDocument = withdrawalRepository
                 .findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId)
@@ -263,8 +312,14 @@ public class StrikeOffPartnerWithdrawalsService {
 
         try {
             WithdrawalDocument updatedWithdrawal = withdrawalRepository.save(existingDocument);
-            LOGGER.info(format("Withdrawal processing status updated successfully: withdrawalId=%s, companyNumber=%s",
-                    updatedWithdrawal.getWithdrawalId(), updatedWithdrawal.getCompanyNumber()));
+            var successLogMap = new DataMap.Builder()
+                    .companyNumber(updatedWithdrawal.getCompanyNumber())
+                    .resourceId(updatedWithdrawal.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .status(updatedWithdrawal.getProcessingStatus())
+                    .build()
+                    .getLogMap();
+            LOGGER.info("Withdrawal processing status updated", successLogMap);
 
             // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
              Instant statusChangedAt = Instant.now();
@@ -288,26 +343,52 @@ public class StrikeOffPartnerWithdrawalsService {
             if (callbackResult.isSuccess()) {
                 // Callback succeeded
                 CallbackStatusTracker.markCallbackSuccess(document, callbackResult.getCorrelationId(), callbackStatusChangedAt);
-                LOGGER.info(format("HMRC callback succeeded: withdrawalId=%s, correlationId=%s, attempt=%d",
-                        document.getWithdrawalId(), callbackResult.getCorrelationId(), callbackResult.getAttemptNumber()));
+                var logMap = new DataMap.Builder()
+                        .companyNumber(document.getCompanyNumber())
+                        .resourceId(document.getWithdrawalId())
+                        .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                        .retryCount(callbackResult.getAttemptNumber())
+                        .correlationId(callbackResult.getCorrelationId())
+                        .build()
+                        .getLogMap();
+                LOGGER.info("HMRC callback succeeded for withdrawal", logMap);
             } else {
                 // Callback failed after all retries
                 CallbackStatusTracker.markCallbackFailed(document, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
-                LOGGER.error(format("HMRC callback failed permanently: withdrawalId=%s, failureReason=%s, attempt=%d",
-                        document.getWithdrawalId(), callbackResult.getFailureReason(), callbackResult.getAttemptNumber()));
+                var logMap = new DataMap.Builder()
+                        .companyNumber(document.getCompanyNumber())
+                        .resourceId(document.getWithdrawalId())
+                        .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                        .retryCount(callbackResult.getAttemptNumber())
+                        .errorMessage(callbackResult.getFailureReason())
+                        .build()
+                        .getLogMap();
+                LOGGER.error("HMRC callback failed permanently for withdrawal", logMap);
             }
             withdrawalRepository.save(document);
         };
-    }
+     }
 
     private static WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
         if (currentStatusValue == null) {
+            var logMap = new DataMap.Builder()
+                    .status(currentStatusValue)
+                    .errorMessage("Invalid current processing status: null value")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Unable to parse current withdrawal status", logMap);
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue));
         }
         try {
             return WithdrawalProcessingStatus.fromValue(currentStatusValue);
         } catch (IllegalArgumentException ex) {
+            var logMap = new DataMap.Builder()
+                    .status(currentStatusValue)
+                    .errorMessage("Invalid withdrawal processing status value")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Unable to parse current withdrawal status", ex, logMap);
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid current processing status=%s", currentStatusValue), ex);
         }

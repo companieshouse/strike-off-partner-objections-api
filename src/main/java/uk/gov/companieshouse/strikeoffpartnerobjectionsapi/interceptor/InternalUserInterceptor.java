@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import uk.gov.companieshouse.logging.util.DataMap;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_AUTHORISED_KEY_PRIVILEGES;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.INTERNAL_APP_PRIVILEGE;
@@ -27,7 +28,11 @@ public class InternalUserInterceptor implements HandlerInterceptor {
         String privilegesHeader = request.getHeader(ERIC_AUTHORISED_KEY_PRIVILEGES);
 
         if (privilegesHeader == null || !hasInternalAppPrivilege(privilegesHeader)) {
-            LOGGER.error("Request to internal endpoint missing internal-app privilege");
+            var logMap = new DataMap.Builder()
+                    .errorMessage("Missing internal-app privilege")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Attempted access to internal endpoint without required privilege", logMap);
             response.setStatus(HttpStatus.FORBIDDEN.value());
             return false;
         }
