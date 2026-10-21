@@ -55,6 +55,14 @@ class CallbackResourceKindTest {
                 .isEqualTo(CallbackResourceKind.WITHDRAWAL);
     }
 
+    @Test
+    void resourceKindsExposeHmrcContractValues() {
+        assertThat(CallbackResourceKind.OBJECTION.getValue())
+                .isEqualTo("strike-off-partner-objection#objection");
+        assertThat(CallbackResourceKind.WITHDRAWAL.getValue())
+                .isEqualTo("strike-off-partner-objection#withdrawal");
+    }
+
     @Tag("unit-test")
     static
     class CallbackStatusTest {

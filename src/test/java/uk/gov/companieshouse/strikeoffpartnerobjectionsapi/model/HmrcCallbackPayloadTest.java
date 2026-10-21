@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -7,6 +8,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackR
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Tag("unit-test")
 class HmrcCallbackPayloadTest {
@@ -164,6 +166,24 @@ class HmrcCallbackPayloadTest {
         assertEquals("", payload.getResourceId());
         assertEquals("", payload.getCompanyNumber());
         assertEquals("", payload.getResourceUri());
+    }
+
+    @Test
+    void serializesUsingHmrcCallbackContract() throws Exception {
+        HmrcCallbackPayload withdrawalPayload = new HmrcCallbackPayload(
+                CallbackResourceKind.WITHDRAWAL,
+                "049348-895017-429226",
+                "04688597",
+                "/company/04688597/strike-off-partner-objections-withdrawals/049348-895017-429226");
+
+        String json = new ObjectMapper().writeValueAsString(withdrawalPayload);
+
+        assertThat(json)
+                .contains("\"resource_kind\":\"strike-off-partner-objection#withdrawal\"")
+                .contains("\"resource_id\":\"049348-895017-429226\"")
+                .contains("\"company_number\":\"04688597\"")
+                .contains("\"resource_uri\":\"/company/04688597/strike-off-partner-objections-withdrawals/"
+                        + "049348-895017-429226\"");
     }
 }
 
