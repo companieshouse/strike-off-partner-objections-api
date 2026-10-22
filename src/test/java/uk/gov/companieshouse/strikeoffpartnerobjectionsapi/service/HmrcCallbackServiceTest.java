@@ -1,4 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -8,9 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -27,7 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 import java.util.concurrent.CountDownLatch;
@@ -89,7 +92,7 @@ class HmrcCallbackServiceTest {
            return Stream.of(
                    Arguments.of(
                            "Objection",
-                           CallbackResourceKind.OBJECTION,
+                           CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                            OBJECTION_ID,
                            OBJECTION_URI,
                            (Consumer<HmrcCallbackService>) service ->
@@ -97,7 +100,7 @@ class HmrcCallbackServiceTest {
                    ),
                    Arguments.of(
                            "Withdrawal",
-                           CallbackResourceKind.WITHDRAWAL,
+                           CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                            WITHDRAWAL_ID,
                            WITHDRAWAL_URI,
                            (Consumer<HmrcCallbackService>) service ->
@@ -156,9 +159,9 @@ class HmrcCallbackServiceTest {
           assertEquals(2, capturedPayloads.size());
 
           boolean hasObjection = capturedPayloads.stream()
-                  .anyMatch(p -> CallbackResourceKind.OBJECTION.equals(p.getResourceKind()));
+                  .anyMatch(p -> CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION.equals(p.getResourceKind()));
           boolean hasWithdrawal = capturedPayloads.stream()
-                  .anyMatch(p -> CallbackResourceKind.WITHDRAWAL.equals(p.getResourceKind()));
+                  .anyMatch(p -> CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL.equals(p.getResourceKind()));
 
           assertTrue(hasObjection, "Expected objection callback to be processed");
           assertTrue(hasWithdrawal, "Expected withdrawal callback to be processed");
@@ -172,7 +175,7 @@ class HmrcCallbackServiceTest {
           verify(callbackClient, timeout(5000)).sendCallback(anyString(), payloadCaptor.capture());
 
           HmrcCallbackPayload capturedPayload = payloadCaptor.getValue();
-          assertEquals(CallbackResourceKind.OBJECTION, capturedPayload.getResourceKind());
+          assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION, capturedPayload.getResourceKind());
           assertEquals(OBJECTION_ID, capturedPayload.getResourceId());
           assertEquals(COMPANY_NUMBER, capturedPayload.getCompanyNumber());
           assertEquals(OBJECTION_URI, capturedPayload.getResourceUri());
@@ -363,7 +366,7 @@ class HmrcCallbackServiceTest {
 
              service.destroy();
 
-             verify(callbackClient, Mockito.never()).sendCallback(anyString(), any(HmrcCallbackPayload.class));
+             verify(callbackClient, never()).sendCallback(anyString(), any(HmrcCallbackPayload.class));
          }
 
         @Test
@@ -393,8 +396,8 @@ class HmrcCallbackServiceTest {
               };
 
               // Create a mock executor that rejects execution
-              ScheduledExecutorService mockExecutor = Mockito.mock(ScheduledExecutorService.class);
-              Mockito.doThrow(new RejectedExecutionException("Queue is full"))
+              ScheduledExecutorService mockExecutor = mock(ScheduledExecutorService.class);
+              doThrow(new RejectedExecutionException("Queue is full"))
                       .when(mockExecutor).execute(ArgumentMatchers.any(Runnable.class));
 
               // Use reflection to inject the mock executor

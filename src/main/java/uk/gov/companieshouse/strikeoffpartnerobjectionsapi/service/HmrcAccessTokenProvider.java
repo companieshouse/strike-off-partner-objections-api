@@ -89,38 +89,38 @@ public class HmrcAccessTokenProvider {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", properties.getGrantType());
-        form.add("client_id", properties.getClientId());
-        form.add("client_secret", properties.getClientSecret());
+        form.add("grant_type", properties.grantType());
+        form.add("client_id", properties.clientId());
+        form.add("client_secret", properties.clientSecret());
 
         try {
             ResponseEntity<HmrcOAuthTokenResponse> response = restTemplate.postForEntity(
-                    properties.getTokenUrl(), new HttpEntity<>(form, headers), HmrcOAuthTokenResponse.class);
+                    properties.tokenUrl(), new HttpEntity<>(form, headers), HmrcOAuthTokenResponse.class);
             return response.getBody();
         } catch (HttpStatusCodeException exception) {
             throw new HmrcAuthenticationTokenProviderException(
-                    TOKEN_REQUEST_FAILED + ": statusCode=" + exception.getStatusCode().value());
+                    TOKEN_REQUEST_FAILED + ": statusCode=" + exception.getStatusCode().value(), exception);
         } catch (RestClientException exception) {
-            throw new HmrcAuthenticationTokenProviderException(TOKEN_REQUEST_FAILED);
+            throw new HmrcAuthenticationTokenProviderException(TOKEN_REQUEST_FAILED, exception);
         }
     }
 
     private void validate(HmrcOAuthTokenResponse response) {
         if (response == null
-                || response.getAccessToken() == null
-                || response.getAccessToken().isBlank()
-                || response.getTokenType() == null
-                || !BEARER_TOKEN_TYPE.equalsIgnoreCase(response.getTokenType())
-                || response.getExpiresIn() <= 0) {
+                || response.accessToken() == null
+                || response.accessToken().isBlank()
+                || response.tokenType() == null
+                || !BEARER_TOKEN_TYPE.equalsIgnoreCase(response.tokenType())
+                || response.expiresIn() <= 0) {
             throw new HmrcAuthenticationTokenProviderException(INVALID_TOKEN_RESPONSE);
         }
     }
 
     private CachedAccessToken createCachedToken(HmrcOAuthTokenResponse response, Instant obtainedAt) {
-        long maximumSkew = Math.max(0, response.getExpiresIn() - 1);
-        long effectiveSkew = Math.min(properties.getExpirySkewSeconds(), maximumSkew);
-        Instant refreshAt = obtainedAt.plusSeconds(response.getExpiresIn() - effectiveSkew);
-        return new CachedAccessToken(response.getAccessToken(), refreshAt);
+        long maximumSkew = Math.max(0, response.expiresIn() - 1);
+        long effectiveSkew = Math.min(properties.expirySkewSeconds(), maximumSkew);
+        Instant refreshAt = obtainedAt.plusSeconds(response.expiresIn() - effectiveSkew);
+        return new CachedAccessToken(response.accessToken(), refreshAt);
     }
 
     private boolean isUsable(CachedAccessToken token, Instant now) {

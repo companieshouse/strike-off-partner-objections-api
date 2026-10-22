@@ -10,4 +10,8 @@ public class HmrcAuthenticationTokenProviderException extends RestClientExceptio
     public HmrcAuthenticationTokenProviderException(String message) {
         super(message);
     }
+
+    public HmrcAuthenticationTokenProviderException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

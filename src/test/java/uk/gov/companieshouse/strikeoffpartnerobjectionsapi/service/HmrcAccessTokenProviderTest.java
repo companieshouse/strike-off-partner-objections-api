@@ -141,7 +141,7 @@ class HmrcAccessTokenProviderTest {
                 .hasMessageNotContaining(CLIENT_ID)
                 .hasMessageNotContaining(CLIENT_SECRET)
                 .hasMessageNotContaining(ACCESS_TOKEN)
-                .hasNoCause();
+                .hasCauseInstanceOf(RestClientException.class);
     }
 
     @Test
@@ -153,7 +153,7 @@ class HmrcAccessTokenProviderTest {
                 .isInstanceOf(HmrcAuthenticationTokenProviderException.class)
                 .hasMessage("Failed to obtain HMRC OAuth access token")
                 .hasMessageNotContaining(CLIENT_SECRET)
-                .hasNoCause();
+                .hasCauseInstanceOf(RestClientException.class);
     }
 
     @Test

@@ -1,51 +1,29 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Successful response returned by the HMRC OAuth token endpoint.
  */
-public class HmrcOAuthTokenResponse {
+public record HmrcOAuthTokenResponse (
 
     @JsonProperty("access_token")
-    private String accessToken;
+    String accessToken,
 
     @JsonProperty("token_type")
-    private String tokenType;
+    String tokenType,
 
     @JsonProperty("expires_in")
-    private long expiresIn;
+    long expiresIn
+){
 
-    public HmrcOAuthTokenResponse() {
-    }
-
-    public HmrcOAuthTokenResponse(String accessToken, String tokenType, long expiresIn) {
-        this.accessToken = accessToken;
-        this.tokenType = tokenType;
-        this.expiresIn = expiresIn;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getTokenType() {
-        return tokenType;
-    }
-
-    public void setTokenType(String tokenType) {
-        this.tokenType = tokenType;
-    }
-
-    public long getExpiresIn() {
-        return expiresIn;
-    }
-
-    public void setExpiresIn(long expiresIn) {
-        this.expiresIn = expiresIn;
+    @Override
+    public @NonNull String toString() {
+        return "HmrcOAuthTokenResponse{" +
+                "accessToken='[REDACTED]'" +
+                ", tokenType='" + tokenType + '\'' +
+                ", expiresIn=" + expiresIn +
+                '}';
     }
 }

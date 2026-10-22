@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,13 +27,13 @@ class HmrcCallbackPayloadTest {
         String resourceUri = "/company/12345678/objections/objection-123";
 
         HmrcCallbackPayload result = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                 resourceId,
                 companyNumber,
                 resourceUri
         );
 
-        assertEquals(CallbackResourceKind.OBJECTION, result.getResourceKind());
+        assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION, result.getResourceKind());
         assertEquals(resourceId, result.getResourceId());
         assertEquals(companyNumber, result.getCompanyNumber());
         assertEquals(resourceUri, result.getResourceUri());
@@ -42,13 +42,13 @@ class HmrcCallbackPayloadTest {
     @Test
     void testConstructorWithWithdrawalResourceKind() {
         HmrcCallbackPayload result = new HmrcCallbackPayload(
-                CallbackResourceKind.WITHDRAWAL,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                 "withdrawal-456",
                 "87654321",
                 "/company/87654321/withdrawals/withdrawal-456"
         );
 
-        assertEquals(CallbackResourceKind.WITHDRAWAL, result.getResourceKind());
+        assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL, result.getResourceKind());
         assertEquals("withdrawal-456", result.getResourceId());
     }
 
@@ -63,11 +63,11 @@ class HmrcCallbackPayloadTest {
 
     @Test
     void testSetAndGetResourceKind() {
-        payload.setResourceKind(CallbackResourceKind.OBJECTION);
-        assertEquals(CallbackResourceKind.OBJECTION, payload.getResourceKind());
+        payload.setResourceKind(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION);
+        assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION, payload.getResourceKind());
 
-        payload.setResourceKind(CallbackResourceKind.WITHDRAWAL);
-        assertEquals(CallbackResourceKind.WITHDRAWAL, payload.getResourceKind());
+        payload.setResourceKind(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL);
+        assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL, payload.getResourceKind());
     }
 
     @Test
@@ -117,12 +117,12 @@ class HmrcCallbackPayloadTest {
 
     @Test
     void testMultipleSetters() {
-        payload.setResourceKind(CallbackResourceKind.OBJECTION);
+        payload.setResourceKind(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION);
         payload.setResourceId("obj-789");
         payload.setCompanyNumber("11111111");
         payload.setResourceUri("/test/uri");
 
-        assertEquals(CallbackResourceKind.OBJECTION, payload.getResourceKind());
+        assertEquals(CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION, payload.getResourceKind());
         assertEquals("obj-789", payload.getResourceId());
         assertEquals("11111111", payload.getCompanyNumber());
         assertEquals("/test/uri", payload.getResourceUri());
@@ -140,14 +140,14 @@ class HmrcCallbackPayloadTest {
     @Test
     void testConstructorDoesNotModifyAfterCreation() {
         HmrcCallbackPayload payload1 = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                 "id-1",
                 "11111111",
                 "/uri/1"
         );
 
         HmrcCallbackPayload payload2 = new HmrcCallbackPayload(
-                CallbackResourceKind.WITHDRAWAL,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                 "id-2",
                 "22222222",
                 "/uri/2"
@@ -171,7 +171,7 @@ class HmrcCallbackPayloadTest {
     @Test
     void serializesUsingHmrcCallbackContract() throws Exception {
         HmrcCallbackPayload withdrawalPayload = new HmrcCallbackPayload(
-                CallbackResourceKind.WITHDRAWAL,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                 "049348-895017-429226",
                 "04688597",
                 "/company/04688597/strike-off-partner-objections-withdrawals/049348-895017-429226");

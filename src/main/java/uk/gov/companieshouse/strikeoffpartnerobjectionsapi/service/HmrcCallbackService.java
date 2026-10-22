@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.beans.factory.DisposableBean;
 import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
@@ -135,7 +135,7 @@ public class HmrcCallbackService implements DisposableBean {
     public void sendObjectionOutcomeCallback(String objectionId, String companyNumber, String objectionsUri,
                                             Consumer<CallbackResult> resultHandler) {
         HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                 objectionId,
                 companyNumber,
                 objectionsUri
@@ -170,7 +170,7 @@ public class HmrcCallbackService implements DisposableBean {
     public void sendWithdrawalOutcomeCallback(String withdrawalId, String companyNumber, String withdrawalUri,
                                             Consumer<CallbackResult> resultHandler) {
         HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                CallbackResourceKind.WITHDRAWAL,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                 withdrawalId,
                 companyNumber,
                 withdrawalUri

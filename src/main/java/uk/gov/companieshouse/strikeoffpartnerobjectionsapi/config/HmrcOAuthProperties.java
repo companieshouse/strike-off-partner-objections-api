@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -10,72 +11,26 @@ import org.springframework.validation.annotation.Validated;
  */
 @Validated
 @ConfigurationProperties(prefix = "hmrc.oauth")
-public class HmrcOAuthProperties {
+public record HmrcOAuthProperties(
 
     @NotBlank
-    private String tokenUrl;
+    String tokenUrl,
 
     @NotBlank
-    private String clientId;
+    String clientId,
 
     @NotBlank
-    private String clientSecret;
+    String clientSecret,
 
     @NotBlank
-    private String grantType;
+    String grantType,
 
     @PositiveOrZero
-    private long expirySkewSeconds;
+    long expirySkewSeconds
+) {
 
-    public HmrcOAuthProperties() {
-    }
-
-    public HmrcOAuthProperties(String tokenUrl, String clientId, String clientSecret,
-                               String grantType, long expirySkewSeconds) {
-        this.tokenUrl = tokenUrl;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.grantType = grantType;
-        this.expirySkewSeconds = expirySkewSeconds;
-    }
-
-    public String getTokenUrl() {
-        return tokenUrl;
-    }
-
-    public void setTokenUrl(String tokenUrl) {
-        this.tokenUrl = tokenUrl;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
-    }
-
-    public String getGrantType() {
-        return grantType;
-    }
-
-    public void setGrantType(String grantType) {
-        this.grantType = grantType;
-    }
-
-    public long getExpirySkewSeconds() {
-        return expirySkewSeconds;
-    }
-
-    public void setExpirySkewSeconds(long expirySkewSeconds) {
-        this.expirySkewSeconds = expirySkewSeconds;
+    @Override
+    public @NonNull String toString() {
+        return "HmrcOAuthProperties[REDACTED]";
     }
 }

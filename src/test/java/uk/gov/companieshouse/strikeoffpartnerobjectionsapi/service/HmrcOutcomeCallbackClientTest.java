@@ -30,7 +30,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcAuthenticationTokenProviderException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 @Tag("unit-test")
@@ -61,7 +61,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackSendsPayloadSuccessfully() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -93,7 +93,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackReturnsValidUUID() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.WITHDRAWAL,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                  "withdrawal-456",
                  COMPANY_NUMBER,
                  "/company/12345678/withdrawals/withdrawal-456"
@@ -116,7 +116,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackThrowsExceptionOnRestClientFailure() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -133,7 +133,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackHandlesNon200StatusCodes() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -151,7 +151,7 @@ class HmrcOutcomeCallbackClientTest {
      @org.junit.jupiter.params.provider.ValueSource(ints = {400, 403, 404, 405, 500, 502, 503})
      void sendCallback_withVariousErrorStatusCodes_throwsRestClientException(int statusCode) {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -171,7 +171,7 @@ class HmrcOutcomeCallbackClientTest {
      @ValueSource(strings = {"", "   "})
      void sendCallback_withInvalidUrl_throwsIllegalArgumentException(String invalidUrl) {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -183,7 +183,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallback_withNullUrl_throwsIllegalArgumentException() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -195,7 +195,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallback_generatesUniqueCorrelationIds() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.WITHDRAWAL,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                  "withdrawal-456",
                  "87654321",
                  "/company/87654321/strike-off/withdrawals/withdrawal-456"
@@ -276,7 +276,7 @@ class HmrcOutcomeCallbackClientTest {
 
     private HmrcCallbackPayload createPayload() {
         return new HmrcCallbackPayload(
-                CallbackResourceKind.OBJECTION,
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                 OBJECTION_ID,
                 COMPANY_NUMBER,
                 OBJECTION_URI);
