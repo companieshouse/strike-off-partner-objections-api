@@ -1,8 +1,8 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -13,16 +13,16 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "hmrc.oauth")
 public record HmrcOAuthProperties(
 
-    @NotBlank
+    @Nullable
     String tokenUrl,
 
-    @NotBlank
+    @Nullable
     String clientId,
 
-    @NotBlank
+    @Nullable
     String clientSecret,
 
-    @NotBlank
+    @Nullable
     String grantType,
 
     @PositiveOrZero

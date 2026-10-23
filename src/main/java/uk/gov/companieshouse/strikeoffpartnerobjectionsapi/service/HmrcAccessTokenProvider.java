@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -27,6 +28,7 @@ public class HmrcAccessTokenProvider {
     private static final String BEARER_TOKEN_TYPE = "bearer";
     private static final String TOKEN_REQUEST_FAILED = "Failed to obtain HMRC OAuth access token";
     private static final String INVALID_TOKEN_RESPONSE = "HMRC OAuth token endpoint returned an invalid response";
+    private static final String INVALID_CONFIGURATION = "HMRC OAuth configuration is incomplete";
 
     private final RestTemplate restTemplate;
     private final HmrcOAuthProperties properties;
@@ -85,6 +87,7 @@ public class HmrcAccessTokenProvider {
     }
 
     private HmrcOAuthTokenResponse requestAccessToken() {
+        validateConfiguration();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -102,6 +105,15 @@ public class HmrcAccessTokenProvider {
                     TOKEN_REQUEST_FAILED + ": statusCode=" + exception.getStatusCode().value(), exception);
         } catch (RestClientException exception) {
             throw new HmrcAuthenticationTokenProviderException(TOKEN_REQUEST_FAILED, exception);
+        }
+    }
+
+    private void validateConfiguration() {
+        if (!StringUtils.hasText(properties.tokenUrl())
+                || !StringUtils.hasText(properties.clientId())
+                || !StringUtils.hasText(properties.clientSecret())
+                || !StringUtils.hasText(properties.grantType())) {
+            throw new HmrcAuthenticationTokenProviderException(INVALID_CONFIGURATION);
         }
     }
 
