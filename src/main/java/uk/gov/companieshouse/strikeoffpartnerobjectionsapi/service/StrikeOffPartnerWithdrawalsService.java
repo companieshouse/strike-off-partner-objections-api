@@ -45,7 +45,8 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 public class StrikeOffPartnerWithdrawalsService {
 
     private static final String NO_OBJECTIONS_FOR_PARTNER_ORGANISATION = "NO_OBJECTIONS_FOR_PARTNER_ORGANISATION";
-    private static final String WITHDRAWAL_URI_TEMPLATE = "/company/%s/strike-off/withdrawals/%s";
+    private static final String WITHDRAWAL_URI_TEMPLATE =
+            "/company/%s/strike-off-partner-objections-withdrawals/%s";
     private static final String RESOURCE_KIND_WITHDRAWAL = "withdrawal";
 
     private final WithdrawalRepository withdrawalRepository;

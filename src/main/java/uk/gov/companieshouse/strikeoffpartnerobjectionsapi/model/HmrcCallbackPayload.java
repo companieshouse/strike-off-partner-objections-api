@@ -1,7 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 
 /**
  * Payload for HMRC outcome callback notifications.

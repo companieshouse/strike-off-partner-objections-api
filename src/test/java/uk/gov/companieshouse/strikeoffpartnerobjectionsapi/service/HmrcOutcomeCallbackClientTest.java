@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,11 +22,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackResourceKind;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcAuthenticationTokenProviderException;
+import uk.gov.companieshouse.api.objections.model.CallbackResourceKind;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 @Tag("unit-test")
@@ -34,21 +41,27 @@ class HmrcOutcomeCallbackClientTest {
     private static final String OBJECTION_ID = "objection-123";
     private static final String COMPANY_NUMBER = "12345678";
     private static final String OBJECTION_URI = "/company/12345678/objections/objection-123";
+    private static final String ACCESS_TOKEN = "test-access-token";
+    private static final String REPLACEMENT_ACCESS_TOKEN = "replacement-access-token";
 
     @Mock
     private RestTemplate restTemplate;
+
+    @Mock
+    private HmrcAccessTokenProvider accessTokenProvider;
 
     private HmrcOutcomeCallbackClient callbackClient;
 
     @BeforeEach
     void setUp() {
-        callbackClient = new HmrcOutcomeCallbackClient(restTemplate);
+        callbackClient = new HmrcOutcomeCallbackClient(restTemplate, accessTokenProvider);
+        lenient().when(accessTokenProvider.getAccessToken()).thenReturn(ACCESS_TOKEN);
     }
 
      @Test
      void sendCallbackSendsPayloadSuccessfully() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -69,12 +82,18 @@ class HmrcOutcomeCallbackClientTest {
 
          HttpEntity<HmrcCallbackPayload> capturedEntity = entityCaptor.getValue();
          assertEquals(payload, capturedEntity.getBody());
+         HttpHeaders headers = capturedEntity.getHeaders();
+         assertThat(headers.getFirst(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer " + ACCESS_TOKEN);
+         assertThat(headers.getFirst("X-Correlation-ID")).isEqualTo(correlationId);
+         assertThat(headers.getFirst(HttpHeaders.DATE)).isNotBlank();
+         assertThat(headers.getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+         assertThat(headers.getAccept()).containsExactly(MediaType.APPLICATION_JSON);
      }
 
      @Test
      void sendCallbackReturnsValidUUID() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.WITHDRAWAL,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                  "withdrawal-456",
                  COMPANY_NUMBER,
                  "/company/12345678/withdrawals/withdrawal-456"
@@ -97,7 +116,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackThrowsExceptionOnRestClientFailure() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -114,7 +133,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallbackHandlesNon200StatusCodes() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  OBJECTION_ID,
                  COMPANY_NUMBER,
                  OBJECTION_URI
@@ -129,10 +148,10 @@ class HmrcOutcomeCallbackClientTest {
      }
 
      @ParameterizedTest
-     @org.junit.jupiter.params.provider.ValueSource(ints = {400, 401, 403, 404, 405, 500, 502, 503})
+     @org.junit.jupiter.params.provider.ValueSource(ints = {400, 403, 404, 405, 500, 502, 503})
      void sendCallback_withVariousErrorStatusCodes_throwsRestClientException(int statusCode) {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -152,7 +171,7 @@ class HmrcOutcomeCallbackClientTest {
      @ValueSource(strings = {"", "   "})
      void sendCallback_withInvalidUrl_throwsIllegalArgumentException(String invalidUrl) {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -164,7 +183,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallback_withNullUrl_throwsIllegalArgumentException() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.OBJECTION,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
                  "objection-123",
                  "12345678",
                  "/company/12345678/strike-off/objections/objection-123"
@@ -176,7 +195,7 @@ class HmrcOutcomeCallbackClientTest {
      @Test
      void sendCallback_generatesUniqueCorrelationIds() {
          HmrcCallbackPayload payload = new HmrcCallbackPayload(
-                 CallbackResourceKind.WITHDRAWAL,
+                 CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_WITHDRAWAL,
                  "withdrawal-456",
                  "87654321",
                  "/company/87654321/strike-off/withdrawals/withdrawal-456"
@@ -198,4 +217,68 @@ class HmrcOutcomeCallbackClientTest {
          assertThat(correlationId2)
                  .isNotNull();
      }
+
+    @Test
+    void sendCallbackReplacesRejectedTokenAndContinuesCallback() {
+        HmrcCallbackPayload payload = createPayload();
+        HttpClientErrorException unauthorized = HttpClientErrorException.create(
+                HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null);
+        when(accessTokenProvider.getAccessToken()).thenReturn(ACCESS_TOKEN, REPLACEMENT_ACCESS_TOKEN);
+        when(restTemplate.postForEntity(eq(CALLBACK_ENDPOINT_URL), any(), eq(Void.class)))
+                .thenThrow(unauthorized)
+                .thenReturn(ResponseEntity.ok().build());
+
+        String correlationId = callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload);
+
+        verify(accessTokenProvider).invalidate(ACCESS_TOKEN);
+        verify(accessTokenProvider, times(2)).getAccessToken();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<HttpEntity<HmrcCallbackPayload>> requestCaptor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate, times(2)).postForEntity(
+                eq(CALLBACK_ENDPOINT_URL), requestCaptor.capture(), eq(Void.class));
+        assertThat(requestCaptor.getAllValues())
+                .extracting(request -> request.getHeaders().getFirst("X-Correlation-ID"))
+                .containsOnly(correlationId);
+        assertThat(requestCaptor.getAllValues())
+                .extracting(request -> request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
+                .containsExactly("Bearer " + ACCESS_TOKEN, "Bearer " + REPLACEMENT_ACCESS_TOKEN);
+    }
+
+    @Test
+    void sendCallbackPropagatesSecondUnauthorizedResponse() {
+        HmrcCallbackPayload payload = createPayload();
+        HttpClientErrorException unauthorized = HttpClientErrorException.create(
+                HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null);
+        when(accessTokenProvider.getAccessToken()).thenReturn(ACCESS_TOKEN, REPLACEMENT_ACCESS_TOKEN);
+        when(restTemplate.postForEntity(eq(CALLBACK_ENDPOINT_URL), any(), eq(Void.class)))
+                .thenThrow(unauthorized);
+
+        assertThrows(HttpClientErrorException.Unauthorized.class,
+                () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+
+        verify(accessTokenProvider).invalidate(ACCESS_TOKEN);
+        verify(restTemplate, times(2)).postForEntity(eq(CALLBACK_ENDPOINT_URL), any(), eq(Void.class));
+    }
+
+    @Test
+    void sendCallbackPropagatesTokenAcquisitionFailureToExistingRetryMechanism() {
+        HmrcCallbackPayload payload = createPayload();
+        HmrcAuthenticationTokenProviderException authenticationException =
+                new HmrcAuthenticationTokenProviderException("Failed to obtain HMRC OAuth access token");
+        when(accessTokenProvider.getAccessToken()).thenThrow(authenticationException);
+
+        RestClientException thrown = assertThrows(RestClientException.class,
+                () -> callbackClient.sendCallback(CALLBACK_ENDPOINT_URL, payload));
+
+        assertThat(thrown).isSameAs(authenticationException);
+        verify(restTemplate, never()).postForEntity(anyString(), any(), eq(Void.class));
+    }
+
+    private HmrcCallbackPayload createPayload() {
+        return new HmrcCallbackPayload(
+                CallbackResourceKind.STRIKE_OFF_PARTNER_OBJECTION_OBJECTION,
+                OBJECTION_ID,
+                COMPANY_NUMBER,
+                OBJECTION_URI);
+    }
 }
