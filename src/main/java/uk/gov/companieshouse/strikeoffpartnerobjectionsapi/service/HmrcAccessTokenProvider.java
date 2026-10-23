@@ -19,6 +19,8 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.HmrcOAuthPrope
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcAuthenticationTokenProviderException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcOAuthTokenResponse;
 
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
+
 /**
  * Obtains and caches OAuth access tokens used for HMRC callback requests.
  */
@@ -87,10 +89,10 @@ public class HmrcAccessTokenProvider {
     }
 
     private HmrcOAuthTokenResponse requestAccessToken() {
-        String tokenUrl = requireConfigured(properties.tokenUrl());
-        String grantType = requireConfigured(properties.grantType());
-        String clientId = requireConfigured(properties.clientId());
-        String clientSecret = requireConfigured(properties.clientSecret());
+        String tokenUrl = requireConfigured(properties.tokenUrl(), "tokenUrl");
+        String grantType = requireConfigured(properties.grantType(), "grantType");
+        String clientId = requireConfigured(properties.clientId(), "clientId");
+        String clientSecret = requireConfigured(properties.clientSecret(), "clientSecret");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -101,19 +103,23 @@ public class HmrcAccessTokenProvider {
         form.add("client_secret", clientSecret);
 
         try {
+            LOGGER.info("Requesting HMRC OAuth access token");
             ResponseEntity<HmrcOAuthTokenResponse> response = restTemplate.postForEntity(
                     tokenUrl, new HttpEntity<>(form, headers), HmrcOAuthTokenResponse.class);
             return response.getBody();
         } catch (HttpStatusCodeException exception) {
+            LOGGER.error(TOKEN_REQUEST_FAILED + ": statusCode=" + exception.getStatusCode().value(), exception);
             throw new HmrcAuthenticationTokenProviderException(
                     TOKEN_REQUEST_FAILED + ": statusCode=" + exception.getStatusCode().value(), exception);
         } catch (RestClientException exception) {
+            LOGGER.error(TOKEN_REQUEST_FAILED, exception);
             throw new HmrcAuthenticationTokenProviderException(TOKEN_REQUEST_FAILED, exception);
         }
     }
 
-    private String requireConfigured(@Nullable String value) {
+    private String requireConfigured(@Nullable String value, String propertyName) {
         if (value == null || value.isBlank()) {
+            LOGGER.error("HMRC OAuth property is missing: " + propertyName);
             throw new HmrcAuthenticationTokenProviderException(INVALID_CONFIGURATION);
         }
         return value;
@@ -126,6 +132,7 @@ public class HmrcAccessTokenProvider {
                 || response.tokenType() == null
                 || !BEARER_TOKEN_TYPE.equalsIgnoreCase(response.tokenType())
                 || response.expiresIn() <= 0) {
+            LOGGER.error("Invalid HMRC OAuth token response: " + response);
             throw new HmrcAuthenticationTokenProviderException(INVALID_TOKEN_RESPONSE);
         }
     }

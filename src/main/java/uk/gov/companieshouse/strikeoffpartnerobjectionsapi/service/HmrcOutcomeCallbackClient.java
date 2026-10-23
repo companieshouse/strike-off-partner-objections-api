@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 
 import static java.lang.String.format;
@@ -58,31 +59,45 @@ public class HmrcOutcomeCallbackClient {
      * @throws RestClientException if the HTTP request fails or returns a non-2xx status
      */
     public String sendCallback(String callbackEndpointUrl, HmrcCallbackPayload payload) {
+        String correlationId = UUID.randomUUID().toString();
+
+        var logMap = new DataMap.Builder()
+                .correlationId(correlationId)
+                .resourceId(payload.getResourceId())
+                .companyNumber(payload.getCompanyNumber())
+                .build()
+                .getLogMap();
+        LOGGER.info("Attempting to send HMRC callback", logMap);
         if (callbackEndpointUrl == null || callbackEndpointUrl.trim().isEmpty()) {
+            LOGGER.error("Callback endpoint URL is null or empty", logMap);
             throw new IllegalArgumentException("Callback endpoint URL must not be null or empty");
         }
 
-        String correlationId = UUID.randomUUID().toString();
-
-        LOGGER.info(format("Sending HMRC callback: correlationId=%s, resourceId=%s, companyNumber=%s",
-                correlationId, payload.getResourceId(), payload.getCompanyNumber()));
+        LOGGER.info(format("Callback endpoint configured; retrieving HMRC access token: correlationId=%s, resourceId=%s, companyNumber=%s",
+                correlationId, payload.getResourceId(), payload.getCompanyNumber()), logMap);
 
         String accessToken = accessTokenProvider.getAccessToken();
         try {
             ResponseEntity<Void> response = sendAuthenticatedCallback(
                     callbackEndpointUrl, payload, correlationId, accessToken);
             if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                LOGGER.info(format("HMRC callback returned 401 Unauthorized, attempting token replacement: correlationId=%s, resourceId=%s",
+                        correlationId, payload.getResourceId()), logMap);
                 response = replaceTokenAndRetry(callbackEndpointUrl, payload, correlationId, accessToken);
             }
+
             validateSuccessfulResponse(response, correlationId, payload.getResourceId());
         } catch (HttpClientErrorException.Unauthorized exception) {
+            LOGGER.info(format("HMRC callback returned 401 Unauthorized, attempting token replacement: correlationId=%s, resourceId=%s",
+                    correlationId, payload.getResourceId()), logMap);
             ResponseEntity<Void> response = replaceTokenAndRetry(
                     callbackEndpointUrl, payload, correlationId, accessToken);
+
             validateSuccessfulResponse(response, correlationId, payload.getResourceId());
         }
 
         LOGGER.info(format("HMRC callback sent successfully: correlationId=%s, resourceId=%s",
-                correlationId, payload.getResourceId()));
+                correlationId, payload.getResourceId()), logMap);
 
         return correlationId;
     }
@@ -104,6 +119,9 @@ public class HmrcOutcomeCallbackClient {
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         HttpEntity<HmrcCallbackPayload> request = new HttpEntity<>(payload, headers);
+
+        LOGGER.debug(format("HMRC callback request prepared: correlationId=%s, resourceId=%s, contentType=%s",
+                correlationId, payload.getResourceId(), MediaType.APPLICATION_JSON));
 
         return restTemplate.postForEntity(callbackEndpointUrl, request, Void.class);
     }
