@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
@@ -11,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -87,18 +87,22 @@ public class HmrcAccessTokenProvider {
     }
 
     private HmrcOAuthTokenResponse requestAccessToken() {
-        validateConfiguration();
+        String tokenUrl = requireConfigured(properties.tokenUrl());
+        String grantType = requireConfigured(properties.grantType());
+        String clientId = requireConfigured(properties.clientId());
+        String clientSecret = requireConfigured(properties.clientSecret());
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", properties.grantType());
-        form.add("client_id", properties.clientId());
-        form.add("client_secret", properties.clientSecret());
+        form.add("grant_type", grantType);
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
 
         try {
             ResponseEntity<HmrcOAuthTokenResponse> response = restTemplate.postForEntity(
-                    properties.tokenUrl(), new HttpEntity<>(form, headers), HmrcOAuthTokenResponse.class);
+                    tokenUrl, new HttpEntity<>(form, headers), HmrcOAuthTokenResponse.class);
             return response.getBody();
         } catch (HttpStatusCodeException exception) {
             throw new HmrcAuthenticationTokenProviderException(
@@ -108,13 +112,11 @@ public class HmrcAccessTokenProvider {
         }
     }
 
-    private void validateConfiguration() {
-        if (!StringUtils.hasText(properties.tokenUrl())
-                || !StringUtils.hasText(properties.clientId())
-                || !StringUtils.hasText(properties.clientSecret())
-                || !StringUtils.hasText(properties.grantType())) {
+    private String requireConfigured(@Nullable String value) {
+        if (value == null || value.isBlank()) {
             throw new HmrcAuthenticationTokenProviderException(INVALID_CONFIGURATION);
         }
+        return value;
     }
 
     private void validate(HmrcOAuthTokenResponse response) {
