@@ -116,13 +116,6 @@ Standards should be applied to all new code, including new classes, methods, and
 
 ## Data Design
 
-### Immutable Objects Over Generic Types
-
-- Don't use `BiConsumer<String, String>` for callbacks that need rich context.
-- Create dedicated immutable classes (e.g., `CallbackResult`) with named fields.
-- This makes code self-documenting and prevents parameter confusion.
-- Enables handlers to make intelligent decisions based on attempt metadata.
-
 ### Callbacks and Context
 
 - Pass attempt numbers, correlation IDs, and failure reasons to handlers.
@@ -132,8 +125,6 @@ Standards should be applied to all new code, including new classes, methods, and
 
 ## Audit Trail & Data Integrity
 
-- Persist all callback attempts (success and failure) to the database.
-- Include attempt number, correlation ID, and timestamp for each outcome.
 - Never lose results due to exception swallowing or missing persistence.
 - A complete audit trail is non-negotiable for compliance, debugging, and retry logic.
 
