@@ -2,6 +2,7 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -14,6 +15,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.Authentic
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.InternalUserInterceptor;
 
 @Configuration
+@EnableConfigurationProperties(HmrcOAuthProperties.class)
 public class ApplicationConfig implements WebMvcConfigurer {
 
     private final AuthenticationInterceptor authenticationInterceptor;

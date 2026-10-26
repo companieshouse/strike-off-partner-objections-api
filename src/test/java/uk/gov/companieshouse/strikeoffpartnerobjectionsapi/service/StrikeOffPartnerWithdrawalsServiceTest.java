@@ -599,7 +599,8 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                  any());
 
          String callbackUri = callbackIdCaptor.getValue();
-         assertEquals(String.format("/company/%s/strike-off/withdrawals/%s", COMPANY_NUMBER, WITHDRAWAL_ID), callbackUri);
+         assertEquals(String.format("/company/%s/strike-off-partner-objections-withdrawals/%s",
+                 COMPANY_NUMBER, WITHDRAWAL_ID), callbackUri);
     }
 
     @Test

@@ -43,7 +43,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 @Service
 public class StrikeOffPartnerObjectionService {
 
-    private static final String OBJECTION_URI_TEMPLATE = "/company/%s/strike-off/objections/%s";
+    private static final String OBJECTION_URI_TEMPLATE = "/company/%s/strike-off-partner-objections/%s";
     private static final String RESOURCE_KIND_OBJECTION = "objection";
     private static final int CALLBACK_STATUS_MAX_RETRIES = 3;
     private static final long CALLBACK_STATUS_INITIAL_DELAY_MILLIS = 100;

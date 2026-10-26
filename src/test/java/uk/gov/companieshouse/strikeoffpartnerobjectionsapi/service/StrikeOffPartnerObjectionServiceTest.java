@@ -87,7 +87,7 @@ class StrikeOffPartnerObjectionServiceTest {
     private static final String NULL_STATUS_OBJECTION_ID = "objection-null-status";
     private static final String MISSING_OBJECTION_ID = "missing-objection";
     private static final String API_SOURCE = "strike-off-partner-objections-api";
-    private static final String CALLBACK_URI_FORMAT = "/company/%s/strike-off/objections/%s";
+    private static final String CALLBACK_URI_FORMAT = "/company/%s/strike-off-partner-objections/%s";
     private static final int HTTP_STATUS_CONFLICT = 409;
     private static final int HTTP_STATUS_FORBIDDEN = 403;
     private static final int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
