@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @RestControllerAdvice
@@ -67,6 +68,9 @@ public class GlobalExceptionHandler {
     private static final String PARTNER_OBJECTION_REASON = "partnerObjectionReason";
     private static final String PARTNER_OBJECTION_REASON_SNAKE = "partner_objection_reason";
     private static final String REQUIRED_BODY_MISSING = "Required request body is missing";
+    private static final String HMRC_CALLBACK_FAILED_CODE = "hmrc_callback_failed";
+    private static final String HMRC_CALLBACK_FAILED_MESSAGE =
+            "Processing status was saved, but the HMRC callback failed.";
     private static final List<String> ERROR_PRIORITY_ORDER = List.of(
             MISSING_REQUIRED_PARAMETER,
             EMAIL_INCORRECT_FORMAT,
@@ -201,6 +205,16 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 new ApiError(INTERNAL_SERVER_ERROR_CODE, INTERNAL_SERVER_ERROR_MESSAGE),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(HmrcCallbackFailedException.class)
+    public ResponseEntity<ApiError> handleHmrcCallbackFailedException(
+            HmrcCallbackFailedException ex) {
+
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiError(
+                        HMRC_CALLBACK_FAILED_CODE,
+                        HMRC_CALLBACK_FAILED_MESSAGE));
     }
 
     private static String toErrorCode(HttpStatusCode statusCode) {

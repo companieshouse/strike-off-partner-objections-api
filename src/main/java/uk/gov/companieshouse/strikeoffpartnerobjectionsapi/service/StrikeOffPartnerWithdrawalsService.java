@@ -2,10 +2,8 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -25,6 +23,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafka
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -267,8 +266,7 @@ public class StrikeOffPartnerWithdrawalsService {
      *
      * <p>If the requested status matches the current status, the update is silently ignored.
      * No state-transition enforcement is applied for withdrawal status updates.
-     * After successful status update, an HMRC callback notification is triggered
-     * asynchronously. Callback failures do not block the API response.</p>
+     * After successful status update, an HMRC callback will be triggered</p>
      *
      * @param companyNumber       the company number the withdrawal belongs to
      * @param withdrawalId        the unique withdrawal identifier
@@ -283,92 +281,109 @@ public class StrikeOffPartnerWithdrawalsService {
             String withdrawalId,
             UpdateWithdrawalStatusRequest updateStatusRequest) {
 
-        var logMap = new DataMap.Builder()
-                .companyNumber(companyNumber)
-                .resourceId(withdrawalId)
-                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
-                .build()
-                .getLogMap();
-        LOGGER.info("Attempting to update withdrawal processing status", logMap);
+        logProcessingStatus(companyNumber, withdrawalId, null,
+                "Attempting to update withdrawal processing status");
 
-        WithdrawalDocument existingDocument = withdrawalRepository
+        WithdrawalDocument document = withdrawalRepository
                 .findByCompanyNumberAndWithdrawalId(companyNumber, withdrawalId)
                 .orElseThrow(() -> new WithdrawalNotFoundException(
-                        format("Withdrawal not found for company number=%s, withdrawalId=%s", companyNumber, withdrawalId)));
+                        format("Withdrawal not found for company number=%s, withdrawalId=%s",
+                                companyNumber, withdrawalId)));
 
-        Set<ConstraintViolation<UpdateWithdrawalStatusRequest>> violations = validator.validate(updateStatusRequest);
-        if (!violations.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    format("Invalid update status request: %s", violations.iterator().next().getMessage()));
-        }
+        validateUpdateStatusRequest(updateStatusRequest);
 
         WithdrawalProcessingStatus requestedStatus = updateStatusRequest.getProcessingStatus();
-        WithdrawalProcessingStatus currentStatus = parseCurrentStatus(existingDocument.getProcessingStatus());
+        WithdrawalProcessingStatus currentStatus = parseCurrentStatus(document.getProcessingStatus());
+
         if (currentStatus == requestedStatus) {
+            if (isWithdrawalProcessed(currentStatus) && document.getCallbackStatus() == CallbackStatus.FAILED) {
+                sendAndPersistWithdrawalCallback(document);
+            }
             return;
         }
 
-        existingDocument.setProcessingStatus(requestedStatus.getValue());
-        existingDocument.setEtag(UUID.randomUUID().toString());
-
-        try {
-            WithdrawalDocument updatedWithdrawal = withdrawalRepository.save(existingDocument);
-            var successLogMap = new DataMap.Builder()
-                    .companyNumber(updatedWithdrawal.getCompanyNumber())
-                    .resourceId(updatedWithdrawal.getWithdrawalId())
-                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
-                    .status(updatedWithdrawal.getProcessingStatus())
-                    .build()
-                    .getLogMap();
-            LOGGER.info("Withdrawal processing status updated", successLogMap);
-
-            // Trigger HMRC callback asynchronously after successful MongoDB update with result handler
-             Instant statusChangedAt = Instant.now();
-             String withdrawalUri = format(WITHDRAWAL_URI_TEMPLATE, companyNumber, withdrawalId);
-             Consumer<CallbackResult> resultHandler = createWithdrawalCallbackResultHandler(updatedWithdrawal, statusChangedAt);
-             hmrcCallbackService.sendWithdrawalOutcomeCallback(withdrawalId, companyNumber, withdrawalUri, resultHandler);
-        } catch (DataAccessException ex) {
-            throw new WithdrawalPersistenceException("Failed to persist updated withdrawal processing status", ex);
+        WithdrawalDocument updatedDocument = saveProcessingStatus(document, requestedStatus);
+        if (isWithdrawalProcessed(requestedStatus)) {
+            sendAndPersistWithdrawalCallback(updatedDocument);
         }
     }
 
-    /**
-     * Creates a result handler for withdrawal callbacks that persists the callback status to MongoDB.
-     *
-     * @param document the withdrawal document to update
-     * @param callbackStatusChangedAt the timestamp when the status update was initiated
-     * @return a Consumer that updates and persists callback status
-     */
-     private Consumer<CallbackResult> createWithdrawalCallbackResultHandler(WithdrawalDocument document, Instant callbackStatusChangedAt) {
-         return callbackResult -> {
-            if (callbackResult.isSuccess()) {
-                // Callback succeeded
-                CallbackStatusTracker.markCallbackSuccess(document, callbackResult.getCorrelationId(), callbackStatusChangedAt);
-                var logMap = new DataMap.Builder()
-                        .companyNumber(document.getCompanyNumber())
-                        .resourceId(document.getWithdrawalId())
-                        .resourceKind(RESOURCE_KIND_WITHDRAWAL)
-                        .retryCount(callbackResult.getAttemptNumber())
-                        .correlationId(callbackResult.getCorrelationId())
-                        .build()
-                        .getLogMap();
-                LOGGER.info("HMRC callback succeeded for withdrawal", logMap);
-            } else {
-                // Callback failed after all retries
-                CallbackStatusTracker.markCallbackFailed(document, null, callbackResult.getFailureReason(), callbackStatusChangedAt);
-                var logMap = new DataMap.Builder()
-                        .companyNumber(document.getCompanyNumber())
-                        .resourceId(document.getWithdrawalId())
-                        .resourceKind(RESOURCE_KIND_WITHDRAWAL)
-                        .retryCount(callbackResult.getAttemptNumber())
-                        .errorMessage(callbackResult.getFailureReason())
-                        .build()
-                        .getLogMap();
-                LOGGER.error("HMRC callback failed permanently for withdrawal", logMap);
-            }
+    private void validateUpdateStatusRequest(UpdateWithdrawalStatusRequest request) {
+        Set<ConstraintViolation<UpdateWithdrawalStatusRequest>> violations =
+                validator.validate(request);
+
+        if (!violations.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    format("Invalid update status request: %s",
+                            violations.iterator().next().getMessage()));
+        }
+    }
+
+    private WithdrawalDocument saveProcessingStatus(
+            WithdrawalDocument document,
+            WithdrawalProcessingStatus requestedStatus) {
+
+        document.setProcessingStatus(requestedStatus.getValue());
+        document.setEtag(UUID.randomUUID().toString());
+
+        try {
+            WithdrawalDocument savedDocument = withdrawalRepository.save(document);
+
+            logProcessingStatus(
+                    savedDocument.getCompanyNumber(),
+                    savedDocument.getWithdrawalId(),
+                    savedDocument.getProcessingStatus(),
+                    "Withdrawal processing status updated");
+
+            return savedDocument;
+        } catch (DataAccessException ex) {
+            throw new WithdrawalPersistenceException(
+                    "Failed to persist updated withdrawal processing status", ex);
+        }
+    }
+
+    private void sendAndPersistWithdrawalCallback(WithdrawalDocument document) {
+        String withdrawalUri = format(
+                WITHDRAWAL_URI_TEMPLATE,
+                document.getCompanyNumber(),
+                document.getWithdrawalId());
+
+        CallbackResult result = hmrcCallbackService.sendWithdrawalOutcomeCallback(
+                document.getWithdrawalId(),
+                document.getCompanyNumber(),
+                withdrawalUri);
+
+        try {
+            CallbackStatusTracker.applyResult(document, result);
             withdrawalRepository.save(document);
-        };
-     }
+            CallbackStatusTracker.throwIfCallbackFailed(result);
+        } catch (DataAccessException ex) {
+            throw new WithdrawalPersistenceException(
+                    "Failed to persist HMRC callback outcome for withdrawal", ex);
+        }
+    }
+
+    private void logProcessingStatus(
+            String companyNumber,
+            String withdrawalId,
+            String status,
+            String message) {
+
+        var builder = new DataMap.Builder()
+                .companyNumber(companyNumber)
+                .resourceId(withdrawalId)
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL);
+
+        if (status != null) {
+            builder.status(status);
+        }
+
+        LOGGER.info(message, builder.build().getLogMap());
+    }
+
+    private boolean isWithdrawalProcessed(WithdrawalProcessingStatus currentStatus) {
+        return currentStatus == WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED || currentStatus == WithdrawalProcessingStatus.WITHDRAWAL_REJECTED;
+    }
 
     private static WithdrawalProcessingStatus parseCurrentStatus(String currentStatusValue) {
         if (currentStatusValue == null) {

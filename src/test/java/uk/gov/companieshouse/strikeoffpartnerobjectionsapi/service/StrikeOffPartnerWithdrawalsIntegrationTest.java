@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
@@ -18,9 +20,12 @@ import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -32,6 +37,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -54,6 +64,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Autowired
     private ObjectionRepository objectionRepository;
 
+    @MockitoBean
+    private HmrcOutcomeCallbackClient callbackClient;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -244,7 +256,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
                 strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION);
         UpdateWithdrawalStatusRequest request = new UpdateWithdrawalStatusRequest();
         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
-
+        when(callbackClient.sendCallback(nullable(String.class), any(HmrcCallbackPayload.class)))
+                .thenReturn("integration-correlation-123");
         strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                 COMPANY_NUMBER, created.getWithdrawalId(), request);
 
@@ -443,6 +456,48 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         AssertionsForInterfaceTypes.assertThat(events).hasSize(1);
         AssertionsForClassTypes.assertThat(events.getFirst().getStrikeOffEventId())
                 .isEqualTo(response.getWithdrawalId());
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCallbackFails_keepsStatusAndPersistsFailure() {
+        WithdrawAllObjectionsResponse created =
+                strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                        COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION);
+
+        UpdateWithdrawalStatusRequest processingRequest = new UpdateWithdrawalStatusRequest();
+        processingRequest.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
+
+        strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, created.getWithdrawalId(), processingRequest);
+
+        verifyNoInteractions(callbackClient);
+
+        when(callbackClient.sendCallback(nullable(String.class), any(HmrcCallbackPayload.class)))
+                .thenThrow(new RestClientException("HMRC unavailable"));
+
+        UpdateWithdrawalStatusRequest acceptedRequest = new UpdateWithdrawalStatusRequest();
+        acceptedRequest.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
+
+        String withdrawalId = created.getWithdrawalId();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                        COMPANY_NUMBER, withdrawalId, acceptedRequest))
+                .isInstanceOf(HmrcCallbackFailedException.class);
+
+        WithdrawalDocument persisted = withdrawalRepository
+                .findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, withdrawalId)
+                .orElseThrow();
+
+        assertThat(persisted.getProcessingStatus())
+                .isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED.getValue());
+        assertThat(persisted.getCallbackStatus()).isEqualTo(CallbackStatus.FAILED);
+        assertThat(persisted.getCallbackFailureReason()).isEqualTo("HMRC unavailable");
+        assertThat(persisted.getCallbackCorrelationId()).isNull();
+        assertThat(persisted.getCallbackStatusChangedAt()).isNotNull();
+
+        verify(callbackClient).sendCallback(nullable(String.class), any(HmrcCallbackPayload.class));
+        verifyNoMoreInteractions(callbackClient);
     }
 
 

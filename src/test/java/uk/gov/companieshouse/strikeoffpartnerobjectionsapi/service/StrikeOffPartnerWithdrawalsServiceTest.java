@@ -44,6 +44,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalPersistenceException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublishException;
@@ -53,6 +54,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
@@ -392,7 +394,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
 
         String id1 = withdrawalIdCaptor.getAllValues().get(0);
@@ -420,7 +422,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
 
         String etag1 = etagCaptor.getAllValues().get(0);
@@ -461,7 +463,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                         createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING));
 
         ArgumentCaptor<WithdrawalDocument> captor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-        verify(withdrawalRepository).save(captor.capture());
+        verify(withdrawalRepository, times(1)).save(captor.capture());
         assertThat(captor.getValue().getProcessingStatus()).isEqualTo("withdrawal-processing");
         assertThat(captor.getValue().getEtag()).isNotBlank();
     }
@@ -578,109 +580,96 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                   .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
       }
 
-      @Test
-      void updateWithdrawalProcessingStatus_whenSuccessful_triggersHmrcCallback() {
-         WithdrawalDocument existing = buildSavedDocument();
-         existing.setProcessingStatus("withdrawal-requested");
-         existing.setWithdrawalId(WITHDRAWAL_ID);
-         existing.setCompanyNumber(COMPANY_NUMBER);
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "withdrawal-accepted",
+            "withdrawal-rejected"
+    })
+    void updateWithdrawalProcessingStatus_whenTerminalCallbackFails_persistsFailure(String targetStatusValue) {
 
-         setupUpdateStatusMocks(existing);
+        WithdrawalProcessingStatus targetStatus = WithdrawalProcessingStatus.fromValue(targetStatusValue);
 
-         strikeOffPartnerWithdrawalsService
-                 .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                         createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING));
-
-         ArgumentCaptor<String> callbackIdCaptor = ArgumentCaptor.forClass(String.class);
-         verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
-                 eq(WITHDRAWAL_ID),
-                 eq(COMPANY_NUMBER),
-                 callbackIdCaptor.capture(),
-                 any());
-
-         String callbackUri = callbackIdCaptor.getValue();
-         assertEquals(String.format("/company/%s/strike-off-partner-objections-withdrawals/%s",
-                 COMPANY_NUMBER, WITHDRAWAL_ID), callbackUri);
-    }
-
-    @Test
-    void updateWithdrawalProcessingStatus_whenCallbackFails_doesNotBlockResponse() {
         WithdrawalDocument existing = buildSavedDocument();
-        existing.setProcessingStatus("withdrawal-requested");
+        existing.setProcessingStatus("withdrawal-processing");
 
         setupUpdateStatusMocks(existing);
 
-        // Callback service is async, so exceptions don't propagate to the caller
-        // The test just verifies the method completes successfully
-        strikeOffPartnerWithdrawalsService
-                .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                        createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING));
+        when(hmrcCallbackService.sendWithdrawalOutcomeCallback(
+                WITHDRAWAL_ID,
+                COMPANY_NUMBER,
+                withdrawalCallbackUri()))
+                .thenReturn(
+                        CallbackResult.failure("Connection timeout"));
 
-        verify(withdrawalRepository).save(any(WithdrawalDocument.class));
-        verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
-                eq(WITHDRAWAL_ID),
-                eq(COMPANY_NUMBER),
-                anyString(),
-                any());
+        UpdateWithdrawalStatusRequest request = createUpdateWithdrawalStatusRequest(targetStatus);
+        assertThatThrownBy(() ->
+                strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                        COMPANY_NUMBER,
+                        WITHDRAWAL_ID,
+                        request))
+                .isInstanceOf(HmrcCallbackFailedException.class)
+                .hasMessageContaining("Connection timeout");
+
+        assertThat(existing.getCallbackStatus()).isEqualTo(CallbackStatus.FAILED);
+
+        assertThat(existing.getCallbackFailureReason()).isEqualTo("Connection timeout");
+
+        verify(withdrawalRepository, times(2)).save(existing);
     }
 
-      @Test
-      void updateWithdrawalProcessingStatus_whenSameStatus_noCallbackTriggered() {
-          WithdrawalDocument existing = buildSavedDocument();
-          existing.setProcessingStatus("withdrawal-requested");
+    @Test
+    void updateWithdrawalProcessingStatus_whenStatusUnchangedAndCallbackFailed_retriesCallback() {
 
-          when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
-                  .thenReturn(Optional.of(existing));
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-accepted");
+        existing.setCallbackStatus(CallbackStatus.FAILED);
 
-          strikeOffPartnerWithdrawalsService
-                  .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                          createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED));
+        setupUpdateStatusMocks(existing);
 
-          verify(withdrawalRepository).findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID);
-          verifyNoInteractions(hmrcCallbackService);
-      }
+        when(hmrcCallbackService.sendWithdrawalOutcomeCallback(
+                WITHDRAWAL_ID,
+                COMPANY_NUMBER,
+                withdrawalCallbackUri()))
+                .thenReturn(
+                        CallbackResult.success("correlation-123"));
 
-      @Test
-      void updateWithdrawalProcessingStatus_callbackResultHandlerSuccessPath() {
-          WithdrawalDocument existing = buildSavedDocument();
-           existing.setProcessingStatus("withdrawal-requested");
+        strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER,
+                WITHDRAWAL_ID,
+                createUpdateWithdrawalStatusRequest(
+                        WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED));
 
-           setupUpdateStatusMocks(existing);
+        verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
+                WITHDRAWAL_ID,
+                COMPANY_NUMBER,
+                withdrawalCallbackUri());
 
-           strikeOffPartnerWithdrawalsService
-                   .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                           createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING));
+        // no status update save
+        verify(withdrawalRepository, times(1)).save(existing);
+    }
 
-           Consumer<CallbackResult> handler = captureCallbackHandler();
+    @Test
+    void updateWithdrawalProcessingStatus_whenStatusUnchangedAndCallbackSuccessful_doesNothing() {
 
-           // Test the result handler with success scenario
-           handler.accept(new CallbackResult("correlation-withdrawal-success", 1));
+        WithdrawalDocument existing = buildSavedDocument();
+        existing.setProcessingStatus("withdrawal-accepted");
+        existing.setCallbackStatus(CallbackStatus.SUCCESS);
 
-           ArgumentCaptor<WithdrawalDocument> documentCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-           verify(withdrawalRepository, times(2)).save(documentCaptor.capture());
-       }
+        when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(
+                COMPANY_NUMBER,
+                WITHDRAWAL_ID))
+                .thenReturn(Optional.of(existing));
 
-       @Test
-       void updateWithdrawalProcessingStatus_callbackResultHandlerFailurePath() {
-           WithdrawalDocument existing = buildSavedDocument();
-           existing.setProcessingStatus("withdrawal-requested");
+        strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER,
+                WITHDRAWAL_ID,
+                createUpdateWithdrawalStatusRequest(
+                        WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED));
 
-           setupUpdateStatusMocks(existing);
+        verifyNoInteractions(hmrcCallbackService);
+    }
 
-           strikeOffPartnerWithdrawalsService
-                   .updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                           createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING));
-
-           Consumer<CallbackResult> handler = captureCallbackHandler();
-
-           // Test the result handler with failure scenario
-           handler.accept(new CallbackResult(3, "Service unavailable"));
-
-           ArgumentCaptor<WithdrawalDocument> documentCaptor = ArgumentCaptor.forClass(WithdrawalDocument.class);
-           verify(withdrawalRepository, times(2)).save(documentCaptor.capture());
-        }
-
-      private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
+    private StrikeOffPartnerObjections getPublishedEvent(String eventId) {
         return StrikeOffPartnerObjections.newBuilder()
                 .setEventId(eventId)
                 .setEventType(EventType.WITHDRAWAL)
@@ -739,11 +728,19 @@ class StrikeOffPartnerWithdrawalsServiceTest {
            return request;
        }
 
-       private void setupUpdateStatusMocks(WithdrawalDocument existing) {
-           when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
-                   .thenReturn(Optional.of(existing));
-           when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenReturn(existing);
-       }
+
+        private void setupUpdateStatusMocks(WithdrawalDocument existing) {
+            existing.setWithdrawalId(WITHDRAWAL_ID);
+            when(withdrawalRepository.findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, WITHDRAWAL_ID))
+                    .thenReturn(Optional.of(existing));
+            when(withdrawalRepository.save(any(WithdrawalDocument.class))).thenReturn(existing);
+        }
+
+        private String withdrawalCallbackUri() {
+            return String.format(
+                    "/company/%s/strike-off-partner-objections-withdrawals/%s",
+                    COMPANY_NUMBER, WITHDRAWAL_ID);
+        }
 
        @SuppressWarnings("unchecked")
        private Consumer<CallbackResult> captureCallbackHandler() {
@@ -752,8 +749,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
            verify(hmrcCallbackService).sendWithdrawalOutcomeCallback(
                    eq(WITHDRAWAL_ID),
                    eq(COMPANY_NUMBER),
-                   anyString(),
-                   handlerCaptor.capture());
+                   anyString());
            return handlerCaptor.getValue();
        }
 
