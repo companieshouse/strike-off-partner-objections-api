@@ -1,95 +1,82 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import java.time.Instant;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerRequestDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 
-import java.time.Instant;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Tag("unit-test")
 class CallbackStatusTrackerTest {
 
-    @Test
-    void testMarkCallbackSuccess() {
-        ObjectionDocument document = new ObjectionDocument();
-        String correlationId = "test-correlation-id-123";
-        Instant timestamp = Instant.now();
+    private static final String CORRELATION_ID = "correlation-123";
+    private static final String FAILURE_REASON = "Connection timeout";
 
-        CallbackStatusTracker.markCallbackSuccess(document, correlationId, timestamp);
+    @ParameterizedTest
+    @MethodSource("documents")
+    void applyResult_whenSuccessful_recordsSuccessAndClearsPreviousFailure(
+            PartnerRequestDocument document) {
+        document.setCallbackStatus(CallbackStatus.FAILED);
+        document.setCallbackFailureReason(FAILURE_REASON);
+        Instant before = Instant.now();
 
-        assertEquals(CallbackStatus.SUCCESS, document.getCallbackStatus());
-        assertEquals(correlationId, document.getCallbackCorrelationId());
-        assertEquals(timestamp, document.getCallbackStatusChangedAt());
-        assertNull(document.getCallbackFailureReason());
+        CallbackStatusTracker.applyResult(
+                document, CallbackResult.success(CORRELATION_ID));
+
+        assertThat(document.getCallbackStatus()).isEqualTo(CallbackStatus.SUCCESS);
+        assertThat(document.getCallbackCorrelationId()).isEqualTo(CORRELATION_ID);
+        assertThat(document.getCallbackFailureReason()).isNull();
+        assertThat(document.getCallbackStatusChangedAt())
+                .isBetween(before, Instant.now());
+    }
+
+    @ParameterizedTest
+    @MethodSource("documents")
+    void applyResult_whenFailed_recordsFailureAndClearsPreviousCorrelationId(
+            PartnerRequestDocument document) {
+        document.setCallbackStatus(CallbackStatus.SUCCESS);
+        document.setCallbackCorrelationId(CORRELATION_ID);
+        Instant before = Instant.now();
+
+        CallbackStatusTracker.applyResult(
+                document, CallbackResult.failure(FAILURE_REASON));
+
+        assertThat(document.getCallbackStatus()).isEqualTo(CallbackStatus.FAILED);
+        assertThat(document.getCallbackCorrelationId()).isNull();
+        assertThat(document.getCallbackFailureReason()).isEqualTo(FAILURE_REASON);
+        assertThat(document.getCallbackStatusChangedAt())
+                .isBetween(before, Instant.now());
     }
 
     @Test
-    void testMarkCallbackSuccess_setsTimestamp() {
-        ObjectionDocument document = new ObjectionDocument();
-        String correlationId = "correlation-id-456";
-        Instant timestamp = Instant.now();
+    void throwIfCallbackFailed_whenSuccessful_doesNotThrow() {
+        CallbackResult result = CallbackResult.success(CORRELATION_ID);
 
-        CallbackStatusTracker.markCallbackSuccess(document, correlationId, timestamp);
-
-        assertNotNull(document.getCallbackStatusChangedAt());
-        assertEquals(timestamp, document.getCallbackStatusChangedAt());
+        assertThatCode(() -> CallbackStatusTracker.throwIfCallbackFailed(result))
+                .doesNotThrowAnyException();
     }
 
     @Test
-    void testMarkCallbackFailed() {
-        ObjectionDocument document = new ObjectionDocument();
-        String correlationId = "failed-correlation-id-789";
-        String failureReason = "Connection timeout";
-        Instant timestamp = Instant.now();
+    void throwIfCallbackFailed_whenFailed_throwsCallbackException() {
+        CallbackResult result = CallbackResult.failure(FAILURE_REASON);
 
-        CallbackStatusTracker.markCallbackFailed(document, correlationId, failureReason, timestamp);
-
-        assertEquals(CallbackStatus.FAILED, document.getCallbackStatus());
-        assertEquals(correlationId, document.getCallbackCorrelationId());
-        assertEquals(failureReason, document.getCallbackFailureReason());
-        assertEquals(timestamp, document.getCallbackStatusChangedAt());
+        assertThatThrownBy(() -> CallbackStatusTracker.throwIfCallbackFailed(result))
+                .isInstanceOf(HmrcCallbackFailedException.class)
+                .hasMessage("HMRC callback failed: " + FAILURE_REASON);
     }
 
-    @Test
-    void testMarkCallbackFailed_with_nullReason() {
-        ObjectionDocument document = new ObjectionDocument();
-        String correlationId = "correlation-id-null-reason";
-        Instant timestamp = Instant.now();
-
-        CallbackStatusTracker.markCallbackFailed(document, correlationId, null, timestamp);
-
-        assertEquals(CallbackStatus.FAILED, document.getCallbackStatus());
-        assertEquals(correlationId, document.getCallbackCorrelationId());
-        assertNull(document.getCallbackFailureReason());
-        assertEquals(timestamp, document.getCallbackStatusChangedAt());
-    }
-
-    @Test
-    void testMarkCallbackFailed_setsTimestamp() {
-        ObjectionDocument document = new ObjectionDocument();
-        Instant timestamp = Instant.now();
-
-        CallbackStatusTracker.markCallbackFailed(document, "test-id", "Test failure", timestamp);
-
-        assertNotNull(document.getCallbackStatusChangedAt());
-        assertEquals(timestamp, document.getCallbackStatusChangedAt());
-    }
-
-    @Test
-    void testMarkCallbackFailed_with_emptyFailureReason() {
-        ObjectionDocument document = new ObjectionDocument();
-        String correlationId = "empty-reason-test";
-        String emptyReason = "";
-        Instant timestamp = Instant.now();
-
-        CallbackStatusTracker.markCallbackFailed(document, correlationId, emptyReason, timestamp);
-
-        assertEquals(emptyReason, document.getCallbackFailureReason());
+    private static Stream<PartnerRequestDocument> documents() {
+        return Stream.of(new ObjectionDocument(), new WithdrawalDocument());
     }
 }
-

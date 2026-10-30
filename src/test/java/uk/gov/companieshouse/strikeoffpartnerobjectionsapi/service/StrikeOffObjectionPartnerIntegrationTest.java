@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
@@ -19,8 +21,11 @@ import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.HmrcCallbackPayload;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 import java.time.Duration;
@@ -31,6 +36,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
@@ -44,6 +54,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
 
     @Autowired
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
+
+    @MockitoBean
+    private HmrcOutcomeCallbackClient callbackClient;
 
     @Autowired
     private ObjectionRepository objectionRepository;
@@ -260,6 +273,47 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
                 strikeOffPartnerObjectionService.updateObjectionProcessingStatus(COMPANY_NUMBER, objectionId, updateRequest))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void updateObjectionProcessingStatus_whenCallbackFails_keepsStatusAndPersistsFailure() {
+        BaseObjectionResponse created = strikeOffPartnerObjectionService.createObjection(
+                COMPANY_NUMBER, buildValidRequest(), PARTNER_ORGANISATION);
+
+        UpdateObjectionStatusRequest processingRequest = new UpdateObjectionStatusRequest();
+        processingRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_PROCESSING);
+
+        strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                COMPANY_NUMBER, created.getObjectionId(), processingRequest);
+
+        verifyNoInteractions(callbackClient);
+
+        when(callbackClient.sendCallback(nullable(String.class), any(HmrcCallbackPayload.class)))
+                .thenThrow(new RestClientException("HMRC unavailable"));
+
+        UpdateObjectionStatusRequest acceptedRequest = new UpdateObjectionStatusRequest();
+        acceptedRequest.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
+
+        String objectionId = created.getObjectionId();
+
+        assertThatThrownBy(() ->
+                strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
+                        COMPANY_NUMBER, objectionId, acceptedRequest))
+                .isInstanceOf(HmrcCallbackFailedException.class);
+
+        ObjectionDocument persisted = objectionRepository
+                .findByCompanyNumberAndObjectionId(COMPANY_NUMBER, created.getObjectionId())
+                .orElseThrow();
+
+        assertThat(persisted.getProcessingStatus()).isEqualTo("objection-accepted");
+        assertThat(persisted.getProcessingStatusChangedAt()).isNotNull();
+        assertThat(persisted.getCallbackStatus()).isEqualTo(CallbackStatus.FAILED);
+        assertThat(persisted.getCallbackFailureReason()).isEqualTo("HMRC unavailable");
+        assertThat(persisted.getCallbackCorrelationId()).isNull();
+        assertThat(persisted.getCallbackStatusChangedAt()).isNotNull();
+
+        verify(callbackClient).sendCallback(nullable(String.class), any(HmrcCallbackPayload.class));
+        verifyNoMoreInteractions(callbackClient);
     }
 
     private static void assertResponse(BaseObjectionResponse response, ObjectionDocument saved) {
