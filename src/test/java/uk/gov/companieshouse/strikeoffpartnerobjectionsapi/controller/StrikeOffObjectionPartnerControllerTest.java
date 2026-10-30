@@ -67,7 +67,7 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final String GET_OBJECTION_URL = "/company/%s/strike-off-partner-objections/%s";
     private static final String UPDATE_STATUS_URL = "/internal/company/%s/strike-off-partner-objections/%s/status";
     private static final String VALID_WORKSTREAM = "individuals-and-small-business-compliance";
-    private static final String VALID_REASON = "compliance-issue-outstanding";
+    private static final String VALID_REASON = "compliance-matters-outstanding";
     private static final String MISSING_REQUIRED_PARAMETER = "MISSING_REQUIRED_PARAMETER";
     private static final String EMAIL_INCORRECT_FORMAT = "EMAIL_INCORRECT_FORMAT";
     private static final String EMAIL_MAX_LENGTH = "EMAIL_MAX_LENGTH";
@@ -383,10 +383,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "compliance-issue-outstanding",
-            "financial-issue-outstanding",
-            "compliance-and-financial-issue-outstanding",
-            "other"
+            "compliance-matters-outstanding",
+            "financial-matters-outstanding",
+            "compliance-and-financial-matters-outstanding",
+            "not-provided"
     })
     void createObjection_whenReasonIsValid_returnsCreated(String reason) throws Exception {
         ObjectNode request = baseValidRequest();
@@ -658,6 +658,13 @@ class StrikeOffObjectionPartnerControllerTest {
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", "invalid-value")),
                 Arguments.of((Consumer<ObjectNode>) request ->
                         request.put("partner_objection_reason", "Compliance-Issue-Outstanding")),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                        request.put("partner_objection_reason", "compliance-issue-outstanding")),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                        request.put("partner_objection_reason", "financial-issue-outstanding")),
+                Arguments.of((Consumer<ObjectNode>) request ->
+                        request.put("partner_objection_reason", "compliance-and-financial-issue-outstanding")),
+                Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", "other")),
                 Arguments.of((Consumer<ObjectNode>) request -> request.remove("partner_objection_reason")),
                 Arguments.of((Consumer<ObjectNode>) request -> request.putNull("partner_objection_reason")),
                 Arguments.of((Consumer<ObjectNode>) request -> request.put("partner_objection_reason", ""))
@@ -697,7 +704,7 @@ class StrikeOffObjectionPartnerControllerTest {
         response.setObjectionId("objection-123");
         response.setPartnerCaseReference("CASE123");
         response.setPartnerObjectionWorkstream("debt-management");
-        response.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
+        response.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED);
         response.setPartnerContactEmail("valid@email.com");
         response.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
         response.setLinks(new BaseObjectionResponseLinks()

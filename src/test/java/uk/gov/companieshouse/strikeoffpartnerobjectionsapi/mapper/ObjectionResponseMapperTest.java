@@ -37,7 +37,7 @@ class ObjectionResponseMapperTest {
         assertThat(response.getEtag()).isEqualTo(ETAG);
         assertThat(response.getProcessingStatus()).isEqualTo(ObjectionProcessingStatus.OBJECTION_SUBMITTED);
         assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
-        assertThat(response.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.OTHER);
+        assertThat(response.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.NOT_PROVIDED);
         assertThat(response.getFailureReason()).isEqualTo(FailureReason.COMPANY_HAS_BEEN_DISSOLVED);
         assertThat(response.getProcessingStatusChangedAt()).isEqualTo(OffsetDateTime.ofInstant(STATUS_CHANGED_AT, ZoneOffset.UTC));
         assertThat(response.getInitialExpirationOn()).isEqualTo(OffsetDateTime.ofInstant(EXPIRATION_ON, ZoneOffset.UTC));
@@ -115,7 +115,7 @@ class ObjectionResponseMapperTest {
         document.setEtag(ETAG);
         document.setProcessingStatus(ObjectionProcessingStatus.OBJECTION_SUBMITTED.getValue());
         document.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
-        document.setPartnerObjectionReason(PartnerObjectionReason.OTHER.getValue());
+        document.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED.getValue());
         document.setFailureReason(FailureReason.COMPANY_HAS_BEEN_DISSOLVED.getValue());
         document.setProcessingStatusChangedAt(STATUS_CHANGED_AT);
         document.setInitialExpirationOn(EXPIRATION_ON);
