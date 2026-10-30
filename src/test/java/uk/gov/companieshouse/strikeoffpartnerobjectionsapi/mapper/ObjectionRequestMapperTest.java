@@ -26,7 +26,7 @@ class ObjectionRequestMapperTest {
         request.setPartnerCaseReference("CASE-001");
         request.setPartnerContactEmail("test@example.com");
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
-        request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
+        request.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED);
 
         ObjectionDocument doc = mapper.toObjectionDocument(
                 request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);
@@ -73,7 +73,7 @@ class ObjectionRequestMapperTest {
     void toObjectionDocument_whenWorkstreamAndReasonAreProvided_mapsWorkstreamAndReasonAsString() {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
-        request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
+        request.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED);
 
         ObjectionDocument doc = mapper.toObjectionDocument(
                 request, COMPANY_NUMBER, PARTNER_ORG, OBJECTION_ID);

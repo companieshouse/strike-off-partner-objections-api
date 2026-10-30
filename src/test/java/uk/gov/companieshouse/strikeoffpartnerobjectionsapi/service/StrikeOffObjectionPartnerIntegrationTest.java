@@ -281,7 +281,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
         assertThat(saved.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
-        assertThat(saved.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.OTHER.getValue());
+        assertThat(saved.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.NOT_PROVIDED.getValue());
         assertThat(saved.getId()).isNotBlank();
         assertThat(saved.getEtag()).isNotBlank();
         assertThat(saved.getProcessingStatus()).isEqualTo(ObjectionProcessingStatus.OBJECTION_SUBMITTED.getValue());
@@ -300,7 +300,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         request.setPartnerCaseReference("CASE-123");
         request.setPartnerContactEmail("test@example.com");
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
-        request.setPartnerObjectionReason(PartnerObjectionReason.OTHER);
+        request.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED);
         return request;
     }
 
