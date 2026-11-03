@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import uk.gov.companieshouse.api.InternalApiClient;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.MongoDbIntegration;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
 
 @Tag("integration-test")
@@ -28,7 +29,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.Authentic
         webEnvironment = SpringBootTest.WebEnvironment.MOCK
 )
 @AutoConfigureMockMvc
-class StrikeOffPartnerObjectionsApiApplicationTests {
+class StrikeOffPartnerObjectionsApiApplicationTests extends MongoDbIntegration {
 
     @MockitoBean
     private InternalApiClient internalApiClient;
