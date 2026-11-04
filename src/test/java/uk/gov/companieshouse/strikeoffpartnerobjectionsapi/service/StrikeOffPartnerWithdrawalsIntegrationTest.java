@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.UpdateWithdrawalStatusRequest;
@@ -17,6 +18,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.EmailProperties;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.WithdrawalNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
@@ -37,6 +39,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 
 @SpringBootTest
 @Tag("integration-test")
+@TestPropertySource(locations = "classpath:application.properties")
 class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
@@ -54,6 +57,8 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
     @Autowired
     private ObjectionRepository objectionRepository;
 
+    @Autowired
+    private EmailProperties emailProperties;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -168,7 +173,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(retrieveResponse.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(retrieveResponse.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(retrieveResponse.getWithdrawalId()).isEqualTo(createResponse.getWithdrawalId());
-        assertThat(retrieveResponse.getPartnerContactEmail()).isEqualTo("test@example.com");
+        assertThat(retrieveResponse.getPartnerContactEmail()).isEqualTo(testEmailAddress());
         assertThat(retrieveResponse.getPartnerCaseReference()).isEqualTo("CASE-123");
         assertThat(retrieveResponse.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(retrieveResponse.getProcessingStatus()).hasToString("withdrawal-requested");
@@ -306,7 +311,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(saved.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(saved.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
-        assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
+        assertThat(saved.getPartnerContactEmail()).isEqualTo(testEmailAddress());
         assertThat(saved.getPartnerObjectionWorkstream())
                 .isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(saved.getPartnerOrganisation()).isEqualTo("hmrc");
@@ -382,7 +387,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         assertThat(response.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(response.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(response.getPartnerCaseReference()).isEqualTo("CASE-123");
-        assertThat(response.getPartnerContactEmail()).isEqualTo("test@example.com");
+        assertThat(response.getPartnerContactEmail()).isEqualTo(testEmailAddress());
         assertThat(response.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(response.getProcessingStatus()).isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED);
         assertThat(response.getKind()).isEqualTo("strike-off-partner-objection#withdrawal");
@@ -450,7 +455,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         WithdrawAllObjectionsRequest request = new WithdrawAllObjectionsRequest();
         request.setSubmissionCompanyName("Acme Limited");
         request.setPartnerCaseReference("CASE-123");
-        request.setPartnerContactEmail("test@example.com");
+        request.setPartnerContactEmail(testEmailAddress());
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         return request;
     }
@@ -470,10 +475,14 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         objection.setObjectionId(UUID.randomUUID().toString());
         objection.setSubmissionCompanyName("Acme Limited");
         objection.setPartnerOrganisation(partnerOrganisation);
-        objection.setPartnerContactEmail("test@example.com");
+        objection.setPartnerContactEmail(testEmailAddress());
         objection.setPartnerCaseReference("CASE-123");
         objection.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         objection.setPartnerObjectionReason("debt-management");
         objectionRepository.insert(objection);
+    }
+
+    private String testEmailAddress() {
+        return "test@" + emailProperties.allowedDomains().getFirst();
     }
 }
