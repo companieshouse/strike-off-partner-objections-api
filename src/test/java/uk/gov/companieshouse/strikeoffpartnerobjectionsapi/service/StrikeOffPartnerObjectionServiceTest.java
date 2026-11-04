@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -52,7 +53,6 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocume
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
-
 @Tag("unit-test")
 @ExtendWith(MockitoExtension.class)
 class StrikeOffPartnerObjectionServiceTest {
@@ -73,7 +73,13 @@ class StrikeOffPartnerObjectionServiceTest {
     private CompanyValidator companyValidator;
 
     @Mock
+    private EmailValidator emailValidator;
+
+    @Mock
     private HmrcCallbackService hmrcCallbackService;
+
+    @InjectMocks
+    private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
 
     private static final String VALID_COMPANY_NUMBER = "12345";
     private static final String VALID_OBJECTION_ID = "objection-1";
@@ -92,21 +98,12 @@ class StrikeOffPartnerObjectionServiceTest {
     private static final int HTTP_STATUS_FORBIDDEN = 403;
     private static final int HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
-    private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
     private CreateObjectionRequest requestDto;
     private ObjectionDocument mappedDocument;
     private ObjectionDocument savedDocument;
 
     @BeforeEach
     void setUp() {
-        strikeOffPartnerObjectionService = new StrikeOffPartnerObjectionService(
-                objectionRepository,
-                objectionRequestMapper,
-                objectionResponseMapper,
-                objectionKafkaProducer,
-                companyValidator,
-                hmrcCallbackService
-        );
         requestDto = validCreateObjectionRequest();
         mappedDocument = new ObjectionDocument();
         savedDocument = new ObjectionDocument();
@@ -133,6 +130,7 @@ class StrikeOffPartnerObjectionServiceTest {
         verify(objectionRepository).insert(mappedDocument);
         ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
         verify(objectionRepository).save(savedCaptor.capture());
+        verify(emailValidator).validateEmail(requestDto.getPartnerContactEmail());
         assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED);
         assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
         verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
@@ -156,6 +154,7 @@ class StrikeOffPartnerObjectionServiceTest {
 
         ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
         verify(objectionRepository).save(savedCaptor.capture());
+        verify(emailValidator).validateEmail(requestDto.getPartnerContactEmail());
         assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED);
         assertThat(savedCaptor.getValue().getEventFailureReason()).contains("publish failed");
         assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
@@ -178,6 +177,7 @@ class StrikeOffPartnerObjectionServiceTest {
                 .hasMessage("Failed to persist objection")
                 .hasCause(cause);
 
+        verify(emailValidator).validateEmail(requestDto.getPartnerContactEmail());
         verify(objectionRequestMapper).toObjectionDocument(
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);

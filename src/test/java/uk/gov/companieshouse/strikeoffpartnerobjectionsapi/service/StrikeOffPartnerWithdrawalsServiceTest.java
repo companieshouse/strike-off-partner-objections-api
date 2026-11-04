@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -82,6 +81,9 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private HmrcCallbackService hmrcCallbackService;
 
+    @Mock
+    private EmailValidator emailValidator;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
@@ -90,7 +92,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
             Validator validator = factory.getValidator();
             strikeOffPartnerWithdrawalsService =
                     new StrikeOffPartnerWithdrawalsService(withdrawalRepository, objectionRepository, withdrawalMapper,
-                            withdrawalKafkaProducer, companyValidator, validator, hmrcCallbackService);
+                            withdrawalKafkaProducer, companyValidator, validator, emailValidator, hmrcCallbackService);
 
             // Default happy-path stub; overridden in specific tests for false/exception scenarios.
             lenient().when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(
@@ -169,10 +171,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(objectionRepository, withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
-
 
     @Test
     void withdrawAllObjections_whenCompanyValidationPasses_continuesWithPersistence() {
@@ -193,6 +195,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verify(emailValidator).validateEmail(request.getPartnerContactEmail());
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
     }
@@ -214,6 +217,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -232,6 +236,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -392,7 +397,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
 
         String id1 = withdrawalIdCaptor.getAllValues().get(0);
@@ -420,7 +425,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
 
         String etag1 = etagCaptor.getAllValues().get(0);

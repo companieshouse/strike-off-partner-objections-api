@@ -54,6 +54,7 @@ public class StrikeOffPartnerObjectionService {
     private final ObjectionResponseMapper objectionResponseMapper;
     private final ObjectionKafkaProducer objectionKafkaProducer;
     private final CompanyValidator companyValidator;
+    private final EmailValidator emailValidator;
     private final HmrcCallbackService hmrcCallbackService;
 
     @Autowired
@@ -63,12 +64,14 @@ public class StrikeOffPartnerObjectionService {
             ObjectionResponseMapper objectionResponseMapper,
             ObjectionKafkaProducer objectionKafkaProducer,
             CompanyValidator companyValidator,
+            EmailValidator emailValidator,
             HmrcCallbackService hmrcCallbackService) {
         this.objectionRepository = objectionRepository;
         this.objectionRequestMapper = objectionRequestMapper;
         this.objectionResponseMapper = objectionResponseMapper;
         this.objectionKafkaProducer = objectionKafkaProducer;
         this.companyValidator = companyValidator;
+        this.emailValidator = emailValidator;
         this.hmrcCallbackService = hmrcCallbackService;
     }
 
@@ -113,6 +116,12 @@ public class StrikeOffPartnerObjectionService {
                 partnerOrganisation,
                 objectionId
         );
+
+        // Validate email address before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a EmailValidationException on failure to stop processing.
+        emailValidator.validateEmail(document.getPartnerContactEmail());
+
         EventTracker.markPending(document);
 
         try {

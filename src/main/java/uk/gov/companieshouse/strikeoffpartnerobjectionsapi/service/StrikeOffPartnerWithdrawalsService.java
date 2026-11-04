@@ -56,6 +56,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private final CompanyValidator companyValidator;
     private final Validator validator;
     private final HmrcCallbackService hmrcCallbackService;
+    private final EmailValidator emailValidator;
 
     /**
      * Constructs the service with its required dependencies.
@@ -66,6 +67,7 @@ public class StrikeOffPartnerWithdrawalsService {
      * @param withdrawalKafkaProducer Kafka producer for publishing withdrawal events
      * @param companyValidator        validator for company details
      * @param validator               Jakarta Bean Validation validator for request payloads
+     * @param emailValidator          validator for partner contact email addresses
      * @param hmrcCallbackService     service for triggering HMRC outcome callbacks
      */
     @Autowired
@@ -76,6 +78,7 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalKafkaProducer withdrawalKafkaProducer,
             CompanyValidator companyValidator,
             Validator validator,
+            EmailValidator emailValidator,
             HmrcCallbackService hmrcCallbackService) {
         this.withdrawalRepository = withdrawalRepository;
         this.objectionRepository = objectionRepository;
@@ -83,6 +86,7 @@ public class StrikeOffPartnerWithdrawalsService {
         this.withdrawalKafkaProducer = withdrawalKafkaProducer;
         this.companyValidator = companyValidator;
         this.validator = validator;
+        this.emailValidator = emailValidator;
         this.hmrcCallbackService = hmrcCallbackService;
     }
 
@@ -187,6 +191,11 @@ public class StrikeOffPartnerWithdrawalsService {
         WithdrawalDocument document = withdrawalMapper.toWithdrawalDocument(
                 request, companyNumber, partnerOrganisation, withdrawalId, etag);
         EventTracker.markPending(document);
+
+        // Validate email address before persistence and publishing.
+        // This validator is intentionally exception-driven: it returns nothing on success
+        // and throws a EmailValidationException on failure to stop processing.
+        emailValidator.validateEmail(document.getPartnerContactEmail());
 
         try {
             WithdrawalDocument persistedWithdrawal = withdrawalRepository.insert(document);

@@ -32,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @Tag("unit-test")
@@ -319,6 +320,18 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(errorCode, body.getErrorCode());
         assertEquals(expectedMessage, body.getMessage());
+    }
+
+    @Test
+    void handleEmailValidationException_whenInvoked_returnsBadRequestWithErrorCode() {
+        EmailValidationException ex = new EmailValidationException("Email check failed", "EMAIL_NOT_RECOGNISED");
+
+        ResponseEntity<ApiError> response = handler.handleEmailValidationException(ex);
+        ApiError body = requireBody(response);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("EMAIL_NOT_RECOGNISED", body.getErrorCode());
+        assertEquals("The email is not a recognised email address", body.getMessage());
     }
 
     @Test

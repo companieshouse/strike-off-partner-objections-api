@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.error.ApiErrorResponseException;
 import uk.gov.companieshouse.api.objections.model.ApiError;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ServiceException;
 
 @RestControllerAdvice
@@ -193,6 +194,11 @@ public class GlobalExceptionHandler {
     @SuppressWarnings("unused")
     @ExceptionHandler(CompanyValidationException.class)
     public ResponseEntity<ApiError> handleCompanyValidationException(CompanyValidationException ex) {
+        return badRequest(ex.getErrorCode());
+    }
+
+    @ExceptionHandler(EmailValidationException.class)
+    public ResponseEntity<ApiError> handleEmailValidationException(EmailValidationException ex) {
         return badRequest(ex.getErrorCode());
     }
 
