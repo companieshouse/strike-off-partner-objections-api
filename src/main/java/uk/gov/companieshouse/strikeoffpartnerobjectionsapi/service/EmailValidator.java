@@ -3,7 +3,6 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 import org.springframework.stereotype.Service;
-import uk.gov.companieshouse.logging.util.DataMap;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.AcceptedEmailAddresses;
 import java.util.Arrays;
@@ -27,10 +26,8 @@ public class EmailValidator {
             return;
         }
 
-        var logMap = new DataMap.Builder().build().getLogMap();
-
         // If this line is reached, the email was not from a recognised source
-        LOGGER.error("Email is not from a recognised source", logMap);
+        LOGGER.error("Email is not from a recognised source");
         throw new EmailValidationException("Email is not from a recognised source", "EMAIL_NOT_RECOGNISED");
     }
 
