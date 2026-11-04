@@ -114,15 +114,6 @@ Standards should be applied to all new code, including new classes, methods, and
 - Prevents SonarQube violations and makes code maintainable.
 - Apply helper patterns consistently across all related test classes.
 
-## Data Design
-
-### Callbacks and Context
-
-- Pass attempt numbers, correlation IDs, and failure reasons to handlers.
-- Use 1-based numbering for user-facing retry counts.
-- Handlers need to know: "Was this the first attempt or a retry?" and "How many attempts did it take?"
-- This enables intelligent retry policies and proper audit trail recording.
-
 ## Audit Trail & Data Integrity
 
 - Never lose results due to exception swallowing or missing persistence.
