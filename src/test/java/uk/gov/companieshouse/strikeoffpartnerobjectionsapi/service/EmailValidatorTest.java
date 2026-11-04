@@ -3,25 +3,29 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.EmailProperties;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 
-@Tag("unit-test")
-@ExtendWith(MockitoExtension.class)
+@Tag("integration-test")
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = EmailValidatorTest.TestConfig.class)
+@TestPropertySource(locations = "classpath:application.properties")
 class EmailValidatorTest {
 
+    @Autowired
     private EmailValidator emailValidator;
-
-    @BeforeEach
-    void setUp() {
-        emailValidator = new EmailValidator();
-    }
 
     @ParameterizedTest
     @ValueSource(strings = {
@@ -35,7 +39,12 @@ class EmailValidatorTest {
 
     @Test
     void testValidateEmailWithRecognisedDomain() {
-        String email = "test@hmrc.gov.uk";
-        assertDoesNotThrow(() -> emailValidator.validateEmail(email));
+        assertDoesNotThrow(() -> emailValidator.validateEmail("test@hmrc.gov.uk"));
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(EmailProperties.class)
+    @Import(EmailValidator.class)
+    static class TestConfig {
     }
 }

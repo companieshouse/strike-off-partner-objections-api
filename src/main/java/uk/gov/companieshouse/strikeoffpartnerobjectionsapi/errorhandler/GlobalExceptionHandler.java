@@ -197,7 +197,6 @@ public class GlobalExceptionHandler {
         return badRequest(ex.getErrorCode());
     }
 
-    @SuppressWarnings("unused")
     @ExceptionHandler(EmailValidationException.class)
     public ResponseEntity<ApiError> handleEmailValidationException(EmailValidationException ex) {
         return badRequest(ex.getErrorCode());

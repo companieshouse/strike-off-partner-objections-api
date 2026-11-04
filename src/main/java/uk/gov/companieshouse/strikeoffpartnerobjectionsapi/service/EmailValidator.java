@@ -2,10 +2,11 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.EmailProperties;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.HmrcOAuthProperties;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.AcceptedEmailAddresses;
-import java.util.Arrays;
 
 /**
  * Service for validating email-related information in requests.
@@ -13,14 +14,19 @@ import java.util.Arrays;
  * Throws EmailValidationException if validation fails.
  */
 @Service
+@EnableConfigurationProperties({HmrcOAuthProperties.class, EmailProperties.class})
 public class EmailValidator {
+
+    private final EmailProperties emailProperties;
+
+    public EmailValidator(EmailProperties emailProperties) {
+        this.emailProperties = emailProperties;
+    }
 
     public void validateEmail(String email) {
         String domain = email.substring(email.lastIndexOf('@') + 1);
 
-        boolean recognised = Arrays.stream(AcceptedEmailAddresses.values())
-                .map(AcceptedEmailAddresses::getDomain)
-                .anyMatch(domain::equalsIgnoreCase);
+        boolean recognised = emailProperties.allowedDomains().stream().anyMatch(domain::equalsIgnoreCase);
 
         if (recognised) {
             return;

@@ -81,6 +81,9 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     @Mock
     private HmrcCallbackService hmrcCallbackService;
 
+    @Mock
+    private EmailValidator emailValidator;
+
     private StrikeOffPartnerWithdrawalsService strikeOffPartnerWithdrawalsService;
 
     @BeforeEach
@@ -89,7 +92,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
             Validator validator = factory.getValidator();
             strikeOffPartnerWithdrawalsService =
                     new StrikeOffPartnerWithdrawalsService(withdrawalRepository, objectionRepository, withdrawalMapper,
-                            withdrawalKafkaProducer, companyValidator, validator, hmrcCallbackService);
+                            withdrawalKafkaProducer, companyValidator, validator, emailValidator, hmrcCallbackService);
 
             // Default happy-path stub; overridden in specific tests for false/exception scenarios.
             lenient().when(objectionRepository.existsByCompanyNumberAndPartnerOrganisation(
@@ -168,10 +171,10 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                 .isSameAs(validationException);
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(objectionRepository, withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
-
 
     @Test
     void withdrawAllObjections_whenCompanyValidationPasses_continuesWithPersistence() {
@@ -192,6 +195,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verify(emailValidator).validateEmail(request.getPartnerContactEmail());
         verify(withdrawalRepository).insert(mappedDocument);
         verify(withdrawalKafkaProducer).publishWithdrawalEvent(savedDocument);
     }
@@ -213,6 +217,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
@@ -231,6 +236,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
 
         verify(companyValidator).validateCompanyForWithdrawal(COMPANY_NUMBER, request.getSubmissionCompanyName());
         verify(objectionRepository).existsByCompanyNumberAndPartnerOrganisation(COMPANY_NUMBER, PARTNER_ORGANISATION);
+        verifyNoInteractions(emailValidator);
         verifyNoInteractions(withdrawalMapper, withdrawalRepository, withdrawalKafkaProducer);
     }
 
