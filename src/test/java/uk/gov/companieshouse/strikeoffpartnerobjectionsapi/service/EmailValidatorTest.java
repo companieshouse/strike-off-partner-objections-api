@@ -18,7 +18,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.EmailProperties;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 
-@Tag("integration-test")
+@Tag("unit-test")
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = EmailValidatorTest.TestConfig.class)
 @TestPropertySource(locations = "classpath:application.properties")
