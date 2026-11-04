@@ -50,7 +50,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionReque
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.EventStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 @Tag("unit-test")

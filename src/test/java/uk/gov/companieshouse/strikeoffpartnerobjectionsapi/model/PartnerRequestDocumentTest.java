@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.EventStatus;
 
 import java.time.Instant;
 
