@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.EmailValidationException;
 
@@ -21,21 +23,13 @@ class EmailValidatorTest {
         emailValidator = new EmailValidator();
     }
 
-    @Test
-    void testValidateEmailWithUnrecognisedDomain() {
-        String email = "test@companieshouse.gov.uk";
-        assertThrows(EmailValidationException.class, () -> emailValidator.validateEmail(email));
-    }
-
-    @Test
-    void testValidateEmailWithDomainNotAtEnd() {
-        String email = "hmrc.gov.uk@somewhereelse.org";
-        assertThrows(EmailValidationException.class, () -> emailValidator.validateEmail(email));
-    }
-
-    @Test
-    void testValidateEmailWithDomainAtEndButStillInvalid() {
-        String email = "test@fakehmrc.gov.uk";
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "test@companieshouse.gov.uk",
+            "hmrc.gov.uk@somewhereelse.org",
+            "test@fakehmrc.gov.uk"
+    })
+    void testValidateEmailWithUnrecognisedDomain(String email) {
         assertThrows(EmailValidationException.class, () -> emailValidator.validateEmail(email));
     }
 
