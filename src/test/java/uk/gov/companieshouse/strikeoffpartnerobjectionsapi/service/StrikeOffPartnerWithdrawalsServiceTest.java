@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.KafkaPublis
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafkaProducer;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
@@ -392,7 +391,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), withdrawalIdCaptor.capture(), any());
 
         String id1 = withdrawalIdCaptor.getAllValues().get(0);
@@ -420,7 +419,7 @@ class StrikeOffPartnerWithdrawalsServiceTest {
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
         strikeOffPartnerWithdrawalsService.withdrawAllObjections(COMPANY_NUMBER, request, PARTNER_ORGANISATION);
 
-        verify(withdrawalMapper, org.mockito.Mockito.times(2))
+        verify(withdrawalMapper, times(2))
                 .toWithdrawalDocument(any(), any(), any(), any(), etagCaptor.capture());
 
         String etag1 = etagCaptor.getAllValues().get(0);
