@@ -1,6 +1,9 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
+import com.mongodb.client.result.UpdateResult;
 import java.time.Instant;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.dao.DataAccessException;
@@ -37,6 +40,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * <p>Handles creation, retrieval, and processing status updates for objection records.
  * On creation, the objection is persisted to MongoDB and a Kafka event is published.
  * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
+ * Publish outcomes update only event-tracking fields to preserve concurrent processing updates.
  * On status update, an HMRC callback notification is triggered asynchronously after
  * the record is successfully updated in MongoDB.</p>
  */
@@ -159,18 +163,50 @@ public class StrikeOffPartnerObjectionService {
     }
 
     private void saveObjectionEventStatus(ObjectionDocument persistedObjection) {
+        var logMap = new DataMap.Builder()
+                .companyNumber(persistedObjection.getCompanyNumber())
+                .resourceId(persistedObjection.getObjectionId())
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .status(Objects.toString(persistedObjection.getEventStatus(), null))
+                .correlationId(persistedObjection.getEventCorrelationId())
+                .build()
+                .getLogMap();
         try {
-            objectionRepository.save(persistedObjection);
+            UpdateResult result = objectionRepository.updateEventStatus(
+                    persistedObjection.getCompanyNumber(),
+                    persistedObjection.getObjectionId(),
+                    persistedObjection.getEventStatus(),
+                    persistedObjection.getEventStatusChangedAt(),
+                    persistedObjection.getEventCorrelationId(),
+                    persistedObjection.getEventFailureReason());
+            logEventStatusUpdateResult(result, logMap);
         } catch (DataAccessException saveEx) {
-            var logMap = new DataMap.Builder()
-                    .companyNumber(persistedObjection.getCompanyNumber())
-                    .resourceId(persistedObjection.getObjectionId())
-                    .resourceKind(RESOURCE_KIND_OBJECTION)
-                    .errorMessage("Failed to update event status after publish")
-                    .build()
-                    .getLogMap();
+            logMap.put("error_message", "Failed to update event status after publish");
             LOGGER.error("Failed to save objection event status", saveEx, logMap);
         }
+    }
+
+    private void logEventStatusUpdateResult(UpdateResult result, Map<String, Object> logMap) {
+        if (result == null) {
+            LOGGER.error("Objection event status update outcome unavailable", logMap);
+            return;
+        }
+        logMap.put("acknowledged", result.wasAcknowledged());
+        if (!result.wasAcknowledged()) {
+            LOGGER.error("Objection event status update was not acknowledged", logMap);
+            return;
+        }
+        logMap.put("matched_count", result.getMatchedCount());
+        logMap.put("modified_count", result.getModifiedCount());
+        if (result.getMatchedCount() == 0) {
+            LOGGER.error("Objection event status update matched no document", logMap);
+            return;
+        }
+        if (result.getModifiedCount() == 0) {
+            LOGGER.info("Objection event status unchanged", logMap);
+            return;
+        }
+        LOGGER.info("Objection event status updated", logMap);
     }
 
     /**
@@ -216,6 +252,8 @@ public class StrikeOffPartnerObjectionService {
                 .companyNumber(document.getCompanyNumber())
                 .resourceId(document.getObjectionId())
                 .resourceKind(RESOURCE_KIND_OBJECTION)
+                .status(document.getProcessingStatus())
+                .correlationId(document.getEventCorrelationId())
                 .build()
                 .getLogMap();
         LOGGER.info("Objection retrieved successfully", successLogMap);
@@ -242,40 +280,44 @@ public class StrikeOffPartnerObjectionService {
             String objectionId,
             UpdateObjectionStatusRequest updateStatusRequest) throws ObjectionNotFoundException {
 
+        ObjectionDocument existingDocument = objectionRepository.findByCompanyNumberAndObjectionId(companyNumber, objectionId)
+                .orElseThrow(() -> new ObjectionNotFoundException(
+                        format("Objection not found for company number=%s, objectionId=%s", companyNumber, objectionId)));
+
         var logMap = new DataMap.Builder()
                 .companyNumber(companyNumber)
                 .resourceId(objectionId)
                 .resourceKind(RESOURCE_KIND_OBJECTION)
+                .correlationId(existingDocument.getEventCorrelationId())
                 .build()
                 .getLogMap();
+
+        String requestedStatusValue = updateStatusRequest.getProcessingStatus().getValue().trim();
+        logMap.put("current_status", existingDocument.getProcessingStatus());
+        logMap.put("requested_status", requestedStatusValue);
         LOGGER.info("Attempting to update objection processing status", logMap);
-
-        ObjectionDocument document = objectionRepository
-                .findByCompanyNumberAndObjectionId(companyNumber, objectionId)
-                .orElseThrow(() -> new ObjectionNotFoundException(
-                        format("Objection not found for company number=%s, objectionId=%s",
-                                companyNumber, objectionId)));
-
-        ObjectionProcessingStatus requestedStatus = parseRequestedStatus(
-                updateStatusRequest.getProcessingStatus().getValue().trim());
+        ObjectionProcessingStatus requestedStatus = parseRequestedStatus(requestedStatusValue);
         ObjectionProcessingStatus currentStatus = parseCurrentStatus(
-                document.getProcessingStatus(), companyNumber, objectionId);
+                existingDocument.getProcessingStatus(), companyNumber, objectionId);
 
         // If the requested status is the same as the current status, we may still need to send a callback if the current status is accepted but the callback previously failed.
         if (currentStatus == requestedStatus) {
-            if (isObjectionProcessed(currentStatus) && isCallbackRequired(document)) {
-                sendAndPersistObjectionCallback(document);
+            logMap.put("status", currentStatus.getValue());
+            LOGGER.debugContext(null, "Objection processing status unchanged", logMap);
+            if (isObjectionProcessed(currentStatus) && isCallbackRequired(existingDocument)) {
+                sendAndPersistObjectionCallback(existingDocument);
             }
             return;
         }
 
         if (!isAllowedTransition(currentStatus, requestedStatus)) {
+            LOGGER.error("Objection processing status transition rejected", logMap);
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     format("Invalid status transition from %s to %s",
                             currentStatus.getValue(), requestedStatus.getValue()));
         }
 
-        ObjectionDocument updatedDocument = saveProcessingStatus(document, requestedStatus);
+        ObjectionDocument updatedDocument = saveProcessingStatus(existingDocument, requestedStatus);
 
         // Send HMRC callback only for terminal states (accepted or rejected)
         if (isObjectionProcessed(requestedStatus)) {

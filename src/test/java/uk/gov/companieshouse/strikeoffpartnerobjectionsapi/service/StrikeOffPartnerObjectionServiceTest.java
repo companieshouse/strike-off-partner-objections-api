@@ -8,9 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -106,6 +108,8 @@ class StrikeOffPartnerObjectionServiceTest {
         requestDto = validCreateObjectionRequest();
         mappedDocument = new ObjectionDocument();
         savedDocument = new ObjectionDocument();
+        savedDocument.setCompanyNumber(VALID_COMPANY_NUMBER);
+        savedDocument.setObjectionId(VALID_OBJECTION_ID);
     }
 
     @Test
@@ -127,11 +131,12 @@ class StrikeOffPartnerObjectionServiceTest {
         verify(objectionRequestMapper).toObjectionDocument(
                 eq(requestDto), eq(companyNumber), eq(PARTNER_ORGANISATION), anyString());
         verify(objectionRepository).insert(mappedDocument);
-        ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
-        verify(objectionRepository).save(savedCaptor.capture());
+        verify(objectionRepository).updateEventStatus(
+                companyNumber, VALID_OBJECTION_ID, EventStatus.PUBLISHED,
+                savedDocument.getEventStatusChangedAt(), "event-id-1", null);
+        verify(objectionRepository, never()).save(any(ObjectionDocument.class));
         verify(emailValidator).validateEmail(requestDto.getPartnerContactEmail());
-        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.PUBLISHED);
-        assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
+        assertThat(savedDocument.getEventStatusChangedAt()).isNotNull();
         verify(objectionResponseMapper).toObjectionApiResponse(savedDocument);
         verify(objectionKafkaProducer).publishObjectionEvent(savedDocument);
     }
@@ -151,12 +156,12 @@ class StrikeOffPartnerObjectionServiceTest {
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
-        ArgumentCaptor<ObjectionDocument> savedCaptor = ArgumentCaptor.forClass(ObjectionDocument.class);
-        verify(objectionRepository).save(savedCaptor.capture());
+        verify(objectionRepository).updateEventStatus(
+                companyNumber, VALID_OBJECTION_ID, EventStatus.FAILED,
+                savedDocument.getEventStatusChangedAt(), kafkaException.getEventId(), kafkaException.getMessage());
+        verify(objectionRepository, never()).save(any(ObjectionDocument.class));
         verify(emailValidator).validateEmail(requestDto.getPartnerContactEmail());
-        assertThat(savedCaptor.getValue().getEventStatus()).isEqualTo(EventStatus.FAILED);
-        assertThat(savedCaptor.getValue().getEventFailureReason()).contains("publish failed");
-        assertThat(savedCaptor.getValue().getEventCorrelationId()).isNotBlank();
+        assertThat(savedDocument.getEventStatusChangedAt()).isNotNull();
     }
 
     @Test
@@ -217,13 +222,17 @@ class StrikeOffPartnerObjectionServiceTest {
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenReturn(getPublishedEvent("event-id-4"));
-        when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
+        doThrow(saveException).when(objectionRepository).updateEventStatus(
+                eq(companyNumber), eq(VALID_OBJECTION_ID), eq(EventStatus.PUBLISHED),
+                any(), eq("event-id-4"), isNull());
         when(objectionResponseMapper.toObjectionApiResponse(savedDocument)).thenReturn(expectedResponse);
 
         BaseObjectionResponse result = strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION);
 
         assertThat(result).isSameAs(expectedResponse);
-        verify(objectionRepository).save(any(ObjectionDocument.class));
+        verify(objectionRepository).updateEventStatus(
+                companyNumber, VALID_OBJECTION_ID, EventStatus.PUBLISHED,
+                savedDocument.getEventStatusChangedAt(), "event-id-4", null);
     }
 
     @Test
@@ -239,12 +248,16 @@ class StrikeOffPartnerObjectionServiceTest {
                 .thenReturn(mappedDocument);
         when(objectionRepository.insert(mappedDocument)).thenReturn(savedDocument);
         when(objectionKafkaProducer.publishObjectionEvent(savedDocument)).thenThrow(kafkaException);
-        when(objectionRepository.save(any(ObjectionDocument.class))).thenThrow(saveException);
+        doThrow(saveException).when(objectionRepository).updateEventStatus(
+                eq(companyNumber), eq(VALID_OBJECTION_ID), eq(EventStatus.FAILED),
+                any(), eq(kafkaException.getEventId()), eq(kafkaException.getMessage()));
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.createObjection(companyNumber, requestDto, PARTNER_ORGANISATION))
                 .isSameAs(kafkaException);
 
-        verify(objectionRepository).save(any(ObjectionDocument.class));
+        verify(objectionRepository).updateEventStatus(
+                companyNumber, VALID_OBJECTION_ID, EventStatus.FAILED,
+                savedDocument.getEventStatusChangedAt(), kafkaException.getEventId(), kafkaException.getMessage());
     }
 
     @Test
