@@ -41,7 +41,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * On creation, the objection is persisted to MongoDB and a Kafka event is published.
  * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
  * Publish outcomes update only event-tracking fields to preserve concurrent processing updates.
- * On status update, an HMRC callback notification is triggered asynchronously after
+ * On terminal status updates, an HMRC callback notification is sent synchronously after
  * the record is successfully updated in MongoDB.</p>
  */
 @Service
@@ -333,18 +333,22 @@ public class StrikeOffPartnerObjectionService {
             ObjectionDocument document,
             ObjectionProcessingStatus requestedStatus) {
 
-        document.setProcessingStatus(requestedStatus.getValue());
-        document.setProcessingStatusChangedAt(Instant.now());
-        document.setEtag(objectionRequestMapper.getEtag());
-
         try {
-            ObjectionDocument savedDocument = objectionRepository.save(document);
+            ObjectionDocument savedDocument = objectionRepository.updateProcessingStatus(
+                            document.getCompanyNumber(),
+                            document.getObjectionId(),
+                            document.getProcessingStatus(),
+                            requestedStatus.getValue(),
+                            Instant.now(),
+                            objectionRequestMapper.getEtag())
+                    .orElseThrow(() -> concurrentProcessingStatusUpdate(document, requestedStatus));
 
             var logMap = new DataMap.Builder()
                     .companyNumber(savedDocument.getCompanyNumber())
                     .resourceId(savedDocument.getObjectionId())
                     .resourceKind(RESOURCE_KIND_OBJECTION)
                     .status(savedDocument.getProcessingStatus())
+                    .correlationId(savedDocument.getEventCorrelationId())
                     .build()
                     .getLogMap();
 
@@ -355,6 +359,22 @@ public class StrikeOffPartnerObjectionService {
             throw new ObjectionPersistenceException(
                     "Failed to persist updated objection processing status", ex);
         }
+    }
+
+    private ResponseStatusException concurrentProcessingStatusUpdate(
+            ObjectionDocument document, ObjectionProcessingStatus requestedStatus) {
+        var logMap = new DataMap.Builder()
+                .companyNumber(document.getCompanyNumber())
+                .resourceId(document.getObjectionId())
+                .resourceKind(RESOURCE_KIND_OBJECTION)
+                .correlationId(document.getEventCorrelationId())
+                .build()
+                .getLogMap();
+        logMap.put("current_status", document.getProcessingStatus());
+        logMap.put("requested_status", requestedStatus.getValue());
+        LOGGER.error("Objection processing status update no longer matches persisted document", logMap);
+        return new ResponseStatusException(HttpStatus.CONFLICT,
+                "Objection processing status changed concurrently or objection was removed");
     }
 
     private void sendAndPersistObjectionCallback(ObjectionDocument document) {
