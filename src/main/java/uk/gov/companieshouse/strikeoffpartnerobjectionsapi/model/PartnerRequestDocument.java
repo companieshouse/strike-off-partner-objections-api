@@ -31,6 +31,9 @@ public abstract class PartnerRequestDocument {
     @Field("created_at")
     private Instant createdAt;
 
+    @Field("processing_status_changed_at")
+    private Instant processingStatusChangedAt;
+
     private String etag;
 
     private PartnerLinks links;
@@ -121,6 +124,14 @@ public abstract class PartnerRequestDocument {
 
     public String getEtag() {
         return etag;
+    }
+
+    public Instant getProcessingStatusChangedAt() {
+        return processingStatusChangedAt;
+    }
+
+    public void setProcessingStatusChangedAt(Instant processingStatusChangedAt) {
+        this.processingStatusChangedAt = processingStatusChangedAt;
     }
 
     public void setEtag(String etag) {

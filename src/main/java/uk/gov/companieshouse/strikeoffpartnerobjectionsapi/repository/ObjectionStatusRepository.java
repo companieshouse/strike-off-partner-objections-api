@@ -1,10 +1,18 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository;
 
+import com.mongodb.client.result.UpdateResult;
 import java.time.Instant;
 import java.util.Optional;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
-public interface ObjectionProcessingStatusRepository {
+public interface ObjectionStatusRepository {
+
+    /**
+     * Updates only event-tracking fields and returns MongoDB's write outcome.
+     */
+    UpdateResult updateEventStatus(String companyNumber, String objectionId, EventStatus eventStatus,
+                                  Instant eventStatusChangedAt, String eventCorrelationId, String eventFailureReason);
 
     /**
      * Updates processing fields only if the persisted status still matches the expected status.

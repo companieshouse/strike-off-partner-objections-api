@@ -21,6 +21,25 @@ class PartnerRequestDocumentTest {
     }
 
     @Test
+    void processingStatusChangedAt_isInheritedByBothDocumentTypes() {
+        Instant changedAt = Instant.parse("2026-01-01T12:00:00Z");
+        PartnerRequestDocument objection = new ObjectionDocument();
+        PartnerRequestDocument withdrawal = new WithdrawalDocument();
+
+        assertNull(objection.getProcessingStatusChangedAt());
+        assertNull(withdrawal.getProcessingStatusChangedAt());
+        objection.setProcessingStatusChangedAt(changedAt);
+        withdrawal.setProcessingStatusChangedAt(changedAt);
+
+        assertEquals(changedAt, objection.getProcessingStatusChangedAt());
+        assertEquals(changedAt, withdrawal.getProcessingStatusChangedAt());
+        objection.setProcessingStatusChangedAt(null);
+        withdrawal.setProcessingStatusChangedAt(null);
+        assertNull(objection.getProcessingStatusChangedAt());
+        assertNull(withdrawal.getProcessingStatusChangedAt());
+    }
+
+    @Test
     void testSetAndGetId() {
         String id = "test-id-123";
         document.setId(id);
@@ -173,4 +192,3 @@ class PartnerRequestDocumentTest {
         assertNull(document.getSubmissionCompanyName());
     }
 }
-
