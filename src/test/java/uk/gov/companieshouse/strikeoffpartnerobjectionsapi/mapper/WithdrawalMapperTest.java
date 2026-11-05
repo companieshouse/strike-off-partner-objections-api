@@ -57,13 +57,31 @@ class WithdrawalMapperTest {
 
     @Test
     void toWithdrawalDocument_setsWithdrawalRequestedProcessingStatus_whenDocumentIsCreated() {
+        Instant before = Instant.now();
         WithdrawalDocument doc = mapper.toWithdrawalDocument(
                 new WithdrawAllObjectionsRequest(), COMPANY_NUMBER, PARTNER_ORG, WITHDRAWAL_ID, ETAG);
 
         assertThat(doc.getProcessingStatus())
                 .isEqualTo(WithdrawalProcessingStatus.WITHDRAWAL_REQUESTED.getValue());
+        assertThat(doc.getProcessingStatusChangedAt()).isBetween(before, Instant.now());
     }
 
+    @Test
+    void toWithdrawAllObjectionsResponse_mapsProcessingStatusTimestampToUtc() {
+        Instant changedAt = Instant.parse("2026-01-01T12:00:00Z");
+        WithdrawalDocument document = buildSavedDocument(changedAt);
+        document.setProcessingStatusChangedAt(changedAt);
+
+        assertThat(mapper.toWithdrawAllObjectionsResponse(document).getProcessingStatusChangedAt())
+                .isEqualTo(changedAt.atOffset(ZoneOffset.UTC));
+    }
+
+    @Test
+    void toWithdrawAllObjectionsResponse_preservesMissingTimestampForLegacyDocument() {
+        WithdrawalDocument document = buildSavedDocument(Instant.now());
+
+        assertThat(mapper.toWithdrawAllObjectionsResponse(document).getProcessingStatusChangedAt()).isNull();
+    }
     @Test
     void toWithdrawalDocument_setsWithdrawalKind_whenDocumentIsCreated() {
         WithdrawalDocument doc = mapper.toWithdrawalDocument(

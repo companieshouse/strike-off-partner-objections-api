@@ -5,7 +5,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocum
 
 import java.util.Optional;
 
-public interface WithdrawalRepository extends MongoRepository<WithdrawalDocument, String> {
+public interface WithdrawalRepository extends MongoRepository<WithdrawalDocument, String>, WithdrawalStatusRepository {
 
     Optional<WithdrawalDocument> findByWithdrawalId(String withdrawalId);
 

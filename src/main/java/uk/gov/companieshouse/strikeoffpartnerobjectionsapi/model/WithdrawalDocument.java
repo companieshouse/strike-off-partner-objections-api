@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model;
 
+import java.time.Instant;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -18,6 +19,9 @@ public class WithdrawalDocument extends PartnerRequestDocument {
     @Field("processing_status")
     @Indexed
     private String processingStatus;
+
+    @Field("processing_status_changed_at")
+    private Instant processingStatusChangedAt;
 
     public String getCompanyNumber() {
         return companyNumber;
@@ -43,5 +47,12 @@ public class WithdrawalDocument extends PartnerRequestDocument {
         this.processingStatus = processingStatus;
     }
 
-}
+    public Instant getProcessingStatusChangedAt() {
+        return processingStatusChangedAt;
+    }
 
+    public void setProcessingStatusChangedAt(Instant processingStatusChangedAt) {
+        this.processingStatusChangedAt = processingStatusChangedAt;
+    }
+
+}

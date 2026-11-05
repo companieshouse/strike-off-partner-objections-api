@@ -32,6 +32,7 @@ class WithdrawalDocumentRepositorySchemaTest {
         assertEquals("partner_case_reference", getFieldName("partnerCaseReference"));
         assertEquals("partner_objection_workstream", getFieldName("partnerObjectionWorkstream"));
         assertEquals("processing_status", getFieldName("processingStatus"));
+        assertEquals("processing_status_changed_at", getFieldName("processingStatusChangedAt"));
         assertEquals("created_at", getFieldName("createdAt"));
     }
 
@@ -77,4 +78,3 @@ class WithdrawalDocumentRepositorySchemaTest {
         throw new NoSuchFieldException(fieldName);
     }
 }
-
