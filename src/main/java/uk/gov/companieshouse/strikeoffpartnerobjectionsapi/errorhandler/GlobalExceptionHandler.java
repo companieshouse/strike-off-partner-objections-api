@@ -217,7 +217,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleHmrcCallbackFailedException(
             HmrcCallbackFailedException ex) {
 
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(
                         HMRC_CALLBACK_FAILED_CODE,
                         HMRC_CALLBACK_FAILED_MESSAGE));

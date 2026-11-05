@@ -23,11 +23,11 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.kafka.WithdrawalKafka
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.WithdrawalMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.WithdrawalRepository;
 
 import static java.lang.String.format;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.CallbackStatusTracker.isCallbackRequired;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 /**
@@ -305,7 +305,7 @@ public class StrikeOffPartnerWithdrawalsService {
         WithdrawalProcessingStatus currentStatus = parseCurrentStatus(document.getProcessingStatus());
 
         if (currentStatus == requestedStatus) {
-            if (isWithdrawalProcessed(currentStatus) && document.getCallbackStatus() == CallbackStatus.FAILED) {
+            if (isWithdrawalProcessed(currentStatus) && isCallbackRequired(document)) {
                 sendAndPersistWithdrawalCallback(document);
             }
             return;

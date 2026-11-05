@@ -22,13 +22,13 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionReque
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper.ObjectionResponseMapper;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
-import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.repository.ObjectionRepository;
 
 import static java.lang.String.format;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_ACCEPTED;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_PROCESSING;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_REJECTED;
+import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.CallbackStatusTracker.isCallbackRequired;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.LOGGER;
 
 /**
@@ -263,7 +263,7 @@ public class StrikeOffPartnerObjectionService {
 
         // If the requested status is the same as the current status, we may still need to send a callback if the current status is accepted but the callback previously failed.
         if (currentStatus == requestedStatus) {
-            if (isObjectionProcessed(currentStatus) && CallbackStatus.FAILED == document.getCallbackStatus()) {
+            if (isObjectionProcessed(currentStatus) && isCallbackRequired(document)) {
                 sendAndPersistObjectionCallback(document);
             }
             return;

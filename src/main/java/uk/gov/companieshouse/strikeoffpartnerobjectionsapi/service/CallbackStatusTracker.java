@@ -1,7 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import java.time.Instant;
-import org.springframework.stereotype.Component;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.HmrcCallbackFailedException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.CallbackResult;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
@@ -10,9 +9,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerRequestD
 /**
  * A utility class for tracking the status of callbacks to HMRC.
  */
-@Component
 public final class CallbackStatusTracker {
-
 
     private CallbackStatusTracker() {
         // prevent instantiation
@@ -33,5 +30,9 @@ public final class CallbackStatusTracker {
             throw new HmrcCallbackFailedException(
                     "HMRC callback failed: " + result.failureReason());
         }
+    }
+
+    public static boolean isCallbackRequired(PartnerRequestDocument document) {
+        return document.getCallbackStatus() == null || CallbackStatus.FAILED == document.getCallbackStatus();
     }
 }
