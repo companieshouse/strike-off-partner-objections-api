@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.model.company.CompanyProfileApi;
 import uk.gov.companieshouse.api.objections.model.BaseObjectionResponse;
@@ -18,6 +19,7 @@ import uk.gov.companieshouse.api.objections.model.UpdateObjectionStatusRequest;
 import uk.gov.companieshouse.strikeoff.partner.objections.EventType;
 import uk.gov.companieshouse.strikeoff.partner.objections.StrikeOffPartnerObjections;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.BaseTestIntegration;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config.EmailProperties;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.CompanyValidationException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNotFoundException;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
@@ -36,6 +38,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
 
 @SpringBootTest
 @Tag("integration-test")
+@TestPropertySource(locations = "classpath:application.properties")
 class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
 
     private static final String COMPANY_NUMBER = "01234567";
@@ -47,6 +50,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
 
     @Autowired
     private ObjectionRepository objectionRepository;
+
+    @Autowired
+    private EmailProperties emailProperties;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -273,13 +279,13 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         assertThat(response.getCreatedAt()).isNotNull();
     }
 
-    private static void assertSavedDocument(ObjectionDocument saved, Instant before, Instant after) {
+    private void assertSavedDocument(ObjectionDocument saved, Instant before, Instant after) {
         Instant beforeAtMillisPrecision = before.truncatedTo(ChronoUnit.MILLIS);
         assertThat(saved.getCompanyNumber()).isEqualTo(COMPANY_NUMBER);
         assertThat(saved.getPartnerOrganisation()).isEqualTo(PARTNER_ORGANISATION);
         assertThat(saved.getSubmissionCompanyName()).isEqualTo("Acme Limited");
         assertThat(saved.getPartnerCaseReference()).isEqualTo("CASE-123");
-        assertThat(saved.getPartnerContactEmail()).isEqualTo("test@example.com");
+        assertThat(saved.getPartnerContactEmail()).isEqualTo(testEmailAddress());
         assertThat(saved.getPartnerObjectionWorkstream()).isEqualTo(DEBT_MANAGEMENT_WORKSTREAM);
         assertThat(saved.getPartnerObjectionReason()).isEqualTo(PartnerObjectionReason.NOT_PROVIDED.getValue());
         assertThat(saved.getId()).isNotBlank();
@@ -298,7 +304,7 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         CreateObjectionRequest request = new CreateObjectionRequest();
         request.setSubmissionCompanyName("Acme Limited");
         request.setPartnerCaseReference("CASE-123");
-        request.setPartnerContactEmail("test@example.com");
+        request.setPartnerContactEmail(testEmailAddress());
         request.setPartnerObjectionWorkstream(DEBT_MANAGEMENT_WORKSTREAM);
         request.setPartnerObjectionReason(PartnerObjectionReason.NOT_PROVIDED);
         return request;
@@ -311,5 +317,9 @@ class StrikeOffObjectionPartnerIntegrationTest extends BaseTestIntegration {
         companyProfile.setCompanyStatus("active");
         companyProfile.setCompanyStatusDetail("active-proposal-to-strike-off");
         return companyProfile;
+    }
+
+    private String testEmailAddress() {
+        return "test@" + emailProperties.allowedDomains().getFirst();
     }
 }
