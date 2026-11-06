@@ -10,7 +10,6 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.exception.ObjectionNo
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerObjectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -55,7 +54,7 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
      */
     @Override
     public ResponseEntity<BaseObjectionResponse> createObjection(
-            @Size(min = 1) @PathVariable("company_number") String companyNumber,
+            @Size(min = 1) String companyNumber,
             @Valid @RequestBody CreateObjectionRequest createObjectionRequest) {
         String partnerOrganisation = resolvePartnerOrganisation();
         BaseObjectionResponse response =
@@ -73,8 +72,8 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
      */
     @Override
     public ResponseEntity<BaseObjectionResponse> getObjection(
-            @Size(min = 1) @PathVariable("company_number") String companyNumber,
-            @Size(min = 1) @PathVariable("objection_id") String objectionId) {
+            @Size(min = 1) String companyNumber,
+            @Size(min = 1) String objectionId) {
         String partnerOrganisation = resolvePartnerOrganisation();
         try {
             BaseObjectionResponse response =
@@ -97,8 +96,8 @@ public class StrikeOffObjectionPartnerController implements StrikeOffPartnerObje
      */
     @Override
     public ResponseEntity<Void> updateObjectionStatus(
-            @Size(min = 1) @PathVariable("company_number") String companyNumber,
-            @Size(min = 1) @PathVariable("objection_id") String objectionId,
+            @Size(min = 1) String companyNumber,
+            @Size(min = 1) String objectionId,
             @Valid @RequestBody UpdateObjectionStatusRequest updateStatusRequest) {
         try {
             strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
