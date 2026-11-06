@@ -13,6 +13,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
@@ -44,6 +45,7 @@ import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsRequest;
 import uk.gov.companieshouse.api.objections.model.WithdrawAllObjectionsResponse;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.errorhandler.GlobalExceptionHandler;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.SensitiveResponseCacheInterceptor;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service.StrikeOffPartnerWithdrawalsService;
 
 @ExtendWith(MockitoExtension.class)
@@ -580,7 +582,10 @@ class StrikeOffPartnerWithdrawalsControllerTest {
 
     private MockMvc mockMvc() {
         return MockMvcBuilders.standaloneSetup(strikeOffPartnerWithdrawalsController)
+                .addInterceptors(new SensitiveResponseCacheInterceptor())
                 .setControllerAdvice(new CreateObjectionRequestBodyAdvice(), new GlobalExceptionHandler())
+                .alwaysExpect(header().string("Cache-Control", "no-store"))
+                .alwaysExpect(header().string("Pragma", "no-cache"))
                 .build();
     }
 }

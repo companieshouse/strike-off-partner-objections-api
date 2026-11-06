@@ -1,7 +1,7 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
+import java.util.Objects;
 import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,20 +13,35 @@ import uk.gov.companieshouse.api.InternalApiClient;
 import uk.gov.companieshouse.sdk.manager.ApiSdkManager;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.AuthenticationInterceptor;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.InternalUserInterceptor;
+import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.interceptor.SensitiveResponseCacheInterceptor;
 
 @Configuration
 @EnableConfigurationProperties(HmrcOAuthProperties.class)
 public class ApplicationConfig implements WebMvcConfigurer {
 
+    private static final int CACHE_POLICY_ORDER = 0;
+    private static final String[] SENSITIVE_PATHS = {
+            "/company/{company_number}/strike-off-partner-objections",
+            "/company/{company_number}/strike-off-partner-objections/**",
+            "/company/{company_number}/strike-off-partner-objections-withdrawals",
+            "/company/{company_number}/strike-off-partner-objections-withdrawals/**",
+            "/internal/company/{company_number}/strike-off-partner-objections",
+            "/internal/company/{company_number}/strike-off-partner-objections/**",
+            "/internal/company/{company_number}/strike-off-partner-objections-withdrawals",
+            "/internal/company/{company_number}/strike-off-partner-objections-withdrawals/**"
+    };
+
     private final AuthenticationInterceptor authenticationInterceptor;
     private final InternalUserInterceptor internalUserInterceptor;
+    private final SensitiveResponseCacheInterceptor sensitiveResponseCacheInterceptor;
 
-    @Autowired(required = false)
     public ApplicationConfig(
             AuthenticationInterceptor authenticationInterceptor,
-            InternalUserInterceptor internalUserInterceptor) {
+            InternalUserInterceptor internalUserInterceptor,
+            SensitiveResponseCacheInterceptor sensitiveResponseCacheInterceptor) {
         this.authenticationInterceptor = authenticationInterceptor;
         this.internalUserInterceptor = internalUserInterceptor;
+        this.sensitiveResponseCacheInterceptor = Objects.requireNonNull(sensitiveResponseCacheInterceptor);
     }
 
     @Bean
@@ -44,6 +59,8 @@ public class ApplicationConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
+        registry.addInterceptor(sensitiveResponseCacheInterceptor)
+                .addPathPatterns(SENSITIVE_PATHS).order(CACHE_POLICY_ORDER);
         if (authenticationInterceptor != null) {
             registry.addInterceptor(authenticationInterceptor)
                     .addPathPatterns("/**")
