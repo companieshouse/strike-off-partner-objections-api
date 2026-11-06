@@ -11,11 +11,11 @@ import org.springframework.data.mongodb.core.query.Update;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
-public class ObjectionStatusRepositoryImpl implements ObjectionStatusRepository {
+public class ObjectionUpdateRepositoryImpl implements ObjectionUpdateRepository {
 
     private final MongoTemplate mongoTemplate;
 
-    public ObjectionStatusRepositoryImpl(MongoTemplate mongoTemplate) {
+    public ObjectionUpdateRepositoryImpl(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 

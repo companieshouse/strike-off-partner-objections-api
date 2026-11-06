@@ -12,11 +12,11 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackStatus;
 
-public class WithdrawalStatusRepositoryImpl implements WithdrawalStatusRepository {
+public class WithdrawalUpdateRepositoryImpl implements WithdrawalUpdateRepository {
 
     private final MongoTemplate mongoTemplate;
 
-    public WithdrawalStatusRepositoryImpl(MongoTemplate mongoTemplate) {
+    public WithdrawalUpdateRepositoryImpl(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
 

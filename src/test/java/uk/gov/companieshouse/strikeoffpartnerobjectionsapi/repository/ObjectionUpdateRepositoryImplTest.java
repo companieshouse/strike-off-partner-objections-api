@@ -32,7 +32,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocume
 
 @Tag("unit-test")
 @ExtendWith(MockitoExtension.class)
-class ObjectionStatusRepositoryImplTest {
+class ObjectionUpdateRepositoryImplTest {
 
     private static final String COMPANY_NUMBER = "01234567";
     private static final String OBJECTION_ID = "objection-1";
@@ -47,7 +47,7 @@ class ObjectionStatusRepositoryImplTest {
     private MongoTemplate mongoTemplate;
 
     @InjectMocks
-    private ObjectionStatusRepositoryImpl repository;
+    private ObjectionUpdateRepositoryImpl repository;
 
     @ParameterizedTest
     @EnumSource(value = EventStatus.class, names = {"PUBLISHED", "FAILED"})

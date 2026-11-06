@@ -32,7 +32,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackS
 
 @Tag("unit-test")
 @ExtendWith(MockitoExtension.class)
-class WithdrawalStatusRepositoryImplTest {
+class WithdrawalUpdateRepositoryImplTest {
 
     private static final String COMPANY = "01234567";
     private static final String ID = "withdrawal-1";
@@ -45,7 +45,7 @@ class WithdrawalStatusRepositoryImplTest {
     @Mock
     private MongoTemplate mongoTemplate;
     @InjectMocks
-    private WithdrawalStatusRepositoryImpl repository;
+    private WithdrawalUpdateRepositoryImpl repository;
 
     @ParameterizedTest
     @MethodSource("trackingUpdates")

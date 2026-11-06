@@ -6,7 +6,7 @@ import java.util.Optional;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.EventStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.ObjectionDocument;
 
-public interface ObjectionStatusRepository {
+public interface ObjectionUpdateRepository {
 
     /**
      * Updates only event-tracking fields and returns MongoDB's write outcome.

@@ -10,7 +10,7 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.enums.CallbackS
 /**
  * Field-specific withdrawal updates that preserve independently written state.
  */
-public interface WithdrawalStatusRepository {
+public interface WithdrawalUpdateRepository {
 
     UpdateResult updateEventStatus(String companyNumber, String withdrawalId, EventStatus status,
                                    Instant changedAt, String correlationId, String failureReason);

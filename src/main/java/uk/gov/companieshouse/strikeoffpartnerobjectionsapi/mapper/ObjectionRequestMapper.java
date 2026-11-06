@@ -1,5 +1,6 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.mapper;
 
+import java.time.Instant;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -12,11 +13,12 @@ import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import static uk.gov.companieshouse.GenerateEtagUtil.generateEtag;
 import static uk.gov.companieshouse.api.objections.model.ObjectionProcessingStatus.OBJECTION_SUBMITTED;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", imports = Instant.class)
 public interface ObjectionRequestMapper {
 
     @Mapping(target = "objectionId", source = "objectionId")
     @Mapping(target = "processingStatus", expression = "java(getStatus())")
+    @Mapping(target = "processingStatusChangedAt", expression = "java(Instant.now())")
     @Mapping(target = "etag", expression = "java(getEtag())")
     @Mapping(target = "kind", expression = "java(getObjectionKind())")
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, objectionId))")
@@ -68,4 +70,3 @@ public interface ObjectionRequestMapper {
     }
 
 }
-
