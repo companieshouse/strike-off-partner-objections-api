@@ -49,6 +49,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private static final String WITHDRAWAL_URI_TEMPLATE =
             "/company/%s/strike-off-partner-objections-withdrawals/%s";
     private static final String RESOURCE_KIND_WITHDRAWAL = "withdrawal";
+    private static final String ACKNOWLEDGED = "acknowledged";
 
     private final WithdrawalRepository withdrawalRepository;
     private final ObjectionRepository objectionRepository;
@@ -254,12 +255,12 @@ public class StrikeOffPartnerWithdrawalsService {
                     persistedWithdrawal.getEventFailureReason());
             if (result == null || !result.wasAcknowledged()) {
                 if (result != null) {
-                    logMap.put("acknowledged", false);
+                    logMap.put(ACKNOWLEDGED, false);
                 }
                 LOGGER.error("Withdrawal event status update outcome not acknowledged or unavailable", logMap);
                 return;
             }
-            logMap.put("acknowledged", true);
+            logMap.put(ACKNOWLEDGED, true);
             logMap.put("matched_count", result.getMatchedCount());
             logMap.put("modified_count", result.getModifiedCount());
             if (result.getMatchedCount() == 0) {
@@ -426,7 +427,7 @@ public class StrikeOffPartnerWithdrawalsService {
                     document.getCallbackCorrelationId(),
                     document.getCallbackFailureReason());
             if (updateResult == null || !updateResult.wasAcknowledged() || updateResult.getMatchedCount() == 0) {
-                logMap.put("acknowledged", updateResult != null && updateResult.wasAcknowledged());
+                logMap.put(ACKNOWLEDGED, updateResult != null && updateResult.wasAcknowledged());
                 if (updateResult != null && updateResult.wasAcknowledged()) {
                     logMap.put("matched_count", updateResult.getMatchedCount());
                     logMap.put("modified_count", updateResult.getModifiedCount());

@@ -18,8 +18,8 @@ import static org.mockito.Mockito.times;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.PARTNER_ORGANISATION;
 
 import jakarta.validation.Validation;
-import jakarta.validation.ValidatorFactory;
 import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -371,6 +371,49 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
+    void withdrawAllObjections_whenEventStatusUpdateIsUnacknowledged_doesNotFailCreation() {
+        stubWithdrawalCreation();
+        when(withdrawalRepository.updateEventStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(UpdateResult.unacknowledged());
+
+        WithdrawAllObjectionsResponse response = strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION);
+
+        assertThat(response).isNotNull();
+        verify(withdrawalRepository).updateEventStatus(
+                eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), eq(EventStatus.PUBLISHED), any(), anyString(), eq(null));
+    }
+
+    @Test
+    void withdrawAllObjections_whenEventStatusDocumentIsUnmatched_doesNotFailCreation() {
+        stubWithdrawalCreation();
+        when(withdrawalRepository.updateEventStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(UpdateResult.acknowledged(0, 0L, null));
+
+        assertThat(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION)).isNotNull();
+
+        verify(withdrawalRepository).updateEventStatus(
+                eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), eq(EventStatus.PUBLISHED), any(), anyString(), eq(null));
+    }
+
+    @Test
+    void withdrawAllObjections_whenEventStatusIsUnchanged_doesNotFailCreation() {
+        stubWithdrawalCreation();
+        when(withdrawalRepository.updateEventStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(UpdateResult.acknowledged(1, 0L, null));
+
+        assertThat(strikeOffPartnerWithdrawalsService.withdrawAllObjections(
+                COMPANY_NUMBER, buildRequest(), PARTNER_ORGANISATION)).isNotNull();
+
+        verify(withdrawalRepository).updateEventStatus(
+                eq(COMPANY_NUMBER), eq(WITHDRAWAL_ID), eq(EventStatus.PUBLISHED), any(), anyString(), eq(null));
+    }
+
+    @Test
     void withdrawAllObjections_whenDocumentIsPersisted_returnsResponseFromMapper() {
         WithdrawAllObjectionsRequest request = buildRequest();
         WithdrawalDocument savedDocument = buildSavedDocument();
@@ -647,6 +690,70 @@ class StrikeOffPartnerWithdrawalsServiceTest {
     }
 
     @Test
+    void updateWithdrawalProcessingStatus_whenCallbackUpdateResultIsNull_throwsPersistenceException() {
+        WithdrawalDocument existing = stubTerminalStatusUpdate();
+        when(withdrawalRepository.updateCallbackStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(null);
+        UpdateWithdrawalStatusRequest request =
+                createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to persist HMRC callback outcome for withdrawal");
+        assertThat(existing.getCallbackStatus()).isEqualTo(CallbackStatus.SUCCESS);
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCallbackUpdateIsUnacknowledged_throwsPersistenceException() {
+        stubTerminalStatusUpdate();
+        when(withdrawalRepository.updateCallbackStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(UpdateResult.unacknowledged());
+        UpdateWithdrawalStatusRequest request =
+                createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to persist HMRC callback outcome for withdrawal");
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCallbackUpdateDoesNotMatchDocument_throwsPersistenceException() {
+        stubTerminalStatusUpdate();
+        when(withdrawalRepository.updateCallbackStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenReturn(UpdateResult.acknowledged(0, 0L, null));
+        UpdateWithdrawalStatusRequest request =
+                createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to persist HMRC callback outcome for withdrawal");
+    }
+
+    @Test
+    void updateWithdrawalProcessingStatus_whenCallbackUpdateThrowsDataAccessException_wrapsFailure() {
+        stubTerminalStatusUpdate();
+        DataAccessResourceFailureException cause =
+                new DataAccessResourceFailureException("mongo update failed");
+        when(withdrawalRepository.updateCallbackStatus(
+                anyString(), anyString(), any(), any(), anyString(), eq(null)))
+                .thenThrow(cause);
+        UpdateWithdrawalStatusRequest request =
+                createUpdateWithdrawalStatusRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
+
+        assertThatThrownBy(() -> strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
+                COMPANY_NUMBER, WITHDRAWAL_ID, request))
+                .isInstanceOf(WithdrawalPersistenceException.class)
+                .hasMessage("Failed to persist HMRC callback outcome for withdrawal")
+                .hasCause(cause);
+    }
+
+    @Test
     void updateWithdrawalProcessingStatus_whenStatusUnchangedAndCallbackFailed_retriesCallback() {
 
         WithdrawalDocument existing = buildSavedDocument();
@@ -777,6 +884,27 @@ class StrikeOffPartnerWithdrawalsServiceTest {
                         return Optional.of(existing);
                     });
         }
+
+    private WithdrawalDocument stubWithdrawalCreation() {
+        WithdrawalDocument document = buildSavedDocument();
+        document.setWithdrawalId(WITHDRAWAL_ID);
+        when(withdrawalMapper.toWithdrawalDocument(any(), eq(COMPANY_NUMBER), eq(PARTNER_ORGANISATION), any(), any()))
+                .thenReturn(document);
+        when(withdrawalRepository.insert(document)).thenReturn(document);
+        when(withdrawalKafkaProducer.publishWithdrawalEvent(document)).thenReturn(getPublishedEvent("event-id"));
+        when(withdrawalMapper.toWithdrawAllObjectionsResponse(document)).thenReturn(buildResponse(document));
+        return document;
+    }
+
+    private WithdrawalDocument stubTerminalStatusUpdate() {
+        WithdrawalDocument document = buildSavedDocument();
+        document.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING.getValue());
+        setupUpdateStatusMocks(document);
+        when(hmrcCallbackService.sendWithdrawalOutcomeCallback(
+                eq(WITHDRAWAL_ID), eq(COMPANY_NUMBER), anyString()))
+                .thenReturn(CallbackResult.success("callback-id"));
+        return document;
+    }
 
         private String withdrawalCallbackUri() {
             return String.format(

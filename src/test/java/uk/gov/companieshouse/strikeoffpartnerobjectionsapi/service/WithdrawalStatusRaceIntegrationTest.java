@@ -187,13 +187,14 @@ class WithdrawalStatusRaceIntegrationTest extends MongoDbIntegration {
                     return result;
                 });
 
+        UpdateWithdrawalStatusRequest terminalRequest =
+                processingRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED);
         if (status == CallbackStatus.FAILED) {
             assertThatThrownBy(() -> service.updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                    processingRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED)))
+                    terminalRequest))
                     .isInstanceOf(HmrcCallbackFailedException.class);
         } else {
-            service.updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID,
-                    processingRequest(WithdrawalProcessingStatus.WITHDRAWAL_ACCEPTED));
+            service.updateWithdrawalProcessingStatus(COMPANY_NUMBER, WITHDRAWAL_ID, terminalRequest);
         }
 
         WithdrawalDocument persisted = findWithdrawal();

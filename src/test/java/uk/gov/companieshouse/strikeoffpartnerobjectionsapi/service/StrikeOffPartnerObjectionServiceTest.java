@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -455,10 +454,11 @@ class StrikeOffPartnerObjectionServiceTest {
         when(objectionRepository.updateProcessingStatus(
                 eq(VALID_COMPANY_NUMBER), eq(VALID_OBJECTION_ID), eq("objection-processing"),
                 eq("objection-accepted"), any(), eq("etag-conflict"))).thenReturn(Optional.empty());
+        UpdateObjectionStatusRequest request =
+                createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_ACCEPTED);
 
         assertThatThrownBy(() -> strikeOffPartnerObjectionService.updateObjectionProcessingStatus(
-                VALID_COMPANY_NUMBER, VALID_OBJECTION_ID,
-                createUpdateStatusRequest(ObjectionProcessingStatus.OBJECTION_ACCEPTED)))
+                VALID_COMPANY_NUMBER, VALID_OBJECTION_ID, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode.value")
                 .isEqualTo(HTTP_STATUS_CONFLICT);
