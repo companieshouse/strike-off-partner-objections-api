@@ -2,6 +2,8 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.service;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import java.time.Instant;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +39,7 @@ import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.Strikeof
  * On creation, a check is made that the partner has at least one active objection for
  * the company before the withdrawal is persisted to MongoDB and a Kafka event is published.
  * Event tracking state (PENDING, PUBLISHED, FAILED) is recorded against the document.
- * On status update, an HMRC callback notification is triggered asynchronously after
+ * On terminal status updates, an HMRC callback notification is sent synchronously after
  * the record is successfully updated in MongoDB.</p>
  */
 @Service
@@ -47,6 +49,7 @@ public class StrikeOffPartnerWithdrawalsService {
     private static final String WITHDRAWAL_URI_TEMPLATE =
             "/company/%s/strike-off-partner-objections-withdrawals/%s";
     private static final String RESOURCE_KIND_WITHDRAWAL = "withdrawal";
+    private static final String ACKNOWLEDGED = "acknowledged";
 
     private final WithdrawalRepository withdrawalRepository;
     private final ObjectionRepository objectionRepository;
@@ -234,16 +237,40 @@ public class StrikeOffPartnerWithdrawalsService {
     }
 
     private void saveWithdrawalEventStatus(WithdrawalDocument persistedWithdrawal) {
+        var logMap = new DataMap.Builder()
+                .companyNumber(persistedWithdrawal.getCompanyNumber())
+                .resourceId(persistedWithdrawal.getWithdrawalId())
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                .status(Objects.toString(persistedWithdrawal.getEventStatus(), null))
+                .correlationId(persistedWithdrawal.getEventCorrelationId())
+                .build()
+                .getLogMap();
         try {
-            withdrawalRepository.save(persistedWithdrawal);
+            var result = withdrawalRepository.updateEventStatus(
+                    persistedWithdrawal.getCompanyNumber(),
+                    persistedWithdrawal.getWithdrawalId(),
+                    persistedWithdrawal.getEventStatus(),
+                    persistedWithdrawal.getEventStatusChangedAt(),
+                    persistedWithdrawal.getEventCorrelationId(),
+                    persistedWithdrawal.getEventFailureReason());
+            if (result == null || !result.wasAcknowledged()) {
+                if (result != null) {
+                    logMap.put(ACKNOWLEDGED, false);
+                }
+                LOGGER.error("Withdrawal event status update outcome not acknowledged or unavailable", logMap);
+                return;
+            }
+            logMap.put(ACKNOWLEDGED, true);
+            logMap.put("matched_count", result.getMatchedCount());
+            logMap.put("modified_count", result.getModifiedCount());
+            if (result.getMatchedCount() == 0) {
+                LOGGER.error("Withdrawal event status update matched no document", logMap);
+                return;
+            }
+            LOGGER.info(result.getModifiedCount() == 0
+                    ? "Withdrawal event status unchanged" : "Withdrawal event status updated", logMap);
         } catch (DataAccessException saveEx) {
-            var logMap = new DataMap.Builder()
-                    .companyNumber(persistedWithdrawal.getCompanyNumber())
-                    .resourceId(persistedWithdrawal.getWithdrawalId())
-                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
-                    .errorMessage("Failed to update event status after publish")
-                    .build()
-                    .getLogMap();
+            logMap.put("error_message", "Failed to update event status after publish");
             LOGGER.error("Failed to save withdrawal event status", saveEx, logMap);
         }
     }
@@ -275,7 +302,8 @@ public class StrikeOffPartnerWithdrawalsService {
      *
      * <p>If the requested status matches the current status, the update is silently ignored.
      * No state-transition enforcement is applied for withdrawal status updates.
-     * After successful status update, an HMRC callback will be triggered</p>
+     * The status write checks the previously read value to avoid overwriting concurrent updates.
+     * After a terminal status update, an HMRC callback is triggered synchronously.</p>
      *
      * @param companyNumber       the company number the withdrawal belongs to
      * @param withdrawalId        the unique withdrawal identifier
@@ -332,11 +360,15 @@ public class StrikeOffPartnerWithdrawalsService {
             WithdrawalDocument document,
             WithdrawalProcessingStatus requestedStatus) {
 
-        document.setProcessingStatus(requestedStatus.getValue());
-        document.setEtag(UUID.randomUUID().toString());
-
         try {
-            WithdrawalDocument savedDocument = withdrawalRepository.save(document);
+            WithdrawalDocument savedDocument = withdrawalRepository.updateProcessingStatus(
+                            document.getCompanyNumber(),
+                            document.getWithdrawalId(),
+                            document.getProcessingStatus(),
+                            requestedStatus.getValue(),
+                            Instant.now(),
+                            UUID.randomUUID().toString())
+                    .orElseThrow(() -> concurrentWithdrawalStatusUpdate(document, requestedStatus));
 
             logProcessingStatus(
                     savedDocument.getCompanyNumber(),
@@ -349,6 +381,22 @@ public class StrikeOffPartnerWithdrawalsService {
             throw new WithdrawalPersistenceException(
                     "Failed to persist updated withdrawal processing status", ex);
         }
+    }
+
+    private ResponseStatusException concurrentWithdrawalStatusUpdate(
+            WithdrawalDocument document, WithdrawalProcessingStatus requestedStatus) {
+        var logMap = new DataMap.Builder()
+                .companyNumber(document.getCompanyNumber())
+                .resourceId(document.getWithdrawalId())
+                .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                .correlationId(document.getEventCorrelationId())
+                .build()
+                .getLogMap();
+        logMap.put("current_status", document.getProcessingStatus());
+        logMap.put("requested_status", requestedStatus.getValue());
+        LOGGER.error("Withdrawal processing status update no longer matches persisted document", logMap);
+        return new ResponseStatusException(HttpStatus.CONFLICT,
+                "Withdrawal processing status changed concurrently or withdrawal was removed");
     }
 
     private void sendAndPersistWithdrawalCallback(WithdrawalDocument document) {
@@ -364,11 +412,43 @@ public class StrikeOffPartnerWithdrawalsService {
 
         try {
             CallbackStatusTracker.applyResult(document, result);
-            withdrawalRepository.save(document);
+            var logMap = new DataMap.Builder()
+                    .companyNumber(document.getCompanyNumber())
+                    .resourceId(document.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .correlationId(document.getCallbackCorrelationId())
+                    .build()
+                    .getLogMap();
+            var updateResult = withdrawalRepository.updateCallbackStatus(
+                    document.getCompanyNumber(),
+                    document.getWithdrawalId(),
+                    document.getCallbackStatus(),
+                    document.getCallbackStatusChangedAt(),
+                    document.getCallbackCorrelationId(),
+                    document.getCallbackFailureReason());
+            if (updateResult == null || !updateResult.wasAcknowledged() || updateResult.getMatchedCount() == 0) {
+                logMap.put(ACKNOWLEDGED, updateResult != null && updateResult.wasAcknowledged());
+                if (updateResult != null && updateResult.wasAcknowledged()) {
+                    logMap.put("matched_count", updateResult.getMatchedCount());
+                    logMap.put("modified_count", updateResult.getModifiedCount());
+                }
+                LOGGER.error("Failed to persist withdrawal callback outcome", logMap);
+                throw new WithdrawalPersistenceException(
+                        "Failed to persist HMRC callback outcome for withdrawal",
+                        new IllegalStateException("Callback status update did not match a withdrawal document"));
+            }
             CallbackStatusTracker.throwIfCallbackFailed(result);
         } catch (DataAccessException ex) {
-            throw new WithdrawalPersistenceException(
-                    "Failed to persist HMRC callback outcome for withdrawal", ex);
+            var logMap = new DataMap.Builder()
+                    .companyNumber(document.getCompanyNumber())
+                    .resourceId(document.getWithdrawalId())
+                    .resourceKind(RESOURCE_KIND_WITHDRAWAL)
+                    .correlationId(document.getCallbackCorrelationId())
+                    .errorMessage("Failed to persist callback status")
+                    .build()
+                    .getLogMap();
+            LOGGER.error("Failed to persist withdrawal callback outcome", ex, logMap);
+            throw new WithdrawalPersistenceException("Failed to persist HMRC callback outcome for withdrawal", ex);
         }
     }
 

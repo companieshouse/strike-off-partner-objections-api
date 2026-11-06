@@ -264,6 +264,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
         request.setProcessingStatus(WithdrawalProcessingStatus.WITHDRAWAL_PROCESSING);
         when(callbackClient.sendCallback(nullable(String.class), any(HmrcCallbackPayload.class)))
                 .thenReturn("integration-correlation-123");
+        Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
                 COMPANY_NUMBER, created.getWithdrawalId(), request);
 
@@ -271,6 +272,7 @@ class StrikeOffPartnerWithdrawalsIntegrationTest extends BaseTestIntegration {
                 .findByCompanyNumberAndWithdrawalId(COMPANY_NUMBER, created.getWithdrawalId())
                 .orElseThrow();
         assertThat(updated.getProcessingStatus()).isEqualTo("withdrawal-processing");
+        assertThat(updated.getProcessingStatusChangedAt()).isAfterOrEqualTo(before);
     }
 
     @Test

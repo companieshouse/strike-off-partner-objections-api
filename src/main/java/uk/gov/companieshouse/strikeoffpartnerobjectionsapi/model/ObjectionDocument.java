@@ -25,9 +25,6 @@ public class ObjectionDocument extends PartnerRequestDocument {
 	@Field("processing_status")
 	private String processingStatus;
 
-	@Field("processing_status_changed_at")
-	private Instant processingStatusChangedAt;
-
 	@Field("initial_expiration_on")
 	private Instant initialExpirationOn;
 
@@ -66,14 +63,6 @@ public class ObjectionDocument extends PartnerRequestDocument {
 		this.processingStatus = processingStatus;
 	}
 
-	public Instant getProcessingStatusChangedAt() {
-		return processingStatusChangedAt;
-	}
-
-	public void setProcessingStatusChangedAt(Instant processingStatusChangedAt) {
-		this.processingStatusChangedAt = processingStatusChangedAt;
-	}
-
 	public Instant getInitialExpirationOn() {
 		return initialExpirationOn;
 	}
@@ -91,4 +80,3 @@ public class ObjectionDocument extends PartnerRequestDocument {
 	}
 
 }
-

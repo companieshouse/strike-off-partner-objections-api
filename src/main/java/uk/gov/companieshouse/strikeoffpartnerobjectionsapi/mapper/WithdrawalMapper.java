@@ -15,7 +15,7 @@ import uk.gov.companieshouse.api.objections.model.WithdrawalProcessingStatus;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.PartnerLinks;
 import uk.gov.companieshouse.strikeoffpartnerobjectionsapi.model.WithdrawalDocument;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", imports = Instant.class)
 public interface WithdrawalMapper {
 
     @Mapping(target = "withdrawalId", source = "withdrawalId")
@@ -27,6 +27,7 @@ public interface WithdrawalMapper {
     @Mapping(target = "partnerContactEmail", source = "request.partnerContactEmail")
     @Mapping(target = "partnerObjectionWorkstream", source = "request.partnerObjectionWorkstream")
     @Mapping(target = "processingStatus", expression = "java(getStatus())")
+    @Mapping(target = "processingStatusChangedAt", expression = "java(Instant.now())")
     @Mapping(target = "kind", expression = "java(getWithdrawalKind())")
     @Mapping(target = "links", expression = "java(buildLinks(companyNumber, withdrawalId))")
     @Mapping(target = "id", ignore = true)
@@ -87,6 +88,7 @@ public interface WithdrawalMapper {
     @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "toOffsetDateTime")
     @Mapping(target = "links", source = "links", qualifiedByName = "toResponseLinks")
     @Mapping(target = "failureReason", ignore = true)
-    @Mapping(target = "processingStatusChangedAt", ignore = true)
+    @Mapping(target = "processingStatusChangedAt", source = "processingStatusChangedAt",
+            qualifiedByName = "toOffsetDateTime")
     WithdrawAllObjectionsResponse toWithdrawAllObjectionsResponse(WithdrawalDocument document);
 }

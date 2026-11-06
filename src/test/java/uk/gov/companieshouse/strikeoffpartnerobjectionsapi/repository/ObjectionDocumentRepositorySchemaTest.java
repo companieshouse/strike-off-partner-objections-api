@@ -27,6 +27,7 @@ class ObjectionDocumentRepositorySchemaTest {
 		assertEquals("partner_contact_email", getFieldName("partnerContactEmail"));
 		assertEquals("objection_id", getFieldName("objectionId"));
 		assertEquals("processing_status", getFieldName("processingStatus"));
+		assertEquals("processing_status_changed_at", getFieldName("processingStatusChangedAt"));
 		assertEquals("created_at", getFieldName("createdAt"));
 	}
 
@@ -50,4 +51,3 @@ class ObjectionDocumentRepositorySchemaTest {
 		throw new NoSuchFieldException(fieldName);
 	}
 }
-
