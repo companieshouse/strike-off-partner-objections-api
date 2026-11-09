@@ -77,6 +77,8 @@ public class HmrcOutcomeCallbackClient {
                 correlationId, payload.getResourceId(), payload.getCompanyNumber()), logMap);
 
         String accessToken = accessTokenProvider.getAccessToken();
+        LOGGER.debug(format("Retrieved HMRC access token: correlationId=%s, resourceId=%s, companyNumber=%s, token=%s",
+                correlationId, payload.getResourceId(), payload.getCompanyNumber(), accessToken), logMap);
         try {
             ResponseEntity<Void> response = sendAuthenticatedCallback(
                     callbackEndpointUrl, payload, correlationId, accessToken);
@@ -98,6 +100,8 @@ public class HmrcOutcomeCallbackClient {
 
         LOGGER.info(format("HMRC callback sent successfully: correlationId=%s, resourceId=%s",
                 correlationId, payload.getResourceId()), logMap);
+        LOGGER.debug(format("HMRC callback request completed: correlationId=%s, resourceId=%s, companyNumber=%s, accessToken=%s",
+                correlationId, payload.getResourceId(), payload.getCompanyNumber(), accessToken), logMap);
 
         return correlationId;
     }
