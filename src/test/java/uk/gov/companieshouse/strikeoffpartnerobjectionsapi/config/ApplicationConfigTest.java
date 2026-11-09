@@ -2,7 +2,6 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,7 +26,10 @@ class ApplicationConfigTest {
 
     @Test
     void internalApiClient_whenInvoked_createsBean() {
-        ApplicationConfig config = new ApplicationConfig(null, null, cacheInterceptor);
+        ApplicationConfig config = new ApplicationConfig(
+                Mockito.mock(AuthenticationInterceptor.class),
+                Mockito.mock(InternalUserInterceptor.class),
+                cacheInterceptor);
 
         try {
             InternalApiClient apiClient = config.internalApiClient();
@@ -40,49 +42,49 @@ class ApplicationConfigTest {
     @Test
     void addInterceptors_whenInvoked_registersAuthenticationInterceptorForAllPaths() {
         AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
+        InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-        InterceptorRegistration registration = Mockito.mock(InterceptorRegistration.class);
-        ApplicationConfig config = new ApplicationConfig(authInterceptor, null, cacheInterceptor);
-        registerCacheInterceptor(registry);
+        InterceptorRegistration authRegistration = Mockito.mock(InterceptorRegistration.class);
+        InterceptorRegistration internalRegistration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(authInterceptor, internalInterceptor, cacheInterceptor);
+        InterceptorRegistration cacheRegistration = registerCacheInterceptor(registry);
 
-        when(registry.addInterceptor(authInterceptor)).thenReturn(registration);
-        when(registration.addPathPatterns("/**")).thenReturn(registration);
-        when(registration.excludePathPatterns("/healthcheck")).thenReturn(registration);
+        when(registry.addInterceptor(authInterceptor)).thenReturn(authRegistration);
+        when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
+        when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
+        when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/**")).thenReturn(internalRegistration);
 
         config.addInterceptors(registry);
 
         verify(registry).addInterceptor(authInterceptor);
-        verify(registration).addPathPatterns("/**");
-        verify(registration).excludePathPatterns("/healthcheck");
-    }
-
-    @Test
-    void addInterceptors_whenAuthenticationInterceptorIsNull_doesNotRegisterAuthInterceptor() {
-        ApplicationConfig config = new ApplicationConfig(null, null, cacheInterceptor);
-        InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-        InterceptorRegistration registration = registerCacheInterceptor(registry);
-
-        config.addInterceptors(registry);
-
-        verify(registry).addInterceptor(cacheInterceptor);
-        verify(registration).order(0);
+        verify(authRegistration).addPathPatterns("/**");
+        verify(authRegistration).excludePathPatterns("/healthcheck");
+        verify(registry).addInterceptor(internalInterceptor);
+        verify(cacheRegistration).order(0);
     }
 
     @Test
     void addInterceptors_whenInvoked_registersInternalUserInterceptorForInternalPaths() {
         InternalUserInterceptor internalInterceptor = Mockito.mock(InternalUserInterceptor.class);
+        AuthenticationInterceptor authInterceptor = Mockito.mock(AuthenticationInterceptor.class);
         InterceptorRegistry registry = Mockito.mock(InterceptorRegistry.class);
-        InterceptorRegistration registration = Mockito.mock(InterceptorRegistration.class);
-        ApplicationConfig config = new ApplicationConfig(null, internalInterceptor, cacheInterceptor);
+        InterceptorRegistration authRegistration = Mockito.mock(InterceptorRegistration.class);
+        InterceptorRegistration internalRegistration = Mockito.mock(InterceptorRegistration.class);
+        ApplicationConfig config = new ApplicationConfig(authInterceptor, internalInterceptor, cacheInterceptor);
         registerCacheInterceptor(registry);
 
-        when(registry.addInterceptor(internalInterceptor)).thenReturn(registration);
-        when(registration.addPathPatterns("/internal/**")).thenReturn(registration);
+        when(registry.addInterceptor(authInterceptor)).thenReturn(authRegistration);
+        when(authRegistration.addPathPatterns("/**")).thenReturn(authRegistration);
+        when(authRegistration.excludePathPatterns("/healthcheck")).thenReturn(authRegistration);
+        when(registry.addInterceptor(internalInterceptor)).thenReturn(internalRegistration);
+        when(internalRegistration.addPathPatterns("/internal/**")).thenReturn(internalRegistration);
 
         config.addInterceptors(registry);
 
+        verify(registry).addInterceptor(authInterceptor);
         verify(registry).addInterceptor(internalInterceptor);
-        verify(registration).addPathPatterns("/internal/**");
+        verify(internalRegistration).addPathPatterns("/internal/**");
     }
 
     @Test
@@ -108,11 +110,6 @@ class ApplicationConfigTest {
         verify(cacheRegistration).order(0);
         verify(authRegistration).order(1);
         verify(internalRegistration).order(2);
-    }
-
-    @Test
-    void constructor_whenCacheInterceptorIsNull_rejectsMissingPolicy() {
-        assertThrows(NullPointerException.class, () -> new ApplicationConfig(null, null, null));
     }
 
     @Test

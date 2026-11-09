@@ -1,6 +1,5 @@
 package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.config;
 
-import java.util.Objects;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +40,7 @@ public class ApplicationConfig implements WebMvcConfigurer {
             SensitiveResponseCacheInterceptor sensitiveResponseCacheInterceptor) {
         this.authenticationInterceptor = authenticationInterceptor;
         this.internalUserInterceptor = internalUserInterceptor;
-        this.sensitiveResponseCacheInterceptor = Objects.requireNonNull(sensitiveResponseCacheInterceptor);
+        this.sensitiveResponseCacheInterceptor = sensitiveResponseCacheInterceptor;
     }
 
     @Bean
@@ -61,14 +60,10 @@ public class ApplicationConfig implements WebMvcConfigurer {
     public void addInterceptors(@NonNull InterceptorRegistry registry) {
         registry.addInterceptor(sensitiveResponseCacheInterceptor)
                 .addPathPatterns(SENSITIVE_PATHS).order(CACHE_POLICY_ORDER);
-        if (authenticationInterceptor != null) {
-            registry.addInterceptor(authenticationInterceptor)
-                    .addPathPatterns("/**")
-                    .excludePathPatterns("/healthcheck").order(1);
-        }
-        if (internalUserInterceptor != null) {
-            registry.addInterceptor(internalUserInterceptor)
-                    .addPathPatterns("/internal/**").order(2);
-        }
+        registry.addInterceptor(authenticationInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/healthcheck").order(1);
+        registry.addInterceptor(internalUserInterceptor)
+                .addPathPatterns("/internal/**").order(2);
     }
 }
