@@ -14,6 +14,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static uk.gov.companieshouse.strikeoffpartnerobjectionsapi.utils.StrikeoffPartnerObjectionsUtils.ERIC_PARTNER_ORGANISATION_HEADER;
@@ -44,6 +45,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.companieshouse.api.InternalApiClient;
@@ -76,8 +79,10 @@ class StrikeOffObjectionPartnerControllerTest {
     private static final ObjectMapper STATIC_OBJECT_MAPPER = new ObjectMapper();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private WebApplicationContext applicationContext;
 
     @MockitoBean
     private StrikeOffPartnerObjectionService strikeOffPartnerObjectionService;
@@ -90,6 +95,10 @@ class StrikeOffObjectionPartnerControllerTest {
 
     @BeforeEach
     void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(applicationContext)
+                .alwaysExpect(header().string("Cache-Control", "no-store"))
+                .alwaysExpect(header().string("Pragma", "no-cache"))
+                .build();
         when(authenticationInterceptor.preHandle(any(), any(), any())).thenReturn(true);
         when(strikeOffPartnerObjectionService.createObjection(eq(COMPANY_NUMBER), any(), eq(PARTNER_ORGANISATION)))
                 .thenReturn(defaultCreatedResponse());

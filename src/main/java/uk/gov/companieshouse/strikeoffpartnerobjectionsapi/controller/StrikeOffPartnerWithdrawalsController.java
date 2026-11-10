@@ -3,7 +3,6 @@ package uk.gov.companieshouse.strikeoffpartnerobjectionsapi.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -89,8 +88,8 @@ public class StrikeOffPartnerWithdrawalsController implements StrikeOffPartnerWi
      */
     @Override
     public ResponseEntity<Void> updateWithdrawalStatus(
-            @Size(min = 1) @PathVariable("company_number") String companyNumber,
-            @Size(min = 1) @PathVariable("withdrawal_id") String withdrawalId,
+            @Size(min = 1) String companyNumber,
+            @Size(min = 1) String withdrawalId,
             @Valid @RequestBody UpdateWithdrawalStatusRequest updateStatusRequest) {
         try {
             strikeOffPartnerWithdrawalsService.updateWithdrawalProcessingStatus(
